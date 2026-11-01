@@ -1,0 +1,806 @@
+/**
+ * NIAN CODE STUDIO - Penjana Kod & Pratonton (generator.js)
+ * Menjana kod standard HTML5, CSS Grid (External, Internal, Inline, 3-in-1, Tailwind), JavaScript,
+ * pewarnaan sintaks (syntax highlighting), dan dokumen pratonton masa nyata.
+ */
+
+const rl = b => {
+  const p = par(b);
+  return { c: b.c - (p ? p.c - 1 : 0), r: b.r - (p ? p.r - 1 : 0) };
+};
+
+function stripHtmlTags(str) {
+  return String(str || '').replace(/<[^>]*>/g, '').trim();
+}
+
+function hasBlockTag(str) {
+  return /<(h[1-6]|p|div|ul|ol|blockquote|article|section)/i.test(str);
+}
+
+function renderWysiwyg(s) {
+  if (!s) return '';
+  return String(s).replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+}
+
+const twc = (b, n) => {
+  const q = rl(b);
+  const padCls = b.pad === 0 ? 'p-0' : b.pad == 8 ? 'p-2' : b.pad == 24 ? 'p-6' : b.pad == 32 ? 'p-8' : (n ? 'p-2' : 'p-4');
+  const radCls = !b.rad ? '' : b.rad == 4 ? 'rounded' : b.rad == 8 ? 'rounded-lg' : b.rad == 16 ? 'rounded-2xl' : b.rad == 999 ? 'rounded-full' : 'rounded-md';
+  const shdCls = !b.shd || b.shd == 'none' ? '' : b.shd == 'sm' ? 'shadow-sm' : b.shd == 'md' ? 'shadow-md' : 'shadow-xl';
+  let t = `col-start-${q.c} col-span-${b.w} ${b.h <= 6 ? `row-start-${q.r} row-span-${b.h}` : `[grid-row:${q.r}/span_${b.h}]`} bg-[${FILLS[b.f]}] ${padCls}`;
+  if (radCls) t += ` ${radCls}`;
+  if (shdCls) t += ` ${shdCls}`;
+  if (b.f == 3) t += ' text-white';
+  if (b.ta) t += ` text-${b.ta}`;
+  if (n) t += ` grid grid-cols-${b.w} auto-rows-[40px] gap-2`;
+  return t;
+};
+
+const inls = (b, n) => {
+  const q = rl(b);
+  const pad = b.pad !== undefined ? b.pad + 'px' : (n ? '8px' : '16px');
+  const bg = b.f === 'none' ? 'transparent' : (FILLS[b.f] || '#ffffff');
+  let s = `grid-column:${q.c}/span ${b.w};grid-row:${q.r}/span ${b.h};background-color:${bg};padding:${pad};`;
+  if (b.font) s += `font-family:${b.font};`;
+  if (b.col) s += `color:${b.col};`;
+  else if (b.f == 3) s += 'color:#ffffff;';
+  if (b.fs) s += `font-size:${b.fs}px;`;
+  if (b.fw === 'bold') s += 'font-weight:700;';
+  else if (Number.isFinite(Number(b.fw)) && b.fw !== undefined && b.fw !== null && b.fw !== '') s += `font-weight:${Number(b.fw)};`;
+  if (b.fst == 'italic') s += 'font-style:italic;';
+  if (b.td && b.td != 'none') s += `text-decoration:${b.td};`;
+  if (b.tt && b.tt != 'none') s += `text-transform:${b.tt};`;
+  if (b.ta) s += `text-align:${b.ta};`;
+  if (b.rad) s += `border-radius:${b.rad == 999 ? '9999px' : b.rad + 'px'};`;
+  if (b.bw) s += `border:${b.bw}px ${b.bs || 'solid'} ${b.bc || 'rgba(0,0,0,0.15)'};`;
+  if (b.shd && b.shd != 'none') {
+    const sh = b.shd == 'sm' ? '0 2px 4px rgba(0,0,0,0.1)' : b.shd == 'md' ? '0 4px 12px rgba(0,0,0,0.15)' : '0 10px 25px rgba(0,0,0,0.2)';
+    s += `box-shadow:${sh};`;
+  }
+  if (n) s += `display:grid;grid-template-columns:repeat(${b.w},1fr);grid-auto-rows:40px;gap:8px;`;
+  return s;
+};
+
+const inner = b => {
+  const t = esc(b.t);
+  const isDiv = S.htmlMode === 'div';
+  const cleanAlt = stripHtmlTags(b.t) || 'Mockup image';
+  const cleanCaption = b.t.trim();
+  const defImg = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=80';
+  return b.type == 'slider' ? (S.hasJs ? '<div class="swiper-wrapper">\n' + [1, 2, 3].map(n => '  <div class="swiper-slide">Slide ' + n + '</div>').join('\n') + '\n</div>\n<div class="swiper-pagination"></div>' : '<div class="slider-box">\n  <p>[ Static Slider ]</p>\n</div>') :
+    b.type == 'dropdown' ? (function() {
+      const dropItems = (b.items && b.items.length) ? b.items : ['Option 1', 'Option 2', 'Option 3'];
+      const innerLinks = dropItems.map(it => `  <a href="#">${esc(it)}</a>`).join('\n');
+      return isDiv
+        ? `<div class="dropdown-header">${t} ▾</div>\n<div class="dropdown-content">\n${innerLinks}\n</div>`
+        : `<summary>${t}</summary>\n<div class="dropdown-content">\n${innerLinks}\n</div>`;
+    })() :
+    b.type == 'nav' ? (function() {
+      let items = [];
+      if (b.t.includes(',')) items = b.t.split(',');
+      else if (b.t.includes('|')) items = b.t.split('|');
+      else if (b.t.includes('\n')) items = b.t.split('\n');
+      else items = b.t.trim().split(/\s+/);
+      const drops = b.dropdowns || {};
+      return items.map((x, idx) => {
+        const title = x.trim();
+        if (!title) return '';
+        const dropData = drops[title] || drops[idx] || drops[title.toLowerCase()];
+        if (dropData) {
+          const subItems = Array.isArray(dropData) ? dropData : (dropData.items || ['Option 1', 'Option 2', 'Option 3']);
+          if (isDiv) {
+            return `<div class="nav-dropdown">\n  <div class="nav-drop-btn">${esc(title)} ▾</div>\n  <div class="dropdown-content">\n    ${subItems.map(sub => `<a href="#">${esc(sub.trim())}</a>`).join('\n    ')}\n  </div>\n</div>`;
+          }
+          return `<details class="nav-dropdown">\n  <summary>${esc(title)} ▾</summary>\n  <div class="dropdown-content">\n    ${subItems.map(sub => `<a href="#">${esc(sub.trim())}</a>`).join('\n    ')}\n  </div>\n</details>`;
+        }
+        const matchPage = Object.keys(S.pages).find(k => S.pages[k].name.toLowerCase().includes(title.toLowerCase()));
+        const href = matchPage || '#';
+        const isCta = /mula|daftar|beli|start|sign|hubungi|contact/i.test(title);
+        const cls = isCta ? ' class="btn-cta"' : '';
+        return `<a href="${href}"${cls}>${esc(title)}</a>`;
+      }).filter(Boolean).join('\n');
+    })() :
+    b.type == 'image' ? (isDiv ? `<div class="image-box"><img src="${b.imgUrl || defImg}" alt="${qa(cleanAlt)}">${cleanCaption ? `\n  <div class="caption">${cleanCaption}</div>` : ''}</div>` : `<figure><img src="${b.imgUrl || defImg}" alt="${qa(cleanAlt)}">${cleanCaption ? `\n<figcaption>${cleanCaption}</figcaption>` : ''}</figure>`) :
+    b.type == 'header' ? (hasBlockTag(b.t) ? b.t : `<h1>${b.t}</h1>`) :
+    ['hero', 'section', 'card'].includes(b.type) ? (hasBlockTag(b.t) ? b.t : `<h2>${b.t}</h2>`) :
+    b.type == 'text' ? (hasBlockTag(b.t) ? b.t : `<p>${b.t}</p>`) : b.t;
+};
+
+function emit(b, d, mode, L, parentFk) {
+  const T = TY[b.type];
+  const ks = kids(b);
+  const pad = '  '.repeat(d);
+  const isDiv = S.htmlMode === 'div';
+  const lk = b.type == 'button' || b.type == 'logo' || b.type == 'link';
+  const targetTag = isDiv ? (lk ? 'a' : 'div') : T.tag;
+  const at = lk ? ` href="${qa(b.href || '#')}"` : '';
+  let clAttr = '';
+  let stAttr = '';
+
+  if (S.hasCss) {
+    if (mode == 'tw') {
+      clAttr = ` class="${(b.type == 'slider' && S.hasJs ? 'swiper ' : '') + twc(b, ks.length)}"`;
+    } else if (mode == 'inl') {
+      stAttr = ` style="${inls(b, ks.length)}"`;
+      if (b.type == 'slider' && S.hasJs) clAttr = ' class="swiper"';
+      if (b.type == 'button') clAttr = ' class="btn-cta"';
+    } else if (mode == 'all') {
+      clAttr = ` class="${(b.type == 'slider' && S.hasJs ? 'swiper ' : '') + b.cls}"`;
+      const isDemo = S.sel ? b.id == S.sel : b.id == (S.blocks[0] && S.blocks[0].id);
+      if (isDemo) {
+        stAttr = ` style="outline: 2px dashed #0a84ff; border-radius: 8px;"`;
+      }
+    } else {
+      clAttr = ` class="${(b.type == 'slider' && S.hasJs ? 'swiper ' : '') + b.cls}"`;
+    }
+  } else if (isDiv) {
+    clAttr = ` class="${b.cls}"`;
+  }
+
+  const fk = 'blk-' + b.id;
+  const bColor = FILLS[b.f];
+
+  // 📝 Komen Penerangan Struktur Semantik / HTML Biasa untuk Pelajar/Pereka
+  if (d === 1) {
+    if (isDiv) {
+      L.push({ s: `${pad}<!-- 📦 ${T.n} (HTML Biasa): <div class="${b.cls}"> (${b.w} kol × ${b.h} baris) -->`, parentFk, blockColor: bColor });
+    } else {
+      L.push({ s: `${pad}<!-- 🧱 ${T.n} (Semantik): <${T.tag}> .${b.cls} (${b.w} kol × ${b.h} baris) -->`, parentFk, blockColor: bColor });
+    }
+  }
+
+  if (lk && !ks.length) return L.push({ id: b.id, s: `${pad}<a${clAttr}${stAttr}${at}>${b.t}</a>`, parentFk, isCssInline: !!stAttr, blockColor: bColor, isTagLine: true });
+  L.push({ id: b.id, s: `${pad}<${targetTag}${clAttr}${stAttr}${at}>`, fold: 'start', fk, tag: targetTag, parentFk, isCssInline: !!stAttr, blockColor: bColor, isTagLine: true });
+  if (ks.length) ks.forEach(k => emit(k, d + 1, mode, L, fk));
+  else inner(b).split('\n').forEach(s => L.push({ id: b.id, s: pad + '  ' + s, parentFk: fk, blockColor: bColor }));
+  L.push({ id: b.id, s: `${pad}</${targetTag}>`, fold: 'end', fk, tag: targetTag, parentFk, blockColor: bColor });
+}
+
+function body(mode) {
+  const L = [];
+  const isDiv = S.htmlMode === 'div';
+  const mainTag = isDiv ? 'div' : 'main';
+  const mainCls = isDiv ? 'main-container ' : '';
+  const mainIdAttr = isDiv ? ' id="main"' : '';
+  const mainClose = isDiv ? '</div><!-- /.main-container -->' : '</main>';
+
+  if (!S.hasCss) {
+    L.push({ s: `<${mainTag}${mainIdAttr}${isDiv ? ' class="main-container"' : ''}>`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body' });
+  } else if (mode == 'tw') {
+    L.push({ s: `<${mainTag}${mainIdAttr} class="${mainCls}grid grid-cols-12 auto-rows-[40px] gap-2 p-4">`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body' });
+  } else if (mode == 'inl') {
+    L.push({ s: `<${mainTag}${mainIdAttr}${isDiv ? ' class="main-container"' : ''} style="display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:40px;gap:8px;padding:16px;">`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body', isCssInline: true });
+  } else {
+    L.push({ s: `<${mainTag}${mainIdAttr}${isDiv ? ' class="main-container"' : ''}>`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body' });
+  }
+  sorted();
+  S.blocks.filter(b => !par(b)).sort((a, b) => a.r - b.r || a.c - b.c).forEach(b => emit(b, 1, mode, L, 'main'));
+  L.push({ s: mainClose, fold: 'end', fk: 'main', tag: mainTag, parentFk: 'body' });
+  return L;
+}
+
+function getCssRules() {
+  if (!S.blocks || !S.blocks.length) return [];
+  const gap = S.gridGap !== undefined ? S.gridGap : 8;
+  const rowH = S.gridRowH !== undefined ? S.gridRowH : 40;
+  const th = S.theme || { primary: '#00d4ff', bg: '#ffffff', text: '#12203f' };
+
+  const rootRules = [
+    '/* 🎨 Variabel Tema (:root) */',
+    ':root {',
+    `  --primary: ${th.primary || '#00d4ff'};`,
+    `  --bg-page: ${th.bg || '#ffffff'};`,
+    `  --text-main: ${th.text || '#12203f'};`,
+    '}'
+  ].map((s, i) => {
+    if (i === 1) return { s, fold: 'start', fk: 'css-root', tag: '}' };
+    if (i === 5) return { s, fold: 'end', fk: 'css-root', tag: '}' };
+    return { s, parentFk: 'css-root' };
+  });
+
+  const mainRules = [
+    '',
+    '/* 🏠 Main Site Grid Container (12 Columns) */',
+    'main, #main, .main-container {',
+    '  display: grid;',
+    '  grid-template-columns: repeat(12, 1fr);',
+    `  grid-auto-rows: ${rowH}px;`,
+    `  gap: ${gap}px;`,
+    '  padding: 16px;',
+    '  background-color: var(--bg-page);',
+    '  color: var(--text-main);',
+    '}'
+  ].map((s, i) => {
+    if (i === 2) return { s, fold: 'start', fk: 'css-main', tag: '}' };
+    if (i === 10) return { s, fold: 'end', fk: 'css-main', tag: '}' };
+    return { s, parentFk: 'css-main' };
+  });
+
+  const L = rootRules.concat(mainRules);
+
+  sorted().forEach(b => {
+    L.push({ s: '' });
+    const fk = 'css-' + b.id;
+    const bgVal = b.f === 'none' ? 'transparent' : (typeof b.f === 'number' ? (FILLS[b.f] || '#ffffff') : (b.f || '#ffffff'));
+    const gradientBg = typeof bgVal === 'string' && /^(?:linear|radial|conic)-gradient\(/i.test(bgVal);
+    const sampleBg = gradientBg ? (bgVal.match(/#[\da-f]{6}/i)?.[0] || '#ffffff') : bgVal;
+    const isDark = isColorDark(sampleBg);
+
+    // 🎨 Komen Penerangan Gaya Setiap Elemen untuk Pelajar/Pereka
+    L.push({ s: `/* 🎨 ${TY[b.type].n}: .${b.cls} (<${TY[b.type].tag}>) - Kolum ${rl(b).c} & Baris ${rl(b).r} */`, parentFk: fk, isCss: true });
+
+    const extra = [];
+    if (b.font) extra.push(`  font-family: ${b.font};`);
+    if (b.col) extra.push(`  color: ${b.col};`);
+    else if (isDark) extra.push('  color: #ffffff;');
+    else extra.push('  color: #12203f;');
+
+    if (b.fs) extra.push(`  font-size: ${b.fs}px;`);
+    if (b.fw === 'bold') extra.push('  font-weight: 700;');
+    else if (Number.isFinite(Number(b.fw)) && b.fw !== undefined && b.fw !== null && b.fw !== '') extra.push(`  font-weight: ${Number(b.fw)};`);
+    if (b.fst == 'italic') extra.push('  font-style: italic;');
+    if (b.td && b.td != 'none') extra.push(`  text-decoration: ${b.td};`);
+    if (b.tt && b.tt != 'none') extra.push(`  text-transform: ${b.tt};`);
+    if (b.ta) extra.push(`  text-align: ${b.ta};`);
+    if (b.bw) extra.push(`  border: ${b.bw}px ${b.bs || 'solid'} ${b.bc || 'rgba(0,0,0,0.15)'};`);
+    if (b.rad) extra.push(`  border-radius: ${b.rad == 999 ? '9999px' : b.rad + 'px'};`);
+    if (b.shd && b.shd != 'none') {
+      const sh = b.shd == 'sm' ? '0 2px 4px rgba(0,0,0,0.1)' : b.shd == 'md' ? '0 4px 12px rgba(0,0,0,0.15)' : b.shd == 'lg' ? '0 10px 25px rgba(0,0,0,0.2)' : '0 0 15px rgba(0,212,255,0.45)';
+      extra.push(`  box-shadow: ${sh};`);
+    }
+    if (b.pad !== undefined) extra.push(`  padding: ${b.pad}px;`);
+    else {
+      const defPad = kids(b).length ? '8px' : '16px';
+      extra.push(`  padding: ${defPad};`);
+    }
+
+    if (b.bgImg) {
+      if (b.bgImg.startsWith('pattern-')) {
+        const p = getPatternCss(b.bgImg);
+        extra.push(`  background-image: ${p.image};`);
+        if (p.size) extra.push(`  background-size: ${p.size};`);
+        if (p.repeat) extra.push(`  background-repeat: ${p.repeat};`);
+      } else {
+        extra.push(`  background-image: url('${b.bgImg}');`);
+        extra.push(`  background-size: ${b.bgSize || 'cover'};`);
+        extra.push(`  background-repeat: ${b.bgRepeat || 'no-repeat'};`);
+        extra.push(`  background-position: ${b.bgPos || 'center'};`);
+      }
+    }
+
+    if (b.h === 1 && !kids(b).length) {
+      extra.push('  display: flex;');
+      extra.push('  align-items: center;');
+      if (b.ta === 'center') extra.push('  justify-content: center;');
+      else if (b.ta === 'right') extra.push('  justify-content: flex-end;');
+    }
+
+    const rules = [
+      `.${b.cls} {`,
+      `  grid-column: ${rl(b).c} / span ${b.w};`,
+      `  grid-row: ${rl(b).r} / span ${b.h};`,
+      `  ${gradientBg ? 'background' : 'background-color'}: ${bgVal};`
+    ].concat(
+      extra,
+      kids(b).length ? ['  display: grid;', `  grid-template-columns: repeat(${b.w}, 1fr);`, `  grid-auto-rows: ${rowH}px;`, `  gap: ${gap}px;`] : [],
+      ['}']
+    );
+    const bColor = b.f === 'none' ? '#00d4ff' : (gradientBg ? sampleBg : bgVal);
+    rules.forEach((s, idx) => {
+      if (idx === 0) L.push({ id: b.id, s, fold: 'start', fk, tag: '}', isCss: true, blockColor: bColor, isSelectorLine: true });
+      else if (idx === rules.length - 1) L.push({ id: b.id, s, fold: 'end', fk, tag: '}' , isCss: true, blockColor: bColor });
+      else L.push({ id: b.id, s, parentFk: fk, isCss: true, blockColor: bColor });
+    });
+  });
+
+  // 🧭 Gaya untuk Menu Dropdown Navigasi (<details class="nav-dropdown">)
+  L.push({ s: '' });
+  L.push({ s: '/* 🧭 Navigation Dropdown Menu (<details class="nav-dropdown">) */' });
+  L.push({ s: 'nav details.nav-dropdown { position: relative; display: inline-block; }' });
+  L.push({ s: 'nav details.nav-dropdown summary { list-style: none; cursor: pointer; font-weight: 500; padding: 4px 10px; border-radius: 6px; user-select: none; }' });
+  L.push({ s: 'nav details.nav-dropdown summary::-webkit-details-marker { display: none; }' });
+  L.push({ s: 'nav details.nav-dropdown[open] summary { color: var(--primary, #00d4ff); font-weight: 600; }' });
+  L.push({ s: 'nav details.nav-dropdown .dropdown-content { position: absolute; top: calc(100% + 4px); left: 0; min-width: 140px; background: #ffffff; color: #12203f; border: 1px solid rgba(0,0,0,0.15); border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.15); padding: 6px 0; z-index: 100; display: flex; flex-direction: column; }' });
+  L.push({ s: 'nav details.nav-dropdown .dropdown-content a { padding: 6px 14px; color: #12203f !important; text-decoration: none !important; font-size: 13px !important; display: block !important; }' });
+  L.push({ s: 'nav details.nav-dropdown .dropdown-content a:hover { background: rgba(0,212,255,0.12) !important; color: #0077b6 !important; }' });
+
+  // 📱 Gaya Responsif untuk Telefon Pintar & Peranti Skrin Kecil (Media Query)
+  // Hanya disuntik jika pengguna mengaktifkan suis "Jana Kod Responsif" (S.responsiveCSS === true)
+  if (S.responsiveCSS) {
+    L.push({ s: '' });
+    L.push({ s: '/* ============================================================ */' });
+    L.push({ s: '/* 📱 RESPONSIVE STYLES FOR MOBILE PHONES (max-width: 768px)  */' });
+    L.push({ s: '/* ============================================================ */' });
+    L.push({ s: '@media (max-width: 768px) {', fold: 'start', fk: 'css-media-mobile', tag: '}' });
+    L.push({ s: '  html, body {', parentFk: 'css-media-mobile' });
+    L.push({ s: '    overflow-x: hidden !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '  }', parentFk: 'css-media-mobile' });
+    L.push({ s: '  main {', parentFk: 'css-media-mobile' });
+    L.push({ s: '    display: flex !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    flex-direction: column !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    gap: 16px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    padding: 14px 12px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    min-height: auto !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    width: 100% !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    box-sizing: border-box !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '  }', parentFk: 'css-media-mobile' });
+    L.push({ s: '  /* Stack canvas elements vertically (1 full column) */', parentFk: 'css-media-mobile' });
+    L.push({ s: '  main > * {', parentFk: 'css-media-mobile' });
+    L.push({ s: '    grid-column: auto !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    grid-row: auto !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    width: 100% !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    min-height: auto !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    box-sizing: border-box !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '  }', parentFk: 'css-media-mobile' });
+    L.push({ s: '  header {', parentFk: 'css-media-mobile' });
+    L.push({ s: '    display: flex !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    flex-direction: column !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    align-items: center !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    text-align: center !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    gap: 10px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    padding: 14px 10px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '  }', parentFk: 'css-media-mobile' });
+    L.push({ s: '  nav {', parentFk: 'css-media-mobile' });
+    L.push({ s: '    display: flex !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    flex-wrap: wrap !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    justify-content: center !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    align-items: center !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    gap: 8px 14px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    width: 100% !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    padding: 6px 4px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '  }', parentFk: 'css-media-mobile' });
+    L.push({ s: '  nav a, nav details.nav-dropdown summary {', parentFk: 'css-media-mobile' });
+    L.push({ s: '    display: inline-block !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    padding: 4px 8px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    font-size: 13px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '  }', parentFk: 'css-media-mobile' });
+    L.push({ s: '  a.btn-cta, button {', parentFk: 'css-media-mobile' });
+    L.push({ s: '    display: inline-flex !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    width: auto !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    max-width: 100% !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    align-self: center !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    padding: 10px 22px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    font-size: 14px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    border-radius: 8px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '  }', parentFk: 'css-media-mobile' });
+    L.push({ s: '  section.hero, .hero {', parentFk: 'css-media-mobile' });
+    L.push({ s: '    min-height: 160px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    padding: 24px 16px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    text-align: center !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '  }', parentFk: 'css-media-mobile' });
+    L.push({ s: '  article, .card {', parentFk: 'css-media-mobile' });
+    L.push({ s: '    width: 100% !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    padding: 18px 16px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    box-sizing: border-box !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '  }', parentFk: 'css-media-mobile' });
+    L.push({ s: '  figure {', parentFk: 'css-media-mobile' });
+    L.push({ s: '    width: 100% !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    min-height: 180px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    max-height: 280px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    box-sizing: border-box !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '  }', parentFk: 'css-media-mobile' });
+    L.push({ s: '  figure img {', parentFk: 'css-media-mobile' });
+    L.push({ s: '    width: 100% !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    height: 100% !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    object-fit: cover !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '  }', parentFk: 'css-media-mobile' });
+    L.push({ s: '  footer {', parentFk: 'css-media-mobile' });
+    L.push({ s: '    text-align: center !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '    padding: 18px 12px !important;', parentFk: 'css-media-mobile' });
+    L.push({ s: '  }', parentFk: 'css-media-mobile' });
+    L.push({ s: '}', fold: 'end', fk: 'css-media-mobile', tag: '}' });
+  }
+
+  return L;
+}
+
+function htmlLines() {
+  const curTitle = (S.pages[S.curPage] && S.pages[S.curPage].name) || 'My Website';
+  const h = [
+    { s: '<!DOCTYPE html>' },
+    { s: '<html lang="ms">', fold: 'start', fk: 'html', tag: 'html' },
+    { s: '<head>', fold: 'start', fk: 'head', tag: 'head', parentFk: 'html' },
+    { s: '  <meta charset="utf-8">', parentFk: 'head' },
+    { s: '  <meta name="viewport" content="width=device-width, initial-scale=1">', parentFk: 'head' },
+    { s: `  <title>${esc(curTitle)}</title>`, parentFk: 'head' }
+  ];
+
+  if (S.hasCss) {
+    h.push({ s: '  <!-- Google Fonts -->' });
+    h.push({ s: '  <link rel="preconnect" href="https://fonts.googleapis.com">' });
+    h.push({ s: '  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' });
+    h.push({ s: '  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Lato:wght@400;700&family=Lora:wght@400;600;700&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;600;700&family=Roboto:wght@400;500;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">' });
+
+    if (S.sty == 'ext' || S.sty == 'all') {
+      h.push({ s: '  <!-- 1. External CSS: Fail gaya berasingan untuk susun atur grid -->', parentFk: 'head', isCss: true });
+      h.push({ s: '  <link rel="stylesheet" href="style.css">', parentFk: 'head', isCss: true });
+    } else if (S.sty == 'tw') {
+      h.push({ s: '  <script src="https://cdn.tailwindcss.com/3.4.17"><\/script>', parentFk: 'head', isCss: true });
+    }
+    if (sl()) h.push({ s: '  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11.1.14/swiper-bundle.min.css">', parentFk: 'head' });
+    if (S.sty == 'int') {
+      if (S.blocks.length) {
+        h.push({ s: '  <style>', fold: 'start', fk: 'style', tag: 'style', parentFk: 'head', isCss: true });
+        getCssRules().forEach(r => h.push({ s: '    ' + r.s, id: r.id, parentFk: 'style', isCss: true }));
+        h.push({ s: '  </style>', fold: 'end', fk: 'style', tag: 'style', parentFk: 'head', isCss: true });
+      }
+    } else if (S.sty == 'all') {
+      h.push({ s: '  <!-- 2. Internal CSS: Menentukan tema & fon khusus halaman ini -->', parentFk: 'head', isCss: true });
+      h.push({ s: '  <style>', fold: 'start', fk: 'style', tag: 'style', parentFk: 'head', isCss: true });
+      h.push({ s: '    body { font-family: "Inter", system-ui, sans-serif; background-color: #f8fafc; }', parentFk: 'style', isCss: true });
+      h.push({ s: '    h1, h2 { letter-spacing: -0.5px; }', parentFk: 'style', isCss: true });
+      h.push({ s: '  </style>', fold: 'end', fk: 'style', tag: 'style', parentFk: 'head', isCss: true });
+    }
+  }
+
+  h.push({ s: '</head>', fold: 'end', fk: 'head', tag: 'head', parentFk: 'html' });
+  h.push({ s: '<body>', fold: 'start', fk: 'body', tag: 'body', parentFk: 'html' });
+  const bLines = S.blocks.length ? body(S.sty) : [{ s: '  <!-- Letak kotak di canvas, kod muncul di sini -->', parentFk: 'body' }];
+  bLines.forEach(l => { if (!l.parentFk) l.parentFk = 'body'; });
+
+  const f = [];
+  if (S.hasJs) {
+    if (sl()) f.push({ s: '  <script src="https://cdn.jsdelivr.net/npm/swiper@11.1.14/swiper-bundle.min.js"><\/script>', parentFk: 'body' });
+    f.push({ s: '  <script src="script.js"><\/script>', parentFk: 'body' });
+  }
+  f.push({ s: '</body>', fold: 'end', fk: 'body', tag: 'body', parentFk: 'html' });
+  f.push({ s: '</html>', fold: 'end', fk: 'html', tag: 'html' });
+  return h.concat(bLines, f);
+}
+
+function css() {
+  if (!S.hasCss) {
+    return [
+      { s: '/* ============================================================ */' },
+      { s: '/* CSS SEDANG DIMATIKAN (MOD ASAS HTML)                         */' },
+      { s: '/* ============================================================ */' },
+      { s: '/* Pelajar kini melihat HTML mentah mengikut gaya lalai browser.*/' },
+      { s: '/* Tiada fail style.css atau tag <style> disertakan.           */' },
+      { s: '/* ============================================================ */' }
+    ];
+  }
+  if (!S.blocks || !S.blocks.length) {
+    return [
+      { s: '/* ============================================================ */' },
+      { s: '/* Belum ada peraturan CSS.                                    */' },
+      { s: '/* Drag or select elements on canvas to generate styling.   */' },
+      { s: '/* ============================================================ */' }
+    ];
+  }
+  if (S.sty == 'tw') {
+    return [
+      { s: '/* ============================================================ */' },
+      { s: '/* FAIL style.css DIMATIKAN (MOD TAILWIND CSS AKTIF)           */' },
+      { s: '/* ============================================================ */' },
+      { s: '/* Gaya ditulis menggunakan class utiliti Tailwind pada tag   */' },
+      { s: '/* di tab "📄 index.html". CDN dimuatkan dalam <head>.         */' },
+      { s: '/* ============================================================ */' }
+    ];
+  }
+  if (S.sty == 'inl') {
+    return [
+      { s: '/* ============================================================ */' },
+      { s: '/* FAIL style.css DIMATIKAN (MOD INLINE CSS AKTIF)             */' },
+      { s: '/* ============================================================ */' },
+      { s: '/* Semua gaya CSS berada terus pada atribut style="..."        */' },
+      { s: '/* setiap tag di tab "📄 index.html".                          */' },
+      { s: '/* Tiada fail style.css digunakan untuk mod ini.               */' },
+      { s: '/* ============================================================ */' }
+    ];
+  }
+  if (S.sty == 'int') {
+    return [
+      { s: '/* ============================================================ */' },
+      { s: '/* FAIL style.css DIMATIKAN (MOD INTERNAL CSS AKTIF)           */' },
+      { s: '/* ============================================================ */' },
+      { s: '/* Semua gaya CSS berada di dalam tag <style> pada tab         */' },
+      { s: '/* "📄 index.html" (bahagian <head>).                          */' },
+      { s: '/* Tiada peraturan CSS disimpan dalam fail berasingan ini.    */' },
+      { s: '/* ============================================================ */' }
+    ];
+  }
+  if (S.sty == 'all') {
+    return [
+      { s: '/* ============================================================ */' },
+      { s: '/* EXTERNAL CSS (Fail style.css - Sebahagian Mod 3-in-1)        */' },
+      { s: '/* ============================================================ */' },
+      { s: '/* 1. EXTERNAL CSS (Fail ini): Menyimpan grid utama & susunan. */' },
+      { s: '/* 2. INTERNAL CSS: Ditulis di <head> fail HTML (tema halaman).*/' },
+      { s: '/* 3. INLINE CSS: Atribut style="..." menindih (override) gaya.*/' },
+      { s: '/* Keutamaan: Inline > Internal > External (Cascading Order)  */' },
+      { s: '/* ============================================================ */' },
+      { s: '' }
+    ].concat(getCssRules());
+  }
+  return getCssRules();
+}
+
+function js() {
+  if (!S.hasJs) {
+    return [
+      { s: '// ============================================================' },
+      { s: '// ⚠️ JavaScript sedang dimatikan (Mod Pembelajaran HTML & CSS).' },
+      { s: '// Tekan butang "+ JS" di bar atas untuk mengaktifkan skrip interaktif.' },
+      { s: '// ============================================================' }
+    ];
+  }
+  const sd = S.blocks.find(b => b.type == 'slider');
+  const L = [
+    { s: '/**' },
+    { s: ' * BLUEPRINT CODE STUDIO - Interactive Script (script.js)' },
+    { s: ' * Menguruskan interaksi butang, tatalan lancar, dan kesan dinamik.' },
+    { s: ' */' },
+    { s: '' },
+    { s: '// 1. Menunggu dokumen HTML siap dimuatkan sepenuhnya (DOM Ready)' },
+    { s: 'document.addEventListener("DOMContentLoaded", () => {' },
+    { s: '  console.log("🚀 Website successfully loaded!");' },
+    { s: '' },
+    { s: '  // 2. Interactivity for CTA buttons and links' },
+    { s: '  document.querySelectorAll("a, button").forEach(elem => {' },
+    { s: '    elem.addEventListener("click", e => {' },
+    { s: '      const href = elem.getAttribute("href");' },
+    { s: '      if (href === "#" || !href) {' },
+    { s: '        e.preventDefault();' },
+    { s: '        console.log("Klik dikesan pada butang:", elem.textContent.trim());' },
+    { s: '      }' },
+    { s: '    });' },
+    { s: '  });' },
+    { s: '' },
+    { s: '  // 3. Smooth scrolling for anchor navigation links (#)' },
+    { s: '  document.querySelectorAll(\'a[href^="#"]\').forEach(anchor => {' },
+    { s: '    anchor.addEventListener("click", function(e) {' },
+    { s: '      const targetId = this.getAttribute("href").substring(1);' },
+    { s: '      const targetElem = document.getElementById(targetId);' },
+    { s: '      if (targetElem) {' },
+    { s: '        e.preventDefault();' },
+    { s: '        targetElem.scrollIntoView({ behavior: "smooth" });' },
+    { s: '      }' },
+    { s: '    });' },
+    { s: '  });' }
+  ];
+
+  if (sd) {
+    L.push({ s: '' });
+    L.push({ s: '  // 4. Inisialisasi Carousel Bergilir (Swiper Slider Autoplay)' });
+    L.push({ s: '  if (document.querySelector(".swiper")) {' });
+    L.push({ s: '    const swiper = new Swiper(".swiper", {' });
+    L.push({ s: '      loop: true,' });
+    L.push({ s: '      autoplay: { delay: 3000 },' });
+    L.push({ s: '      pagination: { el: ".swiper-pagination", clickable: true },' });
+    L.push({ s: '    });' });
+    L.push({ s: '  }' });
+  }
+
+  L.push({ s: '});' });
+  return L;
+}
+
+function hl(s, t, cssHl, commentRange = null) {
+  if (commentRange) {
+    const [start, end] = commentRange;
+    if (start === 0 && end === s.length) return `<i class="c">${esc(s)}</i>`;
+    return `${hl(s.slice(0, start), t, cssHl)}<i class="c">${esc(s.slice(start, end))}</i>${hl(s.slice(end), t, cssHl)}`;
+  }
+  if (/^\s*(\/\/|\/\*|<!--)/.test(s)) return `<i class="c">${esc(s)}</i>`;
+  s = esc(s);
+  if (t == 'css') {
+    let out = s.replace(/^(\s*)([\w-]+)(:)/, '$1<i class=p>$2</i>$3').replace(/^(\.[\w-]+)/, '<i class=t>$1</i>');
+    if (cssHl) {
+      out = out.replace(/(:)([^;{}]+)(;?)/, '$1<i class=v>$2</i>$3');
+    }
+    return out;
+  }
+  if (t == 'js') return s.replace(/(".*?")/g, '<i class=v>$1</i>').replace(/\b(const|let|var|document|function|if|return)\b/g, '<i class=a>$1</i>');
+  return s.replace(/(&lt;\/?)([\w!-]+)/g, '$1<i class=t>$2</i>').replace(/([\w-]+)="([^"]*)"/g, (m, a, v) => {
+    if (cssHl && a == 'style') {
+      return `<mark class="css-hl-mark">${a}="<i class=v>${v}</i>"</mark>`;
+    }
+    return `<i class=a>${a}</i>=<i class=v>"${v}"</i>`;
+  });
+}
+
+function preview() {
+  const fontLinks = `
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Lato:wght@400;700&family=Lora:wght@400;600;700&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;600;700&family=Roboto:wght@400;500;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">`;
+
+  // Kad maklumat mesra jika kanvas kosong
+  if (!S.blocks || S.blocks.length === 0) {
+    const pageTitle = (S.pages && S.pages[S.curPage] && S.pages[S.curPage].name) ? S.pages[S.curPage].name : (S.curPage || 'index.html');
+    return `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Hasil - ${qa(pageTitle)}</title>
+    ${fontLinks}
+    <style>
+      body{margin:0;font-family:Inter,system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e293b;display:flex;align-items:center;justify-content:center;min-height:90vh;padding:20px;box-sizing:border-box}
+      .empty-box{background:#ffffff;border:2px dashed #cbd5e1;border-radius:12px;padding:36px 28px;text-align:center;max-width:440px;box-shadow:0 6px 18px rgba(0,0,0,0.04)}
+      .empty-ic{font-size:44px;margin-bottom:12px;line-height:1}
+      h2{margin:0 0 8px;font-size:18px;color:#0f172a;font-weight:700}
+      p{margin:0;font-size:13.5px;color:#64748b;line-height:1.55}
+      .badge{display:inline-block;margin-top:14px;padding:4px 10px;background:#e0f2fe;color:#0369a1;border-radius:999px;font-size:12px;font-weight:600}
+    </style>
+    </head><body>
+      <div class="empty-box">
+        <div class="empty-ic">📄</div>
+        <h2>Page &ldquo;${qa(pageTitle)}&rdquo; is Empty</h2>
+        <p>There are no elements on this canvas yet.<br>Switch to <b>Grid Canvas</b> mode in the top bar to drag elements or select a <b>Pre-built Layout</b> from the left panel.</p>
+        <div class="badge">💡 Live Preview Mode</div>
+      </div>
+    </body></html>`;
+  }
+
+  if (!S.hasCss) {
+    const bRaw = body('ext').map(l => l.s).join('\n');
+    return `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Preview (HTML Only)</title>
+    ${fontLinks}
+    <style>
+      body{margin:20px;font-family:serif;color:#000;background:#fff;line-height:1.4}
+      h1,h2{margin:12px 0 6px}
+      a{color:#0000ee;text-decoration:underline;margin-right:8px}
+      figure{margin:12px 0;padding:10px;border:1px dashed #888;background:#f5f5f5;display:inline-block}
+      figure img{display:none}
+      figure::before{content:"[ Imej Mockup (HTML Tanpa CSS) ]";color:#555;font-style:italic}
+      header,nav,section,article,footer,aside{display:block;margin-bottom:14px;border-bottom:1px dotted #ccc;padding-bottom:10px}
+    </style>
+    </head><body>
+    ${bRaw}
+    ${S.hasJs ? `<script>document.querySelectorAll('a').forEach(a=>a.addEventListener('click',e=>{if(a.getAttribute('href')=='#'){e.preventDefault();const t=document.createElement('div');t.style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0b3d91;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);font-family:Inter,system-ui;';t.textContent='Pautan diklik (JavaScript aktif)';document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}}));<\/script>` : ''}
+    </body></html>`;
+  }
+  const cs = getCssRules().map(l => l.s).join('\n');
+  const b = body(S.sty).map(l => l.s).join('\n');
+  const extraCss = S.sty == 'all' ? 'body{font-family:Inter,system-ui,sans-serif;background-color:#f8fafc}h1,h2{letter-spacing:-0.5px}' : '';
+  const rowH = S.gridRowH || 40;
+  const gap = S.gridGap !== undefined ? S.gridGap : 8;
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  ${fontLinks}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11.1.14/swiper-bundle.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 14px/1.5 'Inter', system-ui, -apple-system, sans-serif;
+      color: #12203f;
+      background: #ffffff;
+      min-height: 100vh;
+    }
+    main, #main, .main-container {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-auto-rows: ${rowH}px;
+      gap: ${gap}px;
+      padding: 16px;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    h1, h2, h3, h4, h5, h6, p, a, span, label, div {
+      margin: 0;
+      font-family: inherit;
+      color: inherit;
+      line-height: 1.35;
+    }
+    h1 { font-size: 22px; font-weight: 700; }
+    h2 { font-size: 18px; font-weight: 600; }
+    p { font-size: 14px; }
+    a { color: inherit; text-decoration: none; }
+    a.btn-cta, button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+    a.btn-cta:hover { transform: translateY(-1px); opacity: 0.9; }
+    figure {
+      margin: 0;
+      padding: 0;
+      position: relative;
+      overflow: hidden;
+      border-radius: inherit;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+    }
+    figure img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: inherit;
+    }
+    figcaption {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 6px 10px;
+      background: rgba(0, 0, 0, 0.65);
+      color: #ffffff;
+      font-size: 11px;
+      backdrop-filter: blur(4px);
+    }
+    .swiper-slide {
+      background: #082f73;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+      font-weight: 600;
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .swiper-pagination { position: relative; margin-top: 4px; }
+    details summary {
+      cursor: pointer;
+      font-weight: 600;
+      padding: 4px 8px;
+      background: rgba(0,0,0,.08);
+      border-radius: 4px;
+      list-style: none;
+    }
+    details[open] summary { margin-bottom: 6px; }
+    .dropdown-content {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.15);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .dropdown-content a {
+      color: #082f73;
+      text-decoration: none;
+      padding: 4px;
+      display: block;
+      border-radius: 3px;
+    }
+    .dropdown-content a:hover { background: #edf2f7; }
+    ${cs}
+    ${extraCss}
+  </style>
+  ${sl() ? '<script src="https://cdn.jsdelivr.net/npm/swiper@11.1.14/swiper-bundle.min.js"><\/script>' : ''}
+  </head><body>${b}
+  ${S.hasJs ? `<script>
+  if(document.querySelector('.swiper')){new Swiper('.swiper',{loop:true,autoplay:{delay:2500}})}
+  document.querySelectorAll('a').forEach(a=>a.addEventListener('click',e=>{if(a.getAttribute('href')=='#'){e.preventDefault();const t=document.createElement('div');t.style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0b3d91;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);font-family:Inter,system-ui;';t.textContent='Pautan/Butang diklik!';document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}}));
+  <\/script>` : ''}
+  </body></html>`;
+}
+
+function downloadFile(name, content, type) {
+  const b = new Blob([content], { type: type || 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function exportProject() {
+  const isExtOrAll = S.hasCss && (S.sty === 'ext' || S.sty === 'all');
+  const pageEdits = S.codeEdits && S.codeEdits[S.curPage] || {};
+  const curHtml = Object.prototype.hasOwnProperty.call(pageEdits, 'html')
+    ? pageEdits.html : htmlLines().map(l => l.s).join('\n');
+  const curJs = Object.prototype.hasOwnProperty.call(pageEdits, 'js')
+    ? pageEdits.js : js().map(l => l.s).join('\n');
+
+  downloadFile(S.curPage || 'index.html', curHtml, 'text/html');
+  if (isExtOrAll) {
+    const curCss = Object.prototype.hasOwnProperty.call(pageEdits, 'css')
+      ? pageEdits.css : getCssRules().map(l => l.s).join('\n');
+    setTimeout(() => downloadFile('style.css', curCss, 'text/css'), 250);
+  }
+  if (S.hasJs) {
+    setTimeout(() => downloadFile('script.js', curJs, 'application/javascript'), isExtOrAll ? 500 : 250);
+  }
+  toast(isExtOrAll ? `Fail projek (${S.curPage || 'index.html'}, style.css, script.js) sedang dimuat turun!` : `Fail projek (${S.curPage || 'index.html'}, script.js) dimuat turun! (Gaya CSS disimpan dalam HTML).`);
+}
