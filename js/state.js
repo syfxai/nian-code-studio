@@ -12,7 +12,7 @@ const S = {
   ],
   blocks: [],
   sel: null,
-  mode: 'v',
+  mode: 's',
   view: 'plan',
   sty: 'ext',
   tab: 'html',
@@ -54,6 +54,44 @@ function syncCurPage() {
   R = Math.max(12, ...S.blocks.map(b => b.r + b.h - 1));
 }
 
+function syncLanguageDefaults(lang) {
+  const isEn = lang === 'en';
+  Object.keys(S.pages || {}).forEach(pageKey => {
+    const page = S.pages[pageKey];
+    if (!page) return;
+    const defPage = DEFAULT_PAGES[pageKey];
+    if (defPage) {
+      if (isEn && page.name === defPage.nameMs) page.name = defPage.name;
+      else if (!isEn && page.name === defPage.name) page.name = defPage.nameMs || defPage.name;
+    }
+    (page.blocks || []).forEach(b => {
+      const T = TY[b.type];
+      if (T) {
+        if (isEn && T.tMs && b.t === T.tMs) b.t = T.t;
+        else if (!isEn && T.tMs && b.t === T.t) b.t = T.tMs;
+      }
+      if (b.type === 'form') {
+        const msFields = 'Nama Penuh, Alamat Emel, Mesej Anda';
+        const enFields = 'Full Name, Email Address, Your Message';
+        if (isEn && Array.isArray(b.fields) && b.fields.join(', ') === msFields) {
+          b.fields = ['Full Name', 'Email Address', 'Your Message'];
+        } else if (!isEn && Array.isArray(b.fields) && b.fields.join(', ') === enFields) {
+          b.fields = ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
+        }
+        if (isEn && b.submitText === 'Hantar Mesej') b.submitText = 'Send Message';
+        else if (!isEn && b.submitText === 'Send Message') b.submitText = 'Hantar Mesej';
+      }
+      if (b.type === 'dropdown' && Array.isArray(b.items)) {
+        if (isEn && b.items.join(',') === 'Pilihan 1,Pilihan 2,Pilihan 3') {
+          b.items = ['Option 1', 'Option 2', 'Option 3'];
+        } else if (!isEn && b.items.join(',') === 'Option 1,Option 2,Option 3') {
+          b.items = ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
+        }
+      }
+    });
+  });
+}
+
 function load() {
   try {
     const d = JSON.parse(localStorage.getItem('bcs_v2') || 'null');
@@ -66,6 +104,7 @@ function load() {
       S.hasJs = d.js !== undefined ? d.js : true;
       S.previewScripts = d.previewScripts === true;
       S.extLinks = d.ext || S.extLinks;
+      if (d.mode && ['c', 's', 'v'].includes(d.mode)) S.mode = d.mode;
       if (d.gridGap !== undefined) S.gridGap = d.gridGap;
       if (d.gridRowH !== undefined) S.gridRowH = d.gridRowH;
       if (d.theme) S.theme = d.theme;
@@ -78,9 +117,10 @@ function load() {
       if (d.responsiveCSS !== undefined) S.responsiveCSS = d.responsiveCSS;
       if (d.codeEdits && typeof d.codeEdits === 'object') S.codeEdits = d.codeEdits;
       if (d.lang === 'en' || d.lang === 'ms') S.lang = d.lang;
-      if (!localStorage.getItem('bcs_default_en_v3')) {
+      if (!localStorage.getItem('bcs_default_en_v4')) {
         S.lang = 'en';
-        localStorage.setItem('bcs_default_en_v3', '1');
+        S.mode = 's';
+        localStorage.setItem('bcs_default_en_v4', '1');
       }
     }
   } catch (e) {}
@@ -102,6 +142,7 @@ function load() {
   Object.values(S.pages).forEach(page => (page.blocks || []).forEach(block => {
     if (fontMigration[block.font]) block.font = fontMigration[block.font];
   }));
+  syncLanguageDefaults(S.lang);
   syncCurPage();
   uid = Math.max(100, ...Object.values(S.pages).flatMap(p => p.blocks.map(b => +b.id || 0))) + 1;
 }
@@ -113,6 +154,7 @@ const save = () => {
       pages: S.pages,
       curPage: S.curPage,
       n: S.name,
+      mode: S.mode,
       sty: S.sty,
       css: S.hasCss,
       js: S.hasJs,
@@ -128,13 +170,13 @@ const save = () => {
       responsiveCSS: S.responsiveCSS,
       htmlMode: S.htmlMode,
       codeEdits: S.codeEdits || {},
-      lang: S.lang || 'ms'
+      lang: S.lang || 'en'
     }));
     storageSaveFailed = false;
   } catch (e) {
     if (!storageSaveFailed) {
       storageSaveFailed = true;
-      toast('Perubahan belum dapat disimpan. Ruang simpanan pelayar mungkin penuh.');
+      toast(S.lang === 'en' ? 'Changes could not be saved. Browser storage may be full.' : 'Perubahan belum dapat disimpan. Ruang simpanan pelayar mungkin penuh.');
     }
   }
 };
@@ -207,7 +249,7 @@ function hint(b) {
 }
 
 function mk(type, c, r, w, h) {
-  const T = TY[type];
+  const T = TY[type] || TY.text;
   const isEn = S.lang === 'en';
   const defaultText = (isEn ? (T.enText || T.t) : (T.tMs || T.t)) || T.t;
   const block = { id: String(uid++), type, c, r, w, h, t: defaultText, f: T.f };

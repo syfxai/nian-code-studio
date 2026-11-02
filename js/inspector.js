@@ -2,9 +2,12 @@ let codeSourceSelectedElement = null;
 function setCodeSourceSelectedElement(element) {
   codeSourceSelectedElement = element || null;
   S.railTab = 'ins';
-  S.drawerOpen = true;
-  const main = $('main');
-  if (main) main.classList.remove('drawer-collapsed');
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  if (!isMobile) {
+    S.drawerOpen = true;
+    const main = $('main');
+    if (main) main.classList.remove('drawer-collapsed');
+  }
   document.querySelectorAll('.rail-item[data-rail]').forEach(button => button.classList.toggle('active', button.dataset.rail === 'ins'));
   const panels = { elem: $('#drawer-panel-elem'), tpl: $('#drawer-panel-tpl'), ins: $('#drawer-panel-ins'), layers: $('#drawer-panel-layers'), css: $('#drawer-panel-css'), ai: $('#drawer-panel-ai') };
   Object.entries(panels).forEach(([key, panel]) => { if (panel) panel.hidden = key !== 'ins'; });
@@ -83,6 +86,7 @@ function sourceDropdownParts(dropdown) {
 const sourceDropdownHref = new WeakMap();
 
 function renderSourceNavigationInspector(panel, element, context) {
+  const isEn = S.lang === 'en';
   const { container, topLinks, activeLink, dropdown } = context;
   const isDropdown = !!dropdown;
   const activeDropdown = isDropdown ? dropdown : null;
@@ -90,34 +94,35 @@ function renderSourceNavigationInspector(panel, element, context) {
   const navButtons = topLinks.map((link, index) => {
     const isActive = link === activeLink || link.contains(element);
     const hasDropdown = !!link.closest('details,.nav-dropdown,.dropdown');
-    return `<button type="button" class="ins-choice${isActive ? ' active' : ''}" data-source-nav-select="${index}">${hasDropdown ? '▾ ' : ''}${esc((link.textContent || '').trim() || `Pautan ${index + 1}`)}</button>`;
+    return `<button type="button" class="ins-choice${isActive ? ' active' : ''}" data-source-nav-select="${index}">${hasDropdown ? '▾ ' : ''}${esc((link.textContent || '').trim() || (isEn ? `Link ${index + 1}` : `Pautan ${index + 1}`))}</button>`;
   }).join('');
   const activeTopLink = activeLink && topLinks.includes(activeLink) ? activeLink : topLinks[0];
   const dropdownLabel = parts.label ? (parts.label.textContent || '').replace(/\s*▾\s*$/, '').trim() : '';
-  const dropdownItems = parts.links.map((link, index) => `<div class="source-nav-item-row"><span>${index + 1}.</span><input type="text" data-source-dropdown-item="${index}" value="${qa((link.textContent || '').trim())}" aria-label="Pilihan ${index + 1}"><button type="button" data-source-dropdown-delete="${index}" aria-label="Padam pilihan ${index + 1}">×</button></div>`).join('');
+  const dropdownItems = parts.links.map((link, index) => `<div class="source-nav-item-row"><span>${index + 1}.</span><input type="text" data-source-dropdown-item="${index}" value="${qa((link.textContent || '').trim())}" aria-label="${isEn ? 'Option' : 'Pilihan'} ${index + 1}"><button type="button" data-source-dropdown-delete="${index}" aria-label="${isEn ? 'Delete option' : 'Padam pilihan'} ${index + 1}">×</button></div>`).join('');
 
   panel.innerHTML = `<section class="ins-section code-source-element source-navigation">
-    <div class="ins-section-heading">Navigasi <code>&lt;${container.tagName.toLowerCase()}&gt;</code></div>
-    <p class="ins-help">Pautan dalam kod ini boleh diurus di sini, sama seperti menu navigasi studio.</p>
-    <div class="source-nav-links">${navButtons || '<span class="ins-help">Belum ada pautan dalam bahagian ini.</span>'}</div>
-    <div class="source-nav-actions"><button type="button" class="ins-action-btn" data-source-nav-add>+ Tambah pautan</button>
-      ${activeTopLink && !activeTopLink.closest('details,.nav-dropdown,.dropdown') ? '<button type="button" class="ins-action-btn" data-source-nav-dropdown>▾ Tukar kepada dropdown</button>' : ''}
-      ${isDropdown ? '<button type="button" class="ins-action-btn" data-source-dropdown-revert>Tukar semula kepada pautan</button>' : ''}
+    <div class="ins-section-heading">${isEn ? 'Navigation' : 'Navigasi'} <code>&lt;${container.tagName.toLowerCase()}&gt;</code></div>
+    <p class="ins-help">${isEn ? 'Links in this code can be managed here, just like the studio navigation menu.' : 'Pautan dalam kod ini boleh diurus di sini, sama seperti menu navigasi studio.'}</p>
+    <div class="source-nav-links">${navButtons || `<span class="ins-help">${isEn ? 'No links in this section yet.' : 'Belum ada pautan dalam bahagian ini.'}</span>`}</div>
+    <div class="source-nav-actions"><button type="button" class="ins-action-btn" data-source-nav-add>${isEn ? '+ Add link' : '+ Tambah pautan'}</button>
+      ${activeTopLink && !activeTopLink.closest('details,.nav-dropdown,.dropdown') ? `<button type="button" class="ins-action-btn" data-source-nav-dropdown>${isEn ? '▾ Convert to dropdown' : '▾ Tukar kepada dropdown'}</button>` : ''}
+      ${isDropdown ? `<button type="button" class="ins-action-btn" data-source-dropdown-revert>${isEn ? 'Revert to regular link' : 'Tukar semula kepada pautan'}</button>` : ''}
     </div>
     ${isDropdown ? `<div class="source-dropdown-editor">
-      <label class="ins-label">Nama menu</label><input type="text" data-source-dropdown-label value="${qa(dropdownLabel)}">
-      <div class="ins-section-heading">Pilihan menu</div>
+      <label class="ins-label">${isEn ? 'Menu label' : 'Nama menu'}</label><input type="text" data-source-dropdown-label value="${qa(dropdownLabel)}">
+      <div class="ins-section-heading">${isEn ? 'Menu options' : 'Pilihan menu'}</div>
       <div class="source-dropdown-items">${dropdownItems}</div>
-      <button type="button" class="ins-action-btn" data-source-dropdown-add>+ Tambah pilihan</button>
+      <button type="button" class="ins-action-btn" data-source-dropdown-add>${isEn ? '+ Add option' : '+ Tambah pilihan'}</button>
     </div>` : activeTopLink ? `<div class="source-link-editor">
-      <label class="ins-label">Nama pautan</label><input type="text" data-source-property="text" value="${qa((activeTopLink.textContent || '').trim())}">
-      <label class="ins-label">Alamat yang dibuka</label><input type="text" data-source-property="href" value="${qa(activeTopLink.getAttribute('href') || '')}" placeholder="https://... atau halaman.html">
+      <label class="ins-label">${isEn ? 'Link label' : 'Nama pautan'}</label><input type="text" data-source-property="text" value="${qa((activeTopLink.textContent || '').trim())}">
+      <label class="ins-label">${isEn ? 'Target URL' : 'Alamat yang dibuka'}</label><input type="text" data-source-property="href" value="${qa(activeTopLink.getAttribute('href') || '')}" placeholder="${isEn ? 'https://... or page.html' : 'https://... atau halaman.html'}">
     </div>` : ''}
-    <button type="button" class="ins-action-btn" data-reset-code-source>Kembali ke blok visual</button>
+    <button type="button" class="ins-action-btn" data-reset-code-source>${isEn ? 'Return to visual blocks' : 'Kembali ke blok visual'}</button>
   </section>`;
 }
 
 function insertCodeSourceElement(requestedType) {
+  const isEn = S.lang === 'en';
   const frame = $('#cv .code-source-frame');
   const doc = frame && frame.contentDocument;
   if (!doc || !doc.body) return false;
@@ -125,12 +130,12 @@ function insertCodeSourceElement(requestedType) {
   const tag = tagMap[requestedType] || requestedType;
   if (!/^(?:h[1-6]|p|a|img|section|article|header|nav|footer|aside|div|button)$/.test(tag)) return false;
   const element = doc.createElement(tag);
-  if (tag === 'img') { element.src = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=80'; element.alt = 'Gambar baharu'; element.style.maxWidth = '100%'; }
-  else if (tag === 'a') { element.href = '#'; element.textContent = 'Pautan baharu'; }
-  else if (tag === 'nav') { element.innerHTML = '<a href="#">Pautan 1</a> <a href="#">Pautan 2</a>'; }
-  else if (tag === 'h1') element.textContent = 'Tajuk baharu';
-  else if (tag === 'section' || tag === 'article' || tag === 'header' || tag === 'footer') { element.textContent = 'Bahagian baharu'; element.style.padding = '16px'; }
-  else element.textContent = 'Teks baharu';
+  if (tag === 'img') { element.src = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=80'; element.alt = isEn ? 'New image' : 'Gambar baharu'; element.style.maxWidth = '100%'; }
+  else if (tag === 'a') { element.href = '#'; element.textContent = isEn ? 'New link' : 'Pautan baharu'; }
+  else if (tag === 'nav') { element.innerHTML = isEn ? '<a href="#">Link 1</a> <a href="#">Link 2</a>' : '<a href="#">Pautan 1</a> <a href="#">Pautan 2</a>'; }
+  else if (tag === 'h1') element.textContent = isEn ? 'New heading' : 'Tajuk baharu';
+  else if (tag === 'section' || tag === 'article' || tag === 'header' || tag === 'footer') { element.textContent = isEn ? 'New section' : 'Bahagian baharu'; element.style.padding = '16px'; }
+  else element.textContent = isEn ? 'New text' : 'Teks baharu';
   const selected = getCodeSourceSelectedElement();
   const canContain = ['BODY','MAIN','HEADER','NAV','SECTION','ARTICLE','ASIDE','FOOTER','DIV','UL','OL'].includes(selected && selected.tagName);
   const container = canContain ? selected : (selected && selected.parentElement) || doc.body;
@@ -142,10 +147,11 @@ function insertCodeSourceElement(requestedType) {
   return true;
 }
 function renderCodeSourceInspector() {
+  const isEn = S.lang === 'en';
   const panel = $('#inspector-content');
   const element = getCodeSourceSelectedElement();
   if (!element) {
-    panel.innerHTML = `<div class="ins-empty code-source-help"><b>Halaman kod bebas</b><span>Klik teks atau elemen pada kanvas untuk pilih. Sunting teks terus atau gunakan kawalan di sini.</span><div class="code-source-inserts"><button type="button" data-code-source-insert="h1">+ Tajuk</button><button type="button" data-code-source-insert="p">+ Teks</button><button type="button" data-code-source-insert="a">+ Pautan</button><button type="button" data-code-source-insert="img">+ Gambar</button><button type="button" data-code-source-insert="section">+ Bahagian</button></div><button type="button" class="ins-action-btn" data-reset-code-source>Kembali ke blok visual</button></div>`;
+    panel.innerHTML = `<div class="ins-empty code-source-help"><b>${isEn ? 'Custom Code Page' : 'Halaman kod bebas'}</b><span>${isEn ? 'Click any text or element on the canvas to select it. Edit text directly or use the controls here.' : 'Klik teks atau elemen pada kanvas untuk pilih. Sunting teks terus atau gunakan kawalan di sini.'}</span><div class="code-source-inserts"><button type="button" data-code-source-insert="h1">${isEn ? '+ Heading' : '+ Tajuk'}</button><button type="button" data-code-source-insert="p">${isEn ? '+ Text' : '+ Teks'}</button><button type="button" data-code-source-insert="a">${isEn ? '+ Link' : '+ Pautan'}</button><button type="button" data-code-source-insert="img">${isEn ? '+ Image' : '+ Gambar'}</button><button type="button" data-code-source-insert="section">${isEn ? '+ Section' : '+ Bahagian'}</button></div><button type="button" class="ins-action-btn" data-reset-code-source>${isEn ? 'Return to visual blocks' : 'Kembali ke blok visual'}</button></div>`;
     return;
   }
   const navigation = sourceNavigationContext(element);
@@ -160,12 +166,12 @@ function renderCodeSourceInspector() {
   const fontSize = parseInt(element.style.fontSize || computed.fontSize, 10) || 16;
   const align = element.style.textAlign || computed.textAlign || 'left';
   const objectFit = element.style.objectFit || computed.objectFit || 'fill';
-  panel.innerHTML = `<section class="ins-section code-source-element"><div class="ins-section-heading">Elemen dipilih <code>&lt;${tag}&gt;</code></div>
-    ${isImage ? `<label class="ins-label">Pautan gambar</label><input type="url" data-source-property="src" value="${qa(element.getAttribute('src') || '')}" placeholder="https://..."><label class="ins-label">Teks penerangan gambar</label><input type="text" data-source-property="alt" value="${qa(text)}"><div class="source-dimensions">${sourceDimensionControl(element, 'width', 'Lebar')}${sourceDimensionControl(element, 'height', 'Tinggi')}</div><label class="ins-label">Cara muat dalam ruang</label><select data-source-property="objectFit"><option value="fill"${objectFit === 'fill' ? ' selected' : ''}>Regang ikut ruang</option><option value="contain"${objectFit === 'contain' ? ' selected' : ''}>Muat sepenuhnya</option><option value="cover"${objectFit === 'cover' ? ' selected' : ''}>Penuhkan ruang</option><option value="none"${objectFit === 'none' ? ' selected' : ''}>Saiz asal</option><option value="scale-down"${objectFit === 'scale-down' ? ' selected' : ''}>Kecilkan jika perlu</option></select>` : `<label class="ins-label">Teks</label><textarea rows="3" data-source-property="text">${esc(text)}</textarea>`}
-    ${tag === 'a' ? `<label class="ins-label">Alamat yang dibuka</label><input type="text" data-source-property="href" value="${qa(element.getAttribute('href') || '')}" placeholder="https://... atau halaman.html">` : ''}
-    <div class="ins-grid-2col"><div><label class="ins-label">Warna teks</label><input type="color" data-source-property="color" value="${sourceInputColor(element.style.color || computed.color, '#203a5b')}"></div><div><label class="ins-label">Warna latar</label><input type="color" data-source-property="backgroundColor" value="${sourceInputColor(element.style.backgroundColor || computed.backgroundColor, '#ffffff')}"></div></div>
-    <label class="ins-label">Saiz teks</label><input type="number" min="8" max="120" data-source-property="fontSize" value="${fontSize}"><label class="ins-label">Penjajaran</label><select data-source-property="textAlign"><option value="left"${align === 'left' ? ' selected' : ''}>Kiri</option><option value="center"${align === 'center' ? ' selected' : ''}>Tengah</option><option value="right"${align === 'right' ? ' selected' : ''}>Kanan</option></select>
-    <div class="code-source-format"><button type="button" data-code-source-action="bold"><b>B</b></button><button type="button" data-code-source-action="italic"><i>I</i></button><button type="button" data-code-source-action="underline"><u>U</u></button><button type="button" data-code-source-action="delete">Padam elemen</button></div><button type="button" class="ins-action-btn" data-reset-code-source>Kembali ke blok visual studio</button></section>`;
+  panel.innerHTML = `<section class="ins-section code-source-element"><div class="ins-section-heading">${isEn ? 'Selected element' : 'Elemen dipilih'} <code>&lt;${tag}&gt;</code></div>
+    ${isImage ? `<label class="ins-label">${isEn ? 'Image URL' : 'Pautan gambar'}</label><input type="url" data-source-property="src" value="${qa(element.getAttribute('src') || '')}" placeholder="https://..."><label class="ins-label">${isEn ? 'Image alt description' : 'Teks penerangan gambar'}</label><input type="text" data-source-property="alt" value="${qa(text)}"><div class="source-dimensions">${sourceDimensionControl(element, 'width', isEn ? 'Width' : 'Lebar')}${sourceDimensionControl(element, 'height', isEn ? 'Height' : 'Tinggi')}</div><label class="ins-label">${isEn ? 'Object fit mode' : 'Cara muat dalam ruang'}</label><select data-source-property="objectFit"><option value="fill"${objectFit === 'fill' ? ' selected' : ''}>${isEn ? 'Stretch to fit' : 'Regang ikut ruang'}</option><option value="contain"${objectFit === 'contain' ? ' selected' : ''}>${isEn ? 'Contain full image' : 'Muat sepenuhnya'}</option><option value="cover"${objectFit === 'cover' ? ' selected' : ''}>${isEn ? 'Cover space' : 'Penuhkan ruang'}</option><option value="none"${objectFit === 'none' ? ' selected' : ''}>${isEn ? 'Original size' : 'Saiz asal'}</option><option value="scale-down"${objectFit === 'scale-down' ? ' selected' : ''}>${isEn ? 'Scale down if needed' : 'Kecilkan jika perlu'}</option></select>` : `<label class="ins-label">${isEn ? 'Text' : 'Teks'}</label><textarea rows="3" data-source-property="text">${esc(text)}</textarea>`}
+    ${tag === 'a' ? `<label class="ins-label">${isEn ? 'Target URL' : 'Alamat yang dibuka'}</label><input type="text" data-source-property="href" value="${qa(element.getAttribute('href') || '')}" placeholder="${isEn ? 'https://... or page.html' : 'https://... atau halaman.html'}">` : ''}
+    <div class="ins-grid-2col"><div><label class="ins-label">${isEn ? 'Text color' : 'Warna teks'}</label><input type="color" data-source-property="color" value="${sourceInputColor(element.style.color || computed.color, '#203a5b')}"></div><div><label class="ins-label">${isEn ? 'Background color' : 'Warna latar'}</label><input type="color" data-source-property="backgroundColor" value="${sourceInputColor(element.style.backgroundColor || computed.backgroundColor, '#ffffff')}"></div></div>
+    <label class="ins-label">${isEn ? 'Font size' : 'Saiz teks'}</label><input type="number" min="8" max="120" data-source-property="fontSize" value="${fontSize}"><label class="ins-label">${isEn ? 'Alignment' : 'Penjajaran'}</label><select data-source-property="textAlign"><option value="left"${align === 'left' ? ' selected' : ''}>${isEn ? 'Left' : 'Kiri'}</option><option value="center"${align === 'center' ? ' selected' : ''}>${isEn ? 'Center' : 'Tengah'}</option><option value="right"${align === 'right' ? ' selected' : ''}>${isEn ? 'Right' : 'Kanan'}</option></select>
+    <div class="code-source-format"><button type="button" data-code-source-action="bold"><b>B</b></button><button type="button" data-code-source-action="italic"><i>I</i></button><button type="button" data-code-source-action="underline"><u>U</u></button><button type="button" data-code-source-action="delete">${isEn ? 'Delete element' : 'Padam elemen'}</button></div><button type="button" class="ins-action-btn" data-reset-code-source>${isEn ? 'Return to studio visual blocks' : 'Kembali ke blok visual studio'}</button></section>`;
 }
 
 function renderIns() {
@@ -226,30 +232,30 @@ function renderIns() {
       </details>`;
     contextHtml = `
       <section class="ins-section ins-background-section">
-        <div class="ins-section-heading">Background</div>
-        <div class="ins-mode-tabs" role="group" aria-label="Jenis latar">
-          <button type="button" data-bg-mode="color" class="${bgMode === 'color' ? 'active' : ''}">Color</button>
-          <button type="button" data-bg-mode="pattern" class="${bgMode === 'pattern' ? 'active' : ''}">Pattern</button>
-          <button type="button" data-bg-mode="image" class="${bgMode === 'image' ? 'active' : ''}">Image</button>
+        <div class="ins-section-heading">${isEn ? 'Background' : 'Latar Belakang'}</div>
+        <div class="ins-mode-tabs" role="group" aria-label="${isEn ? 'Background type' : 'Jenis latar'}">
+          <button type="button" data-bg-mode="color" class="${bgMode === 'color' ? 'active' : ''}">${isEn ? 'Color' : 'Warna'}</button>
+          <button type="button" data-bg-mode="pattern" class="${bgMode === 'pattern' ? 'active' : ''}">${isEn ? 'Pattern' : 'Corak'}</button>
+          <button type="button" data-bg-mode="image" class="${bgMode === 'image' ? 'active' : ''}">${isEn ? 'Image' : 'Gambar'}</button>
         </div>
-        <div class="ins-bg-panel"${bgMode !== 'color' ? ' hidden' : ''}><p class="ins-help">Pick a color using the Canva toolbar above.</p></div>
+        <div class="ins-bg-panel"${bgMode !== 'color' ? ' hidden' : ''}><p class="ins-help">${isEn ? 'Pick a color using the Canva toolbar above.' : 'Pilih warna menggunakan bar alatan di atas.'}</p></div>
         <div class="ins-bg-panel"${bgMode !== 'pattern' ? ' hidden' : ''}>
-          <div class="ins-choice-row">${patternPicker}<button type="button" class="ins-choice" data-set-bg-pattern="none">None</button></div>
+          <div class="ins-choice-row">${patternPicker}<button type="button" class="ins-choice" data-set-bg-pattern="none">${isEn ? 'None' : 'Tiada'}</button></div>
         </div>
         <div class="ins-bg-panel"${bgMode !== 'image' ? ' hidden' : ''}>${imagePicker}</div>
       </section>
-      ${b.type !== 'text' ? `<section class="ins-section ins-child-section"><div class="ins-section-heading">Add inside this block:</div><div class="ins-btn-grid">
-        <button type="button" class="ins-action-btn" data-add-child="text">+ Text</button>
-        <button type="button" class="ins-action-btn" data-add-child="image">+ Image</button>
-        <button type="button" class="ins-action-btn" data-add-child="button">+ Button</button>
-        <button type="button" class="ins-action-btn" data-add-child="card">+ Card</button>
+      ${b.type !== 'text' ? `<section class="ins-section ins-child-section"><div class="ins-section-heading">${isEn ? 'Add inside this block:' : 'Tambah di dalam blok ini:'}</div><div class="ins-btn-grid">
+        <button type="button" class="ins-action-btn" data-add-child="text">+ ${isEn ? 'Text' : 'Teks'}</button>
+        <button type="button" class="ins-action-btn" data-add-child="image">+ ${isEn ? 'Image' : 'Gambar'}</button>
+        <button type="button" class="ins-action-btn" data-add-child="button">+ ${isEn ? 'Button' : 'Butang'}</button>
+        <button type="button" class="ins-action-btn" data-add-child="card">+ ${isEn ? 'Card' : 'Kad'}</button>
       </div></section>` : ''}`;
   } else if (isImage) {
     contextHtml = `
       <section class="ins-section">
-        <div class="ins-section-heading">Image</div>
-        <label class="ins-label" for="ins-img-url">Image URL</label>
-        <input type="text" id="ins-img-url" placeholder="Paste image URL here" value="${qa(b.imgUrl || '')}">
+        <div class="ins-section-heading">${isEn ? 'Image' : 'Gambar'}</div>
+        <label class="ins-label" for="ins-img-url">${isEn ? 'Image URL' : 'URL Gambar'}</label>
+        <input type="text" id="ins-img-url" placeholder="${isEn ? 'Paste image URL here' : 'Tampal URL gambar di sini'}" value="${qa(b.imgUrl || '')}">
         <div class="ins-preset-chips ins-image-presets">
           <button type="button" class="ins-choice" data-set-img="https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=80">Computer</button>
           <button type="button" class="ins-choice" data-set-img="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop&q=80">Team</button>
@@ -274,18 +280,18 @@ function renderIns() {
         <input type="url" id="ins-link-url" value="${qa(b.href || '')}" placeholder="${isEn ? 'https://example.com or /page.html' : 'https://laman.com atau /halaman.html'}">
       </section>`;
   } else if (isDropdown) {
-    b.items = (b.items && b.items.length) ? b.items : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
+    b.items = (b.items && b.items.length) ? b.items : (isEn ? ['Option 1', 'Option 2', 'Option 3'] : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3']);
     const itemsCount = b.items.length;
     contextHtml = `<section class="ins-section">
-      <div class="ins-section-heading">Dropdown Options Management</div>
-      <p class="ins-help" style="margin:0 0 8px">Control option count and customize labels for this dropdown:</p>
+      <div class="ins-section-heading">${isEn ? 'Dropdown Options Management' : 'Pengurusan Pilihan Dropdown'}</div>
+      <p class="ins-help" style="margin:0 0 8px">${isEn ? 'Control option count and customize labels for this dropdown:' : 'Kawal bilangan pilihan dan ubah suai label untuk dropdown ini:'}</p>
       
       <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.05);padding:6px 10px;border-radius:6px;border:1px solid var(--line);margin-bottom:10px">
-        <span style="font-size:11.5px;font-weight:600">Total Options:</span>
+        <span style="font-size:11.5px;font-weight:600">${isEn ? 'Total Options:' : 'Jumlah Pilihan:'}</span>
         <div style="display:flex;align-items:center;gap:6px">
-          <button type="button" class="ins-stepper-btn" data-drop-count-step="-1" title="Decrease options" ${itemsCount <= 1 ? 'disabled' : ''}>−</button>
-          <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--cy);min-width:60px;text-align:center">${itemsCount} Options</span>
-          <button type="button" class="ins-stepper-btn" data-drop-count-step="1" title="Increase options">+</button>
+          <button type="button" class="ins-stepper-btn" data-drop-count-step="-1" title="${isEn ? 'Decrease options' : 'Kurangkan pilihan'}" ${itemsCount <= 1 ? 'disabled' : ''}>−</button>
+          <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--cy);min-width:60px;text-align:center">${itemsCount} ${isEn ? 'Options' : 'Pilihan'}</span>
+          <button type="button" class="ins-stepper-btn" data-drop-count-step="1" title="${isEn ? 'Increase options' : 'Tambahkan pilihan'}">+</button>
         </div>
       </div>
 
@@ -293,8 +299,8 @@ function renderIns() {
         ${b.items.map((it, idx) => `
           <div class="dropdown-item-row" style="display:flex;align-items:center;gap:6px">
             <span style="font-size:11px;font-family:var(--font-mono);color:var(--mute);min-width:18px">${idx + 1}.</span>
-            <input type="text" class="ins-drop-item-input" data-drop-item-idx="${idx}" value="${esc(it)}" placeholder="Option ${idx + 1}" style="flex:1;padding:4px 8px;font-size:12px">
-            <button type="button" class="ins-drop-item-del" data-drop-item-del="${idx}" title="Delete this option" style="background:rgba(255,60,60,0.15);border:1px solid rgba(255,80,80,0.3);color:#ff8888;padding:4px 8px;border-radius:4px;cursor:pointer"${itemsCount <= 1 ? ' disabled style="opacity:0.3;cursor:not-allowed"' : ''}>✕</button>
+            <input type="text" class="ins-drop-item-input" data-drop-item-idx="${idx}" value="${esc(it)}" placeholder="${isEn ? 'Option' : 'Pilihan'} ${idx + 1}" style="flex:1;padding:4px 8px;font-size:12px">
+            <button type="button" class="ins-drop-item-del" data-drop-item-del="${idx}" title="${isEn ? 'Delete this option' : 'Padam pilihan ini'}" style="background:rgba(255,60,60,0.15);border:1px solid rgba(255,80,80,0.3);color:#ff8888;padding:4px 8px;border-radius:4px;cursor:pointer"${itemsCount <= 1 ? ' disabled style="opacity:0.3;cursor:not-allowed"' : ''}>✕</button>
           </div>
         `).join('')}
       </div>
@@ -304,7 +310,7 @@ function renderIns() {
       </button>
     </section>`;
   } else if (isForm) {
-    b.fields = (b.fields && b.fields.length) ? b.fields : (b.t ? b.t.split(',').map(x => x.trim()).filter(Boolean) : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda']);
+    b.fields = (b.fields && b.fields.length) ? b.fields : (b.t ? b.t.split(',').map(x => x.trim()).filter(Boolean) : (isEn ? ['Full Name', 'Email Address', 'Your Message'] : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda']));
     b.submitText = b.submitText || (isEn ? 'Send Message' : 'Hantar Mesej');
     const fieldsCount = b.fields.length;
     contextHtml = `<section class="ins-section">
@@ -331,8 +337,9 @@ function renderIns() {
     const curIdx = (S.selNavIdx !== null && S.selNavIdx < items.length) ? S.selNavIdx : 0;
     const curTitle = (items[curIdx] || items[0] || 'Menu').trim();
     const isDrop = !!(drops[curTitle] || drops[curIdx] || drops[curTitle.toLowerCase()]);
-    const dropData = drops[curTitle] || drops[curIdx] || drops[curTitle.toLowerCase()] || ['WhatsApp', 'Emel', 'Lokasi'];
-    const subItems = Array.isArray(dropData) ? dropData : (dropData.items || ['WhatsApp', 'Emel', 'Lokasi']);
+    const defaultSubList = isEn ? ['WhatsApp', 'Email', 'Location'] : ['WhatsApp', 'Emel', 'Lokasi'];
+    const dropData = drops[curTitle] || drops[curIdx] || drops[curTitle.toLowerCase()] || defaultSubList;
+    const subItems = Array.isArray(dropData) ? dropData : (dropData.items || defaultSubList);
     const subCount = subItems.length;
 
     contextHtml = `<section class="ins-section">
@@ -365,8 +372,8 @@ function renderIns() {
             ${subItems.map((sub, sIdx) => `
               <div style="display:flex;align-items:center;gap:6px">
                 <span style="font-size:10.5px;font-family:var(--font-mono);color:var(--mute);min-width:16px">${sIdx + 1}.</span>
-                <input type="text" class="ins-nav-sub-input" data-nav-sub-idx="${sIdx}" data-target-title="${esc(curTitle)}" value="${esc(sub)}" placeholder="Sub-pilihan ${sIdx + 1}" style="flex:1;padding:4px 8px;font-size:11.5px">
-                <button type="button" class="ins-nav-sub-del" data-nav-sub-del="${sIdx}" data-target-title="${esc(curTitle)}" title="Padam" style="background:rgba(255,60,60,0.15);border:1px solid rgba(255,80,80,0.3);color:#ff8888;padding:3px 7px;border-radius:4px;cursor:pointer"${subCount <= 1 ? ' disabled style="opacity:0.3"' : ''}>✕</button>
+                <input type="text" class="ins-nav-sub-input" data-nav-sub-idx="${sIdx}" data-target-title="${esc(curTitle)}" value="${esc(sub)}" placeholder="${isEn ? 'Sub-option' : 'Sub-pilihan'} ${sIdx + 1}" style="flex:1;padding:4px 8px;font-size:11.5px">
+                <button type="button" class="ins-nav-sub-del" data-nav-sub-del="${sIdx}" data-target-title="${esc(curTitle)}" title="${isEn ? 'Delete' : 'Padam'}" style="background:rgba(255,60,60,0.15);border:1px solid rgba(255,80,80,0.3);color:#ff8888;padding:3px 7px;border-radius:4px;cursor:pointer"${subCount <= 1 ? ' disabled style="opacity:0.3"' : ''}>✕</button>
               </div>
             `).join('')}
           </div>
@@ -405,7 +412,7 @@ function renderIns() {
     <section class="ins-section ins-item-section">
       <div class="ins-head-row"><span class="ins-title">${esc(tName)}</span></div>
       <label class="ins-label" for="ty">${isEn ? 'Component Type' : 'Jenis Komponen'}</label>
-      <select id="ty" aria-label="Jenis Komponen">${componentOptions}</select>
+      <select id="ty" aria-label="${isEn ? 'Component Type' : 'Jenis Komponen'}">${componentOptions}</select>
     </section>
     <section class="ins-section ins-content-section">
       <label class="ins-label" for="tx">${contentLabel}</label>
@@ -415,10 +422,10 @@ function renderIns() {
       <div class="ins-section-heading">${isEn ? 'Canvas Grid Size' : 'Saiz Grid Kanvas'}</div>
       <div class="steppers-row">
         <div class="stepper-box"><span class="stepper-lbl">${isEn ? 'Width' : 'Lebar'}</span><div class="stepper-ctrls">
-          <button type="button" data-step="w-dec" aria-label="Kurangkan lebar">−</button><span class="stepper-num"><b>${b.w}</b><small>${isEn ? 'cols' : 'kol'}</small></span><button type="button" data-step="w-inc" aria-label="Tambahkan lebar">+</button>
+          <button type="button" data-step="w-dec" aria-label="${isEn ? 'Decrease width' : 'Kurangkan lebar'}">−</button><span class="stepper-num"><b>${b.w}</b><small>${isEn ? 'cols' : 'kol'}</small></span><button type="button" data-step="w-inc" aria-label="${isEn ? 'Increase width' : 'Tambahkan lebar'}">+</button>
         </div></div>
         <div class="stepper-box"><span class="stepper-lbl">${isEn ? 'Height' : 'Tinggi'}</span><div class="stepper-ctrls">
-          <button type="button" data-step="h-dec" aria-label="Kurangkan tinggi">−</button><span class="stepper-num"><b>${b.h}</b><small>${isEn ? 'rows' : 'baris'}</small></span><button type="button" data-step="h-inc" aria-label="Tambahkan tinggi">+</button>
+          <button type="button" data-step="h-dec" aria-label="${isEn ? 'Decrease height' : 'Kurangkan tinggi'}">−</button><span class="stepper-num"><b>${b.h}</b><small>${isEn ? 'rows' : 'baris'}</small></span><button type="button" data-step="h-inc" aria-label="${isEn ? 'Increase height' : 'Tambahkan tinggi'}">+</button>
         </div></div>
       </div>
     </section>
@@ -436,7 +443,7 @@ function renderLayersPanel() {
 
   const labelFor = b => {
     const clean = String(b.t || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-    return clean || (isEn ? (TY[b.type]?.en || TY[b.type]?.n) : TY[b.type]?.n) || 'Elemen';
+    return clean || (isEn ? (TY[b.type]?.en || TY[b.type]?.n) : TY[b.type]?.n) || (isEn ? 'Element' : 'Elemen');
   };
 
   const sortFn = isZIndex
@@ -447,7 +454,7 @@ function renderLayersPanel() {
     const siblings = S.blocks.filter(b => par(b) === parent).sort(sortFn);
     return siblings.map((b, index) => {
       const title = labelFor(b);
-      const meta = (isEn ? (TY[b.type]?.en || TY[b.type]?.n) : TY[b.type]?.n) || 'Elemen';
+      const meta = (isEn ? (TY[b.type]?.en || TY[b.type]?.n) : TY[b.type]?.n) || (isEn ? 'Element' : 'Elemen');
       const children = renderBranch(b);
       const canMoveUp = index > 0;
       const canMoveDown = index < siblings.length - 1;
@@ -477,7 +484,7 @@ function renderLayersPanel() {
       <div><h3>${isEn ? 'Layers' : 'Susunan Lapisan'}</h3><p>${subtitleText}</p></div>
       <span class="layers-count">${S.blocks.length}</span>
     </div>
-    <div class="layers-mode-toggle" role="group" aria-label="Mod susunan lapisan" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">
+    <div class="layers-mode-toggle" role="group" aria-label="${isEn ? 'Layer sorting mode' : 'Mod susunan lapisan'}" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">
       <button type="button" class="ins-choice${!isZIndex ? ' active' : ''}" data-layer-sort="flow" title="${isEn ? 'Sort by natural webpage flow: Header at top, Footer at bottom' : 'Susun mengikut aliran fizikal laman: Pengepala di atas, Pengaki di bawah'}">${isEn ? '📄 Page Flow (DOM)' : '📄 Aliran Laman (DOM)'}</button>
       <button type="button" class="ins-choice${isZIndex ? ' active' : ''}" data-layer-sort="zindex" title="${isEn ? 'Sort by graphic design overlapping stack (Z-Index / Front to Back)' : 'Susun mengikut tindihan grafik ala Photoshop/Canva (Z-Index / Depan ke Belakang)'}">${isEn ? '📑 Z-Index Stack' : '📑 Tindihan Z-Index'}</button>
     </div>
@@ -676,7 +683,8 @@ document.addEventListener('drop', e => {
     refresh();
   } else if (e.target.classList.contains('ins-form-field-input')) {
     const idx = parseInt(e.target.dataset.formFieldIdx, 10);
-    b.fields = (b.fields && b.fields.length) ? b.fields : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
+    const isEn = S.lang === 'en';
+    b.fields = (b.fields && b.fields.length) ? b.fields : (isEn ? ['Full Name', 'Email Address', 'Your Message'] : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda']);
     b.fields[idx] = e.target.value;
     b.t = b.fields.join(', ');
     if ($('#tx')) $('#tx').value = b.t;
@@ -693,15 +701,17 @@ document.addEventListener('drop', e => {
     refresh();
   } else if (e.target.classList.contains('ins-drop-item-input')) {
     const idx = parseInt(e.target.dataset.dropItemIdx, 10);
-    b.items = (b.items && b.items.length) ? b.items : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
+    const isEn = S.lang === 'en';
+    b.items = (b.items && b.items.length) ? b.items : (isEn ? ['Option 1', 'Option 2', 'Option 3'] : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3']);
     b.items[idx] = e.target.value;
     if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
     refresh();
   } else if (e.target.classList.contains('ins-nav-sub-input')) {
     const idx = parseInt(e.target.dataset.navSubIdx, 10);
     const title = e.target.dataset.targetTitle;
+    const isEn = S.lang === 'en';
     b.dropdowns = b.dropdowns || {};
-    let arr = Array.isArray(b.dropdowns[title]) ? b.dropdowns[title] : (b.dropdowns[title]?.items || ['WhatsApp', 'Emel', 'Lokasi']);
+    let arr = Array.isArray(b.dropdowns[title]) ? b.dropdowns[title] : (b.dropdowns[title]?.items || (isEn ? ['WhatsApp', 'Email', 'Location'] : ['WhatsApp', 'Emel', 'Lokasi']));
     arr[idx] = e.target.value;
     b.dropdowns[title] = arr;
     if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
@@ -710,7 +720,7 @@ document.addEventListener('drop', e => {
     b.dropdowns = b.dropdowns || {};
     const title = S.selNavTitle || (b.t.split(/[,\s|]+/)[0] || 'Nav');
     const arr = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
-    b.dropdowns[title] = arr.length ? arr : ['Pilihan 1'];
+    b.dropdowns[title] = arr.length ? arr : [S.lang === 'en' ? 'Option 1' : 'Pilihan 1'];
     if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
     refresh();
   }
@@ -741,13 +751,14 @@ document.addEventListener('drop', e => {
   snap();
   if (e.target.id == 'ty') {
     const o = TY[b.type];
+    const isEn = S.lang === 'en';
     b.type = e.target.value;
-    if (b.t == o.t) b.t = TY[b.type].t;
+    if (b.t == o.t || b.t == o.tMs) b.t = isEn ? TY[b.type].t : (TY[b.type].tMs || TY[b.type].t);
     if (['button', 'logo', 'link'].includes(b.type) && !b.href) b.href = '#';
-    if (b.type === 'dropdown' && !b.items) b.items = ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
+    if (b.type === 'dropdown' && !b.items) b.items = isEn ? ['Option 1', 'Option 2', 'Option 3'] : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
     if (b.type === 'form') {
-      if (!b.fields) b.fields = ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
-      if (!b.submitText) b.submitText = 'Hantar Mesej';
+      if (!b.fields) b.fields = isEn ? ['Full Name', 'Email Address', 'Your Message'] : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
+      if (!b.submitText) b.submitText = isEn ? 'Send Message' : 'Hantar Mesej';
     }
     if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
     render();
@@ -776,6 +787,7 @@ document.addEventListener('drop', e => {
 
 ($('#canva-drawer') || $('#ins') || document).addEventListener('click', e => {
   const target = e.target;
+  const isEn = S.lang === 'en';
   if (target.closest('[data-source-nav-select]')) {
     const index = Number(target.closest('[data-source-nav-select]').dataset.sourceNavSelect);
     const context = sourceNavigationContext(getCodeSourceSelectedElement());
@@ -789,7 +801,7 @@ document.addEventListener('drop', e => {
     const doc = context.container.ownerDocument;
     const link = doc.createElement('a');
     link.href = '#';
-    link.textContent = 'Pautan baharu';
+    link.textContent = isEn ? 'New link' : 'Pautan baharu';
     const first = context.topLinks[0];
     const listParent = first && first.parentElement && first.parentElement.tagName === 'LI' ? first.parentElement.parentElement : context.container;
     if (first && first.parentElement && first.parentElement.tagName === 'LI') {
@@ -813,7 +825,7 @@ document.addEventListener('drop', e => {
     summary.textContent = (link.textContent || '').trim() || 'Menu';
     const menu = doc.createElement('div');
     menu.className = 'dropdown-content';
-    ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'].forEach(label => {
+    (isEn ? ['Option 1', 'Option 2', 'Option 3'] : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3']).forEach(label => {
       const item = doc.createElement('a');
       item.href = '#';
       item.textContent = label;
@@ -831,7 +843,7 @@ document.addEventListener('drop', e => {
     const { label } = sourceDropdownParts(dropdown);
     const link = dropdown.ownerDocument.createElement('a');
     link.href = sourceDropdownHref.get(dropdown) || '#';
-    link.textContent = (label && label.textContent || '').replace(/\s*▾\s*$/, '').trim() || 'Pautan';
+    link.textContent = (label && label.textContent || '').replace(/\s*▾\s*$/, '').trim() || (isEn ? 'Link' : 'Pautan');
     dropdown.replaceWith(link);
     setCodeSourceSelectedElement(link);
     syncCodeCanvasFrame();
@@ -848,7 +860,7 @@ document.addEventListener('drop', e => {
     }
     const link = dropdown.ownerDocument.createElement('a');
     link.href = '#';
-    link.textContent = `Pilihan ${sourceDropdownParts(dropdown).links.length + 1}`;
+    link.textContent = `${isEn ? 'Option' : 'Pilihan'} ${sourceDropdownParts(dropdown).links.length + 1}`;
     content.appendChild(link);
     syncCodeCanvasFrame();
     renderCodeSourceInspector();
@@ -881,17 +893,19 @@ document.addEventListener('drop', e => {
   }
   if (target.closest('[data-reset-code-source]')) {
     appConfirm(
-      'Kod HTML, CSS dan JavaScript halaman ini akan dibuang daripada paparan bebas dan diganti dengan blok visual tersimpan. Tindakan ini tidak boleh dipulihkan melalui Undo.',
-      'Kembali kepada blok visual?',
+      isEn
+        ? 'The custom HTML, CSS, and JavaScript on this page will be removed from freeform view and replaced with saved visual blocks. This action cannot be undone.'
+        : 'Kod HTML, CSS dan JavaScript halaman ini akan dibuang daripada paparan bebas dan diganti dengan blok visual tersimpan. Tindakan ini tidak boleh dipulihkan melalui Undo.',
+      isEn ? 'Return to visual blocks?' : 'Kembali kepada blok visual?',
       '⚠️',
       true,
-      'Buang kod dan kembali'
+      isEn ? 'Discard custom code & return' : 'Buang kod dan kembali'
     ).then(confirmed => {
       if (!confirmed) return;
       clearPageCodeOverrides();
       codeSourceSelectedElement = null;
       render();
-      toast('Kembali kepada blok visual studio.');
+      toast(isEn ? 'Returned to studio visual blocks.' : 'Kembali kepada blok visual studio.');
     });
     return;
   }
@@ -931,9 +945,9 @@ document.addEventListener('drop', e => {
   } else if (target.closest('[data-drop-count-step]')) {
     const btn = target.closest('[data-drop-count-step]');
     const step = parseInt(btn.dataset.dropCountStep, 10);
-    b.items = (b.items && b.items.length) ? b.items : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
+    b.items = (b.items && b.items.length) ? b.items : (isEn ? ['Option 1', 'Option 2', 'Option 3'] : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3']);
     if (step > 0) {
-      b.items.push('Pilihan ' + (b.items.length + 1));
+      b.items.push((isEn ? 'Option ' : 'Pilihan ') + (b.items.length + 1));
     } else if (step < 0 && b.items.length > 1) {
       b.items.pop();
     }
@@ -941,15 +955,15 @@ document.addEventListener('drop', e => {
     if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
     render();
   } else if (target.closest('[data-drop-add-item]')) {
-    b.items = (b.items && b.items.length) ? b.items : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
-    b.items.push('Pilihan ' + (b.items.length + 1));
+    b.items = (b.items && b.items.length) ? b.items : (isEn ? ['Option 1', 'Option 2', 'Option 3'] : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3']);
+    b.items.push((isEn ? 'Option ' : 'Pilihan ') + (b.items.length + 1));
     snap();
     if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
     render();
   } else if (target.closest('[data-drop-item-del]')) {
     const btn = target.closest('[data-drop-item-del]');
     const idx = parseInt(btn.dataset.dropItemDel, 10);
-    b.items = (b.items && b.items.length) ? b.items : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
+    b.items = (b.items && b.items.length) ? b.items : (isEn ? ['Option 1', 'Option 2', 'Option 3'] : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3']);
     if (b.items.length > 1) {
       b.items.splice(idx, 1);
       snap();
@@ -957,8 +971,8 @@ document.addEventListener('drop', e => {
       render();
     }
   } else if (target.closest('[data-form-add-field]')) {
-    b.fields = (b.fields && b.fields.length) ? b.fields : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
-    b.fields.push((S.lang === 'en' ? 'Field ' : 'Medan ') + (b.fields.length + 1));
+    b.fields = (b.fields && b.fields.length) ? b.fields : (isEn ? ['Full Name', 'Email Address', 'Your Message'] : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda']);
+    b.fields.push((isEn ? 'Field ' : 'Medan ') + (b.fields.length + 1));
     b.t = b.fields.join(', ');
     snap();
     if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
@@ -966,7 +980,7 @@ document.addEventListener('drop', e => {
   } else if (target.closest('[data-form-field-del]')) {
     const btn = target.closest('[data-form-field-del]');
     const idx = parseInt(btn.dataset.formFieldDel, 10);
-    b.fields = (b.fields && b.fields.length) ? b.fields : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
+    b.fields = (b.fields && b.fields.length) ? b.fields : (isEn ? ['Full Name', 'Email Address', 'Your Message'] : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda']);
     if (b.fields.length > 1) {
       b.fields.splice(idx, 1);
       b.t = b.fields.join(', ');
@@ -979,9 +993,9 @@ document.addEventListener('drop', e => {
     const step = parseInt(btn.dataset.navSubStep, 10);
     const title = btn.dataset.targetTitle;
     b.dropdowns = b.dropdowns || {};
-    let arr = Array.isArray(b.dropdowns[title]) ? b.dropdowns[title] : (b.dropdowns[title]?.items || ['WhatsApp', 'Emel', 'Lokasi']);
+    let arr = Array.isArray(b.dropdowns[title]) ? b.dropdowns[title] : (b.dropdowns[title]?.items || (isEn ? ['WhatsApp', 'Email', 'Location'] : ['WhatsApp', 'Emel', 'Lokasi']));
     if (step > 0) {
-      arr.push('Sub-Pilihan ' + (arr.length + 1));
+      arr.push((isEn ? 'Sub-Option ' : 'Sub-Pilihan ') + (arr.length + 1));
     } else if (step < 0 && arr.length > 1) {
       arr.pop();
     }
@@ -993,8 +1007,8 @@ document.addEventListener('drop', e => {
     const btn = target.closest('[data-nav-sub-add]');
     const title = btn.dataset.targetTitle;
     b.dropdowns = b.dropdowns || {};
-    let arr = Array.isArray(b.dropdowns[title]) ? b.dropdowns[title] : (b.dropdowns[title]?.items || ['WhatsApp', 'Emel', 'Lokasi']);
-    arr.push('Sub-Pilihan ' + (arr.length + 1));
+    let arr = Array.isArray(b.dropdowns[title]) ? b.dropdowns[title] : (b.dropdowns[title]?.items || (isEn ? ['WhatsApp', 'Email', 'Location'] : ['WhatsApp', 'Emel', 'Lokasi']));
+    arr.push((isEn ? 'Sub-Option ' : 'Sub-Pilihan ') + (arr.length + 1));
     b.dropdowns[title] = arr;
     snap();
     if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
@@ -1004,7 +1018,7 @@ document.addEventListener('drop', e => {
     const idx = parseInt(btn.dataset.navSubDel, 10);
     const title = btn.dataset.targetTitle;
     b.dropdowns = b.dropdowns || {};
-    let arr = Array.isArray(b.dropdowns[title]) ? b.dropdowns[title] : (b.dropdowns[title]?.items || ['WhatsApp', 'Emel', 'Lokasi']);
+    let arr = Array.isArray(b.dropdowns[title]) ? b.dropdowns[title] : (b.dropdowns[title]?.items || (isEn ? ['WhatsApp', 'Email', 'Location'] : ['WhatsApp', 'Emel', 'Lokasi']));
     if (arr.length > 1) {
       arr.splice(idx, 1);
       b.dropdowns[title] = arr;
@@ -1024,9 +1038,9 @@ document.addEventListener('drop', e => {
     b.dropdowns = b.dropdowns || {};
     snap();
     if (action === 'add') {
-      let defSubs = ['WhatsApp Rasmi', 'Hantar Emel', 'Peta Lokasi'];
-      if (/produk|servis|pilihan/i.test(title)) defSubs = ['Pakej Asas', 'Pakej Premium', 'Pakej Khas'];
-      else if (/tentang|about/i.test(title)) defSubs = ['About Us', 'Our Team', 'Vision & Mission'];
+      let defSubs = isEn ? ['Official WhatsApp', 'Send Email', 'Location Map'] : ['WhatsApp Rasmi', 'Hantar Emel', 'Peta Lokasi'];
+      if (/produk|servis|pilihan|service|product/i.test(title)) defSubs = isEn ? ['Basic Plan', 'Premium Plan', 'Custom Plan'] : ['Pakej Asas', 'Pakej Premium', 'Pakej Khas'];
+      else if (/tentang|about/i.test(title)) defSubs = isEn ? ['About Us', 'Our Team', 'Vision & Mission'] : ['Latar Belakang', 'Pasukan Kami', 'Visi & Misi'];
       b.dropdowns[title] = defSubs;
       S.selNavTitle = title;
       toast(`Menu "${title}" converted to semantic Dropdown!`);
@@ -1043,9 +1057,10 @@ document.addEventListener('drop', e => {
 function renderCanvaBar() {
   const bar = $('#canva-bar');
   if (!bar) return;
+  const isEn = S.lang === 'en';
   if (typeof hasCodePreviewOverride === 'function' && hasCodePreviewOverride()) {
     bar.style.display = S.view === 'plan' ? 'flex' : 'none';
-    bar.innerHTML = '<span class="canva-hint">Pilih elemen pada halaman untuk sunting teks dan rupa; perubahan disimpan terus ke kod.</span>';
+    bar.innerHTML = `<span class="canva-hint">${isEn ? 'Select any element on the page to edit its text and style; changes sync directly to code.' : 'Pilih elemen pada halaman untuk sunting teks dan rupa; perubahan disimpan terus ke kod.'}</span>`;
     const pop = $('#color-popover');
     if (pop) pop.hidden = true;
     return;

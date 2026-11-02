@@ -438,9 +438,10 @@ function getCssRules() {
 
 function htmlLines() {
   const curTitle = (S.pages[S.curPage] && S.pages[S.curPage].name) || 'My Website';
+  const htmlLang = S.lang === 'ms' ? 'ms' : 'en';
   const h = [
     { s: '<!DOCTYPE html>' },
-    { s: '<html lang="ms">', fold: 'start', fk: 'html', tag: 'html' },
+    { s: `<html lang="${htmlLang}">`, fold: 'start', fk: 'html', tag: 'html' },
     { s: '<head>', fold: 'start', fk: 'head', tag: 'head', parentFk: 'html' },
     { s: '  <meta charset="utf-8">', parentFk: 'head' },
     { s: '  <meta name="viewport" content="width=device-width, initial-scale=1">', parentFk: 'head' },
@@ -661,11 +662,12 @@ function preview() {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Lato:wght@400;700&family=Lora:wght@400;600;700&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;600;700&family=Roboto:wght@400;500;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">`;
 
-  // Kad maklumat mesra jika kanvas kosong
+  // Friendly info card when canvas is empty
+  const isMs = S.lang === 'ms';
   if (!S.blocks || S.blocks.length === 0) {
     const pageTitle = (S.pages && S.pages[S.curPage] && S.pages[S.curPage].name) ? S.pages[S.curPage].name : (S.curPage || 'index.html');
     return `<!DOCTYPE html><html><head><meta charset="utf-8">
-    <title>Hasil - ${qa(pageTitle)}</title>
+    <title>${isMs ? 'Hasil' : 'Preview'} - ${qa(pageTitle)}</title>
     ${fontLinks}
     <style>
       body{margin:0;font-family:Inter,system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e293b;display:flex;align-items:center;justify-content:center;min-height:90vh;padding:20px;box-sizing:border-box}
@@ -678,9 +680,9 @@ function preview() {
     </head><body>
       <div class="empty-box">
         <div class="empty-ic">📄</div>
-        <h2>Page &ldquo;${qa(pageTitle)}&rdquo; is Empty</h2>
-        <p>There are no elements on this canvas yet.<br>Switch to <b>Grid Canvas</b> mode in the top bar to drag elements or select a <b>Pre-built Layout</b> from the left panel.</p>
-        <div class="badge">💡 Live Preview Mode</div>
+        <h2>${isMs ? `Halaman &ldquo;${qa(pageTitle)}&rdquo; Masih Kosong` : `Page &ldquo;${qa(pageTitle)}&rdquo; is Empty`}</h2>
+        <p>${isMs ? 'Belum ada elemen diletakkan pada kanvas ini.<br>Tukar ke mod <b>Reka</b> di bar atas untuk menyeret elemen atau pilih <b>Templat</b> di panel kiri.' : 'There are no elements on this canvas yet.<br>Switch to <b>Design</b> mode in the top bar to drag elements or select a <b>Template</b> from the left panel.'}</p>
+        <div class="badge">💡 ${isMs ? 'Mod Pratonton Langsung' : 'Live Preview Mode'}</div>
       </div>
     </body></html>`;
   }
@@ -688,7 +690,7 @@ function preview() {
   if (!S.hasCss) {
     const bRaw = body('ext').map(l => l.s).join('\n');
     return `<!DOCTYPE html><html><head><meta charset="utf-8">
-    <title>Preview (HTML Only)</title>
+    <title>${isMs ? 'Pratonton (HTML Sahaja)' : 'Preview (HTML Only)'}</title>
     ${fontLinks}
     <style>
       body{margin:20px;font-family:serif;color:#000;background:#fff;line-height:1.4}
@@ -696,12 +698,12 @@ function preview() {
       a{color:#0000ee;text-decoration:underline;margin-right:8px}
       figure{margin:12px 0;padding:10px;border:1px dashed #888;background:#f5f5f5;display:inline-block}
       figure img{display:none}
-      figure::before{content:"[ Imej Mockup (HTML Tanpa CSS) ]";color:#555;font-style:italic}
+      figure::before{content:"${isMs ? '[ Imej Mockup (HTML Tanpa CSS) ]' : '[ Image Mockup (HTML Without CSS) ]'}";color:#555;font-style:italic}
       header,nav,section,article,footer,aside{display:block;margin-bottom:14px;border-bottom:1px dotted #ccc;padding-bottom:10px}
     </style>
     </head><body>
     ${bRaw}
-    ${S.hasJs ? `<script>document.querySelectorAll('a').forEach(a=>a.addEventListener('click',e=>{if(a.getAttribute('href')=='#'){e.preventDefault();const t=document.createElement('div');t.style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0b3d91;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);font-family:Inter,system-ui;';t.textContent='Pautan diklik (JavaScript aktif)';document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}}));<\/script>` : ''}
+    ${S.hasJs ? `<script>document.querySelectorAll('a').forEach(a=>a.addEventListener('click',e=>{if(a.getAttribute('href')=='#'){e.preventDefault();const t=document.createElement('div');t.style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0b3d91;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);font-family:Inter,system-ui;';t.textContent='${isMs ? 'Pautan diklik (JavaScript aktif)' : 'Link clicked (JavaScript active)'}';document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}}));<\/script>` : ''}
     </body></html>`;
   }
   const cs = getCssRules().map(l => l.s).join('\n');
@@ -832,8 +834,8 @@ function preview() {
   </head><body>${b}
   ${S.hasJs ? `<script>
   if(document.querySelector('.swiper')){new Swiper('.swiper',{loop:true,autoplay:{delay:2500}})}
-  document.querySelectorAll('a').forEach(a=>a.addEventListener('click',e=>{if(a.getAttribute('href')=='#'){e.preventDefault();const t=document.createElement('div');t.style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0b3d91;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);font-family:Inter,system-ui;';t.textContent='Pautan/Butang diklik!';document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}}));
-  document.querySelectorAll('form').forEach(f=>f.addEventListener('submit',e=>{e.preventDefault();const t=document.createElement('div');t.style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#065f46;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);font-family:Inter,system-ui;';t.textContent='📩 Mesej borang telah dihantar!';document.body.appendChild(t);f.reset();setTimeout(()=>t.remove(),2500);}));
+  document.querySelectorAll('a').forEach(a=>a.addEventListener('click',e=>{if(a.getAttribute('href')=='#'){e.preventDefault();const t=document.createElement('div');t.style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0b3d91;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);font-family:Inter,system-ui;';t.textContent='${isMs ? 'Pautan/Butang diklik!' : 'Link/Button clicked!'}';document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}}));
+  document.querySelectorAll('form').forEach(f=>f.addEventListener('submit',e=>{e.preventDefault();const t=document.createElement('div');t.style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#065f46;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);font-family:Inter,system-ui;';t.textContent='${isMs ? '📩 Mesej borang telah dihantar!' : '📩 Form message sent!'}';document.body.appendChild(t);f.reset();setTimeout(()=>t.remove(),2500);}));
   <\/script>` : ''}
   </body></html>`;
 }
@@ -982,28 +984,43 @@ function exportProject() {
     files.push({ name: 'script.js', content: jsContent });
   }
 
-  const readmeContent = [
-    'NIAN CODE STUDIO - Pakej Eksport Projek Laman Web',
-    '=================================================',
-    `Pereka: ${S.name || 'Pelajar / Pereka Web'}`,
-    `Tarikh: ${new Date().toLocaleDateString('ms-MY')}`,
-    '',
-    'Senarai Fail dalam Arkib ZIP ini:',
-    ...files.map(f => `- ${f.name}`),
-    '',
-    'Cara Penggunaan:',
-    '1. Ekstrak (Unzip) fail nian-code-studio-projek.zip ke dalam satu folder.',
-    '2. Buka fail index.html menggunakan pelayar web (Chrome, Edge, Firefox, Safari) atau editor kod (VS Code).'
-  ].join('\n');
+  const isEn = S.lang === 'en';
+  const readmeContent = isEn
+    ? [
+        'NIAN CODE STUDIO - Website Project Export Package',
+        '=================================================',
+        `Author: ${S.name || 'Student / Web Designer'}`,
+        `Date: ${new Date().toLocaleDateString('en-US')}`,
+        '',
+        'Files included in this ZIP archive:',
+        ...files.map(f => `- ${f.name}`),
+        '',
+        'How to Use:',
+        '1. Extract (Unzip) nian-code-studio-project.zip into a folder.',
+        '2. Open index.html in any web browser (Chrome, Edge, Firefox, Safari) or code editor (VS Code).'
+      ].join('\n')
+    : [
+        'NIAN CODE STUDIO - Pakej Eksport Projek Laman Web',
+        '=================================================',
+        `Pereka: ${S.name || 'Pelajar / Pereka Web'}`,
+        `Tarikh: ${new Date().toLocaleDateString('ms-MY')}`,
+        '',
+        'Senarai Fail dalam Arkib ZIP ini:',
+        ...files.map(f => `- ${f.name}`),
+        '',
+        'Cara Penggunaan:',
+        '1. Ekstrak (Unzip) fail nian-code-studio-projek.zip ke dalam satu folder.',
+        '2. Buka fail index.html menggunakan pelayar web (Chrome, Edge, Firefox, Safari) atau editor kod (VS Code).'
+      ].join('\n');
   files.push({ name: 'README.txt', content: readmeContent });
 
+  const zipFilename = isEn ? 'nian-code-studio-project.zip' : 'nian-code-studio-projek.zip';
   const zipBytes = createZipArchive(files);
   const blob = new Blob([zipBytes], { type: 'application/zip' });
-  downloadFile('nian-code-studio-projek.zip', blob, 'application/zip');
+  downloadFile(zipFilename, blob, 'application/zip');
 
-  const isEn = S.lang === 'en';
   toast(isEn
-    ? `📦 Project archive (nian-code-studio-projek.zip with ${files.length} files) downloaded!`
-    : `📦 Arkib projek (nian-code-studio-projek.zip mengandungi ${files.length} fail) berjaya dimuat turun!`);
+    ? `📦 Project archive (${zipFilename} with ${files.length} files) downloaded!`
+    : `📦 Arkib projek (${zipFilename} mengandungi ${files.length} fail) berjaya dimuat turun!`);
 }
 

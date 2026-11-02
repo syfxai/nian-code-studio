@@ -55,16 +55,46 @@ test('TY includes <form> element with BM and EN labels and PNG icon mapping', ()
   assert.equal(PNG_ICON_MAP.form, 'assets/icons/elem-form.png');
 });
 
-test('Generator inner() produces valid W3C <form> fields and submit button', () => {
+test('Generator inner() produces valid W3C <form> fields and submit button in English default and BM', () => {
   const ctx = loadStudioContext();
-  const formHtml = vm.runInContext(`
-    const b = mk('form', 1, 5, 6, 4);
-    inner(b);
+  const formHtmlEn = vm.runInContext(`
+    const bEn = mk('form', 1, 5, 6, 4);
+    inner(bEn);
   `, ctx);
-  assert.match(formHtml, /<label for="field-\d+-1">Nama Penuh<\/label>/);
-  assert.match(formHtml, /<input type="email" id="field-\d+-2"/);
-  assert.match(formHtml, /<textarea id="field-\d+-3"/);
-  assert.match(formHtml, /<button type="submit" class="btn-cta form-submit">Hantar Mesej<\/button>/);
+  assert.match(formHtmlEn, /<label for="field-\d+-1">Full Name<\/label>/);
+  assert.match(formHtmlEn, /<input type="email" id="field-\d+-2"/);
+  assert.match(formHtmlEn, /<textarea id="field-\d+-3"/);
+  assert.match(formHtmlEn, /<button type="submit" class="btn-cta form-submit">Send Message<\/button>/);
+
+  const formHtmlMs = vm.runInContext(`
+    S.lang = 'ms';
+    const bMs = mk('form', 1, 5, 6, 4);
+    inner(bMs);
+  `, ctx);
+  assert.match(formHtmlMs, /<label for="field-\d+-1">Nama Penuh<\/label>/);
+  assert.match(formHtmlMs, /<button type="submit" class="btn-cta form-submit">Hantar Mesej<\/button>/);
+});
+
+test('syncLanguageDefaults translates unmodified default page titles and block texts between EN and BM', () => {
+  const ctx = loadStudioContext();
+  const res = vm.runInContext(`
+    S.pages = JSON.parse(JSON.stringify(DEFAULT_PAGES));
+    S.blocks = [mk('section', 1, 1, 6, 3)];
+    S.pages['index.html'].blocks = S.blocks;
+    syncLanguageDefaults('ms');
+    const msPageName = S.pages['index.html'].name;
+    const msHeading = S.blocks[0].t;
+    syncLanguageDefaults('en');
+    const enPageName = S.pages['index.html'].name;
+    const enHeading = S.blocks[0].t;
+    ({ msPageName, msHeading, enPageName, enHeading, defaultMode: S.mode, defaultLang: S.lang });
+  `, ctx);
+  assert.equal(res.defaultLang, 'en');
+  assert.equal(res.defaultMode, 's');
+  assert.equal(res.msPageName, 'Utama (index.html)');
+  assert.equal(res.msHeading, 'Tajuk bahagian');
+  assert.equal(res.enPageName, 'Home (index.html)');
+  assert.equal(res.enHeading, 'Section Heading');
 });
 
 test('createZipArchive builds a valid PKZIP binary with all project files', () => {

@@ -9,18 +9,21 @@ let pend = null;
 
 function renderCanvas() {
   R = getAutoRows();
+  const isEn = S.lang === 'en';
   cv.classList.toggle('dr', S.tool == 'r');
   cv.classList.toggle('no-css', !S.hasCss);
   cv.style.setProperty('--rows', R);
   if ($('#grid-dim')) {
-    $('#grid-dim').textContent = !S.hasCss ? '📄 Mod Asas HTML (CSS Dimatikan): Aliran Menegak Asas' : `🏠 Kanvas <main>: 12 kol × ${R} baris (Auto-Fluid)`;
+    $('#grid-dim').textContent = !S.hasCss
+      ? (isEn ? '📄 HTML Base Mode (CSS Disabled): Vertical Document Flow' : '📄 Mod Asas HTML (CSS Dimatikan): Aliran Menegak Asas')
+      : (isEn ? `🏠 <main> Canvas: 12 cols × ${R} rows (Auto-Fluid)` : `🏠 Kanvas <main>: 12 kol × ${R} baris (Auto-Fluid)`);
   }
   if (typeof hasCodePreviewOverride === 'function' && hasCodePreviewOverride()) {
     cv.classList.add('code-source-preview');
-    cv.innerHTML = '<iframe class="code-source-frame" sandbox="allow-same-origin" title="Kanvas visual boleh sunting"></iframe><span class="code-source-label">Garis putus-putus = kotak &lt;div&gt; · klik untuk sunting</span>';
+    cv.innerHTML = `<iframe class="code-source-frame" sandbox="allow-same-origin" title="${isEn ? 'Editable visual canvas' : 'Kanvas visual boleh sunting'}"></iframe><span class="code-source-label">${isEn ? 'Dashed lines = &lt;div&gt; boxes · click to edit' : 'Garis putus-putus = kotak &lt;div&gt; · klik untuk sunting'}</span>`;
     const frame = cv.querySelector('.code-source-frame');
     if (frame) { attachCodeCanvasEditing(frame); frame.srcdoc = codePreviewDocument(); }
-    if ($('#grid-dim')) $('#grid-dim').textContent = 'Klik elemen untuk sunting · perubahan disegerakkan ke kod';
+    if ($('#grid-dim')) $('#grid-dim').textContent = isEn ? 'Click any element to edit · changes sync directly to code' : 'Klik elemen untuk sunting · perubahan disegerakkan ke kod';
     return;
   }
   cv.classList.remove('code-source-preview');
@@ -67,11 +70,11 @@ function renderCanvas() {
       const defImg = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=80';
       contentHtml = `<div class="canvas-img-box"><img src="${b.imgUrl || defImg}" alt="Mockup" style="object-fit:${b.objFit || 'cover'};"><span class="canvas-img-cap">${renderWysiwyg(b.t)}</span></div>`;
     } else if (b.type === 'dropdown' && !kids(b).length) {
-      const dropItems = (b.items && b.items.length) ? b.items : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
+      const dropItems = (b.items && b.items.length) ? b.items : (isEn ? ['Option 1', 'Option 2', 'Option 3'] : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3']);
       contentHtml = `<div class="canvas-dropdown-box"><div class="canvas-dropdown-summary">${renderWysiwyg(b.t)} ▾</div><div class="canvas-dropdown-items">${dropItems.slice(0, 4).map(it => `<span>• ${esc(it)}</span>`).join(' ')}${dropItems.length > 4 ? ` <small>(+${dropItems.length - 4})</small>` : ''}</div></div>`;
     } else if (b.type === 'form' && !kids(b).length) {
-      const fields = (b.fields && b.fields.length) ? b.fields : (b.t ? b.t.split(',').map(x => x.trim()).filter(Boolean) : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda']);
-      const subTxt = b.submitText || (S.lang === 'en' ? 'Send Message' : 'Hantar Mesej');
+      const fields = (b.fields && b.fields.length) ? b.fields : (b.t ? b.t.split(',').map(x => x.trim()).filter(Boolean) : (isEn ? ['Full Name', 'Email Address', 'Your Message'] : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda']));
+      const subTxt = b.submitText || (isEn ? 'Send Message' : 'Hantar Mesej');
       contentHtml = `<div class="canvas-form-box">${fields.slice(0, 4).map(f => {
         const isArea = /mesej|message|komen|comment|ulasan/i.test(f);
         return `<div class="canvas-form-row"><span class="canvas-form-lbl">${esc(f)}</span><span class="canvas-form-input${isArea ? ' is-area' : ''}">${isArea ? '✎ ...' : ''}</span></div>`;
@@ -91,7 +94,10 @@ function renderCanvas() {
         const isCta = !isDrop && /mula|daftar|beli|start|sign|hubungi|contact/i.test(s);
         const dropBadge = isDrop ? '<small class="nav-drop-tag">▾ Dropdown</small>' : '';
         const iconPrefix = isDrop ? '▾' : '🔗';
-        return `<span class="canvas-nav-item${isDrop ? ' is-dropdown' : ''}${isCta ? ' cta' : ''}${isSelItem ? ' sel' : ''}" data-nav-blk="${b.id}" data-nav-idx="${idx}" data-nav-title="${esc(s)}" title="${isDrop ? 'Menu Dropdown (Klik untuk pilih & urus)' : 'Pautan Navigasi (Klik untuk pilih & tukar ke dropdown)'}">${iconPrefix} ${esc(s)} ${dropBadge}</span>`;
+        const navTitleAttr = isDrop
+          ? (isEn ? 'Dropdown Menu (Click to select & manage)' : 'Menu Dropdown (Klik untuk pilih & urus)')
+          : (isEn ? 'Navigation Link (Click to select & convert to dropdown)' : 'Pautan Navigasi (Klik untuk pilih & tukar ke dropdown)');
+        return `<span class="canvas-nav-item${isDrop ? ' is-dropdown' : ''}${isCta ? ' cta' : ''}${isSelItem ? ' sel' : ''}" data-nav-blk="${b.id}" data-nav-idx="${idx}" data-nav-title="${esc(s)}" title="${navTitleAttr}">${iconPrefix} ${esc(s)} ${dropBadge}</span>`;
       }).filter(Boolean).join(' ');
       contentHtml = `<div class="canvas-nav-links">${linksHtml}</div>`;
     }
@@ -99,7 +105,7 @@ function renderCanvas() {
     let labelText = '';
     const isDiv = S.htmlMode === 'div';
     const tagDisplay = isDiv ? (['button', 'logo', 'link'].includes(b.type) ? 'a' : 'div') : T.tag;
-    const typeName = S.lang === 'en' ? (T.en || T.n) : T.n;
+    const typeName = isEn ? (T.en || T.n) : T.n;
     if (b.w <= 2) {
       labelText = `&lt;${tagDisplay}&gt;`;
     } else if (b.w <= 4) {
@@ -116,22 +122,22 @@ function renderCanvas() {
         ${S.hasCss ? `<span class="canvas-color-dot" style="background:${dotColor};"></span>` : ''}
         ${labelText}
       </span>
-      <div class="tx" data-tx-id="${b.id}" title="Dwi-klik untuk sunting teks secara langsung pada kanvas">${contentHtml}</div>
+      <div class="tx" data-tx-id="${b.id}" title="${isEn ? 'Double-click to edit text directly on canvas' : 'Dwi-klik untuk sunting teks secara langsung pada kanvas'}">${contentHtml}</div>
       ${on && S.hasCss ? `
         <span class="dim-badge">${b.w} × ${b.h}</span>
-        <button type="button" class="blk-del" data-del="${b.id}" title="Padam elemen (Delete)" aria-label="Padam elemen">×</button>
-        <i class="rs-h rs-e" data-dir="e" title="Seret untuk ubah lebar"></i>
-        <i class="rs-h rs-s" data-dir="s" title="Seret untuk ubah tinggi"></i>
-        <i class="rs-h rs-w" data-dir="w" title="Seret untuk ubah lebar dari kiri"></i>
-        <i class="rs-h rs-n" data-dir="n" title="Seret untuk ubah tinggi dari atas"></i>
-        <i class="rs-h rs-se" data-dir="se" title="Seret penjuru untuk ubah saiz"></i>
-        <i class="rs-h rs-nw" data-dir="nw" title="Seret penjuru atas kiri"></i>
-        <i class="rs-h rs-ne" data-dir="ne" title="Seret penjuru atas kanan"></i>
-        <i class="rs-h rs-sw" data-dir="sw" title="Seret penjuru bawah kiri"></i>
+        <button type="button" class="blk-del" data-del="${b.id}" title="${isEn ? 'Delete element (Delete)' : 'Padam elemen (Delete)'}" aria-label="${isEn ? 'Delete element' : 'Padam elemen'}">×</button>
+        <i class="rs-h rs-e" data-dir="e" title="${isEn ? 'Drag to resize width' : 'Seret untuk ubah lebar'}"></i>
+        <i class="rs-h rs-s" data-dir="s" title="${isEn ? 'Drag to resize height' : 'Seret untuk ubah tinggi'}"></i>
+        <i class="rs-h rs-w" data-dir="w" title="${isEn ? 'Drag to resize width from left' : 'Seret untuk ubah lebar dari kiri'}"></i>
+        <i class="rs-h rs-n" data-dir="n" title="${isEn ? 'Drag to resize height from top' : 'Seret untuk ubah tinggi dari atas'}"></i>
+        <i class="rs-h rs-se" data-dir="se" title="${isEn ? 'Drag corner to resize' : 'Seret penjuru untuk ubah saiz'}"></i>
+        <i class="rs-h rs-nw" data-dir="nw" title="${isEn ? 'Drag top-left corner' : 'Seret penjuru atas kiri'}"></i>
+        <i class="rs-h rs-ne" data-dir="ne" title="${isEn ? 'Drag top-right corner' : 'Seret penjuru atas kanan'}"></i>
+        <i class="rs-h rs-sw" data-dir="sw" title="${isEn ? 'Drag bottom-left corner' : 'Seret penjuru bawah kiri'}"></i>
       ` : ''}
     </div>`;
-  }).join('') + (S.hasCss ? ((g => g ? `<div class="ghost${free(g.c, g.r, g.w, g.h) ? '' : ' bad'}" style="grid-column:${g.c}/span ${g.w};grid-row:${g.r}/span ${g.h}"><span class="dim">${g.w} kol × ${g.h} baris</span></div>` : '')(drag && drag.draw && drag.moved ? drag.g : pend)) : '') +
-  (S.blocks.length || pend || (drag && drag.draw) ? '' : (S.lang === 'en'
+  }).join('') + (S.hasCss ? ((g => g ? `<div class="ghost${free(g.c, g.r, g.w, g.h) ? '' : ' bad'}" style="grid-column:${g.c}/span ${g.w};grid-row:${g.r}/span ${g.h}"><span class="dim">${g.w} ${isEn ? 'cols' : 'kol'} × ${g.h} ${isEn ? 'rows' : 'baris'}</span></div>` : '')(drag && drag.draw && drag.moved ? drag.g : pend)) : '') +
+  (S.blocks.length || pend || (drag && drag.draw) ? '' : (isEn
     ? '<div class="empty"><div><b>Canvas is empty</b>Drag across the grid to draw your first block. Start from the top: Header, Hero, Content, Footer. Or pick a pre-built layout template from the left drawer.</div></div>'
     : '<div class="empty"><div><b>Kanvas masih kosong</b>Seret pada grid untuk melukis blok pertama anda. Mulakan dari atas: Kepala Halaman, Hero, Kandungan, Kaki Halaman — atau pilih Templat siap guna di panel kiri.</div></div>'));
 }

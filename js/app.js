@@ -1061,11 +1061,11 @@ function applyCodeChanges(showToast = true) {
     renderPreview();
   }
 
-  showCodeStatus('Disimpan', 'success');
+  showCodeStatus(S.lang === 'en' ? 'Saved' : 'Disimpan', 'success');
 
   if (showToast) {
     const tabName = S.tab === 'html' ? 'HTML' : S.tab === 'css' ? 'CSS' : 'JavaScript';
-    toast(`⚡ ${tabName} changes successfully updated to Canvas!`);
+    toast(S.lang === 'en' ? `⚡ ${tabName} changes successfully updated to Canvas!` : `⚡ Perubahan ${tabName} berjaya dikemas kini ke Kanvas!`);
   }
   save();
 }
@@ -2150,13 +2150,16 @@ document.addEventListener('click', e => {
   let x;
   if (x = q('#btn-lang-toggle')) {
     S.lang = S.lang === 'en' ? 'ms' : 'en';
+    if (typeof syncLanguageDefaults === 'function') syncLanguageDefaults(S.lang);
     render();
     toast(S.lang === 'en' ? '🌐 Interface language switched to English (EN)' : '🌐 Bahasa antara muka ditukar ke Bahasa Melayu (BM)');
   } else if (x = q('#run-preview-js')) {
     S.previewScripts = !S.previewScripts;
     if (S.previewScripts) S.hasJs = true;
     render();
-    toast(S.previewScripts ? 'JavaScript pratonton dihidupkan dalam ruang terasing.' : 'JavaScript pratonton dimatikan.');
+    toast(S.lang === 'en'
+      ? (S.previewScripts ? 'Preview JavaScript enabled in isolated sandbox.' : 'Preview JavaScript disabled.')
+      : (S.previewScripts ? 'JavaScript pratonton dihidupkan dalam ruang terasing.' : 'JavaScript pratonton dimatikan.'));
   } else if (x = q('[data-rail]')) {
     const tab = x.dataset.rail;
     if (S.railTab === tab) {
@@ -2173,9 +2176,11 @@ document.addEventListener('click', e => {
     S.drawerOpen = true;
     render();
   } else if (x = q('[data-add]')) {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) S.drawerOpen = false;
     if (hasCodePreviewOverride()) insertCodeSourceElement(x.dataset.add);
     else add(x.dataset.add);
   } else if (x = q('[data-tpl]')) {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) S.drawerOpen = false;
     if (hasCodePreviewOverride()) clearPageCodeOverrides();
     applyTpl(+x.dataset.tpl);
   }
@@ -2400,6 +2405,7 @@ document.addEventListener('click', e => {
     render();
   } else if (x = q('[data-dw-view]')) {
     const v = x.dataset.dwView;
+    const isEn = S.lang === 'en';
     if (v === 'prev' || v === 'nodes') {
       if (S.mode === 'v' && S.view === v) {
         const fallback = workspaceReturnState || { mode: 'v', view: 'plan' };
@@ -2411,24 +2417,27 @@ document.addEventListener('click', e => {
         S.mode = 'v';
         S.view = v;
       }
-      toast(S.view === 'prev' ? 'Pratonton aktif' : S.view === 'nodes' ? 'Aliran halaman aktif' : 'Kembali ke paparan asal');
+      toast(isEn
+        ? (S.view === 'prev' ? 'Preview mode active' : S.view === 'nodes' ? 'Page Flow active' : 'Returned to previous view')
+        : (S.view === 'prev' ? 'Pratonton aktif' : S.view === 'nodes' ? 'Aliran halaman aktif' : 'Kembali ke paparan asal'));
     } else if (v === 'plan') {
       workspaceReturnState = null;
       S.mode = 'v';
       S.view = 'plan';
-      toast('Reka bentuk aktif');
+      toast(isEn ? 'Design mode active' : 'Reka bentuk aktif');
     }
     render();
   } else if (x = q('[data-m]')) {
     workspaceReturnState = null;
     S.mode = x.dataset.m;
     S.view = 'plan';
+    const isEn = S.lang === 'en';
     if (S.mode === 's') {
-      toast('Paparan Split: kanvas dan kod bersebelahan');
+      toast(isEn ? 'Split view: canvas and code side-by-side' : 'Paparan Split: kanvas dan kod bersebelahan');
     } else if (S.mode === 'c') {
-      toast('Editor kod dibuka');
+      toast(isEn ? 'Code editor opened' : 'Editor kod dibuka');
     } else if (S.mode === 'v') {
-      toast('Kanvas reka bentuk dibuka');
+      toast(isEn ? 'Design canvas opened' : 'Kanvas reka bentuk dibuka');
     }
     render();
   } else if (x = q('[data-dw-pick]')) {
@@ -2442,7 +2451,8 @@ document.addEventListener('click', e => {
       if (b) {
         S.sel = b.id;
         render();
-        toast(`Selected <${TY[b.type]?.tag || 'div'}> (${TY[b.type]?.n || b.type})`);
+        const tName = S.lang === 'en' ? (TY[b.type]?.en || TY[b.type]?.n || b.type) : (TY[b.type]?.n || b.type);
+        toast(`Selected <${TY[b.type]?.tag || 'div'}> (${tName})`);
       }
     }
   } else if (x = q('[data-v]')) {
@@ -2450,6 +2460,7 @@ document.addEventListener('click', e => {
     render();
   } else if (x = q('[data-t]')) {
     const nextTab = x.dataset.t;
+    const isEn = S.lang === 'en';
     if (nextTab === 'css') {
       const cssWasOff = !S.hasCss || !['ext', 'all'].includes(S.sty);
       S.hasCss = true;
@@ -2457,8 +2468,8 @@ document.addEventListener('click', e => {
       else if (!Object.prototype.hasOwnProperty.call(pageCodeEdits(), 'css')) pageCodeEdits().css = '';
       S.sty = 'ext';
       S.sideTab = 'css';
-      if (cssWasOff) toast('style.css dibuka; CSS dihidupkan dalam mod External.');
-      else toast('style.css dibuka.');
+      if (cssWasOff) toast(isEn ? 'style.css opened; CSS enabled in External mode.' : 'style.css dibuka; CSS dihidupkan dalam mod External.');
+      else toast(isEn ? 'style.css opened.' : 'style.css dibuka.');
     } else if (nextTab === 'html') {
       S.sideTab = 'html';
     }
@@ -2474,8 +2485,11 @@ document.addEventListener('click', e => {
       S.view = 'prev';
     }
     render();
-    const vpNames = { mobile: 'Telefon (375 px)', tablet: 'Tablet (768 px)', desktop: 'Muat ikut ruang tersedia' };
-    toast(`Pratonton: ${vpNames[S.viewport]}`);
+    const isEn = S.lang === 'en';
+    const vpNames = isEn
+      ? { mobile: 'Mobile (375 px)', tablet: 'Tablet (768 px)', desktop: 'Fit to available space' }
+      : { mobile: 'Telefon (375 px)', tablet: 'Tablet (768 px)', desktop: 'Muat ikut ruang tersedia' };
+    toast(`${isEn ? 'Preview' : 'Pratonton'}: ${vpNames[S.viewport]}`);
   } else if (x = q('[data-set-gap]')) {
     snap();
     S.gridGap = +x.dataset.setGap;
@@ -2517,7 +2531,7 @@ document.addEventListener('click', e => {
       toast('Styling format changed to: ' + x.textContent);
     }
     render();
-    if (sourceConverted) toast(`Gaya kod bebas ditukar ke mod ${x.textContent}. Semak tab HTML dan CSS.`);
+    if (sourceConverted) toast(S.lang === 'en' ? `Custom code styles converted to ${x.textContent} mode. Check HTML and CSS tabs.` : `Gaya kod bebas ditukar ke mod ${x.textContent}. Semak tab HTML dan CSS.`);
   } else if (x = q('[data-f]')) {
     snap();
     get(S.sel).f = +x.dataset.f;
@@ -2541,7 +2555,9 @@ document.addEventListener('click', e => {
     S.cssHighlight = !S.cssHighlight;
     renderCode();
     $('#btn-toggle-hl').setAttribute('aria-pressed', S.cssHighlight);
-    $('#btn-toggle-hl').title = S.cssHighlight ? 'Serlahan kod dihidupkan · klik untuk matikan' : 'Serlahan kod dimatikan · klik untuk hidupkan';
+    $('#btn-toggle-hl').title = S.lang === 'en'
+      ? (S.cssHighlight ? 'Code highlight enabled · click to disable' : 'Code highlight disabled · click to enable')
+      : (S.cssHighlight ? 'Serlahan kod dihidupkan · klik untuk matikan' : 'Serlahan kod dimatikan · klik untuk hidupkan');
     toast(S.cssHighlight ? 'Code highlighter enabled' : 'Code highlighter disabled');
   } else if (x = q('#btn-toggle-resp-css')) {
     S.responsiveCSS = !S.responsiveCSS;
@@ -2559,12 +2575,13 @@ document.addEventListener('click', e => {
     if (!b || b.type !== 'nav') return;
     const act = x.dataset.navDrop;
     const curTitle = S.selNavTitle || (b.t.split(/[,\s|]+/)[0] || 'Nav');
+    const isEn = S.lang === 'en';
     b.dropdowns = b.dropdowns || {};
     snap();
     if (act === 'add') {
-      let defSubs = ['Official WhatsApp', 'Hantar Emel', 'Peta Lokasi'];
-      if (/produk|servis|pilihan/i.test(curTitle)) defSubs = ['Pakej Asas', 'Pakej Premium', 'Pakej Khas'];
-      else if (/tentang|about/i.test(curTitle)) defSubs = ['Latar Belakang', 'Pasukan Kami', 'Visi & Misi'];
+      let defSubs = isEn ? ['Official WhatsApp', 'Send Email', 'Location Map'] : ['WhatsApp Rasmi', 'Hantar Emel', 'Peta Lokasi'];
+      if (/produk|servis|pilihan|service|product/i.test(curTitle)) defSubs = isEn ? ['Basic Plan', 'Premium Plan', 'Custom Plan'] : ['Pakej Asas', 'Pakej Premium', 'Pakej Khas'];
+      else if (/tentang|about/i.test(curTitle)) defSubs = isEn ? ['About Us', 'Our Team', 'Vision & Mission'] : ['Latar Belakang', 'Pasukan Kami', 'Visi & Misi'];
       b.dropdowns[curTitle] = defSubs;
       S.selNavTitle = curTitle;
       toast(`Menu "${curTitle}" converted to semantic Dropdown!`);
@@ -2579,13 +2596,16 @@ document.addEventListener('click', e => {
     const act = x.dataset.cbar;
     const b = get(S.sel);
     if (!b) return;
+    const isEn = S.lang === 'en';
     snap();
     if (act === 'fill') {
       const fillCycle = [0, 1, 2, 3, 4, 5, 'none'];
       const curIdx = fillCycle.indexOf(b.f);
       const nextIdx = (curIdx + 1) % fillCycle.length;
       b.f = fillCycle[nextIdx];
-      const names = ['Putih', 'Biru Lembut', 'Kuning Emas', 'Kelabu Gelap', 'Oren Coral', 'Hijau Mint', 'Lutsinar (None)'];
+      const names = isEn
+        ? ['White', 'Soft Blue', 'Gold Yellow', 'Dark Slate', 'Coral Orange', 'Mint Green', 'Transparent (None)']
+        : ['Putih', 'Biru Lembut', 'Kuning Emas', 'Kelabu Gelap', 'Oren Coral', 'Hijau Mint', 'Lutsinar (None)'];
       toast(`Background Color: ${names[nextIdx]}`);
     } else if (act === 'border') {
       if (!b.bw || b.bw === 0) { b.bw = 1; b.bs = 'solid'; toast('Border: 1px Solid'); }
@@ -2601,7 +2621,7 @@ document.addEventListener('click', e => {
     } else if (act === 'bold') {
       const current = b.fw === 'bold' ? 700 : Number(b.fw) || 400;
       b.fw = current >= 700 ? 400 : 700;
-      toast(`Ketebalan teks: ${b.fw >= 700 ? 'Tebal' : 'Biasa'}`);
+      toast(isEn ? `Font weight: ${b.fw >= 700 ? 'Bold' : 'Regular'}` : `Ketebalan teks: ${b.fw >= 700 ? 'Tebal' : 'Biasa'}`);
     } else if (act === 'italic') {
       b.fst = b.fst === 'italic' ? 'normal' : 'italic';
       toast(`Italic: ${b.fst === 'italic' ? 'ON' : 'OFF'}`);
@@ -2613,7 +2633,9 @@ document.addEventListener('click', e => {
       const curIdx = aligns.indexOf(b.ta || 'left');
       const nextIdx = (curIdx + 1) % aligns.length;
       b.ta = aligns[nextIdx];
-      const alignNames = { left: 'Rata Kiri', center: 'Rata Tengah', right: 'Rata Kanan' };
+      const alignNames = isEn
+        ? { left: 'Left', center: 'Center', right: 'Right' }
+        : { left: 'Rata Kiri', center: 'Rata Tengah', right: 'Rata Kanan' };
       toast(`Alignment: ${alignNames[b.ta]}`);
     } else if (act === 'pad') {
       const padCycle = [0, 8, 16, 24, 32];
@@ -2626,7 +2648,9 @@ document.addEventListener('click', e => {
       const curIdx = shdCycle.indexOf(b.shd || 'none');
       const nextIdx = (curIdx + 1) % shdCycle.length;
       b.shd = shdCycle[nextIdx];
-      const names = { none: 'Tiada', sm: 'Lembut', md: 'Timbul', lg: 'Jelas' };
+      const names = isEn
+        ? { none: 'None', sm: 'Soft', md: 'Medium', lg: 'Strong' }
+        : { none: 'Tiada', sm: 'Lembut', md: 'Timbul', lg: 'Jelas' };
       toast(`Shadow: ${names[b.shd]}`);
     } else if (act === 'position') {
       const idx = S.blocks.indexOf(b);
@@ -2647,8 +2671,8 @@ document.addEventListener('click', e => {
       toast('Element converted to Link Button <a>');
     } else if (act === 'to-dropdown') {
       b.type = 'dropdown';
-      b.items = b.items && b.items.length ? b.items : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
-      toast('Pautan ditukar kepada menu dropdown');
+      b.items = b.items && b.items.length ? b.items : (isEn ? ['Option 1', 'Option 2', 'Option 3'] : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3']);
+      toast(isEn ? 'Link converted to dropdown menu' : 'Pautan ditukar kepada menu dropdown');
     } else if (act === 'del') {
       deleteBox(b.id);
       return;
@@ -2804,6 +2828,7 @@ if (canvaBarEl) {
     if (!b) return;
     if (e.target.id === 'canva-tag-sel') {
       snap();
+      const isEn = S.lang === 'en';
       b.type = e.target.value;
       if (b.type === 'nav' && !b.t.includes(',')) {
         b.t = b.t.trim().split(/\s+/).join(', ');
@@ -2812,10 +2837,10 @@ if (canvaBarEl) {
         b.href = 'index.html';
       }
       if (b.type === 'link' && !b.href) b.href = '#';
-      if (b.type === 'dropdown' && !b.items) b.items = ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
+      if (b.type === 'dropdown' && !b.items) b.items = isEn ? ['Option 1', 'Option 2', 'Option 3'] : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
       if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
       render();
-      toast(`Element converted to <${TY[b.type].tag}> (${TY[b.type].n})`);
+      toast(`Element converted to <${TY[b.type].tag}> (${isEn ? (TY[b.type].en || TY[b.type].n) : TY[b.type].n})`);
     } else if (e.target.id === 'canva-font-sel') {
       snap();
       b.font = e.target.value;
@@ -2883,11 +2908,12 @@ function currentPopoverHex() {
 }
 function colorSelectorMarkup(hex) {
   const hsv = hexToHsv(hex);
+  const isEn = S.lang === 'en';
   return `<div class="cpop-selector-wrap">
-    <div class="cpop-sv-field" id="cpop-sv-field" role="slider" tabindex="0" aria-label="Pilih tona dan kecerahan" aria-valuetext="${hex}" style="--picker-hue:hsl(${Math.round(hsv.h)} 100% 50%)">
+    <div class="cpop-sv-field" id="cpop-sv-field" role="slider" tabindex="0" aria-label="${isEn ? 'Select tone and brightness' : 'Pilih tona dan kecerahan'}" aria-valuetext="${hex}" style="--picker-hue:hsl(${Math.round(hsv.h)} 100% 50%)">
       <span class="cpop-selector-marker" style="left:${hsv.s * 100}%;top:${(1 - hsv.v) * 100}%"></span>
     </div>
-    <label class="cpop-hue-control"><span>Spektrum warna</span><input type="range" id="cpop-hue-range" min="0" max="359" value="${Math.round(hsv.h)}" aria-label="Spektrum warna"></label>
+    <label class="cpop-hue-control"><span>${isEn ? 'Color spectrum' : 'Spektrum warna'}</span><input type="range" id="cpop-hue-range" min="0" max="359" value="${Math.round(hsv.h)}" aria-label="${isEn ? 'Color spectrum' : 'Spektrum warna'}"></label>
   </div>`;
 }
 async function pickScreenColor() {
@@ -2916,6 +2942,7 @@ function toggleColorPopover(type, btn) {
   }
   const b = get(S.sel);
   if (!b) return;
+  const isEn = S.lang === 'en';
   curPopType = type;
   colorPopoverUndoCaptured = false;
 
@@ -2943,7 +2970,9 @@ function toggleColorPopover(type, btn) {
     'linear-gradient(135deg, #a78bfa 0%, #fbcfe8 100%)',
     'linear-gradient(135deg, #0b3d91 0%, #38bdf8 100%)'
   ];
-  const labels = { '#203a5b':'Navy', '#c4d7ed':'Biru lembut', '#ffffff':'Putih', '#111827':'Arang', '#cfe0ff':'Biru muda', '#ffd166':'Kuning', '#2b2f3a':'Arang gelap', '#ff7a59':'Jingga', '#b8f2c9':'Hijau lembut', '#0b3d91':'Biru', '#06255c':'Navy gelap', '#1e293b':'Slate', '#f1f5f9':'Kelabu cerah', '#fef08a':'Kuning lembut', '#fecdd3':'Merah jambu', '#ddd6fe':'Ungu lembut', '#e0e7ff':'Indigo lembut' };
+  const labels = isEn
+    ? { '#203a5b':'Navy', '#c4d7ed':'Soft blue', '#ffffff':'White', '#111827':'Charcoal', '#cfe0ff':'Light blue', '#ffd166':'Yellow', '#2b2f3a':'Dark charcoal', '#ff7a59':'Coral', '#b8f2c9':'Mint green', '#0b3d91':'Blue', '#06255c':'Dark navy', '#1e293b':'Slate', '#f1f5f9':'Light gray', '#fef08a':'Soft yellow', '#fecdd3':'Pink', '#ddd6fe':'Soft purple', '#e0e7ff':'Soft indigo' }
+    : { '#203a5b':'Navy', '#c4d7ed':'Biru lembut', '#ffffff':'Putih', '#111827':'Arang', '#cfe0ff':'Biru muda', '#ffd166':'Kuning', '#2b2f3a':'Arang gelap', '#ff7a59':'Jingga', '#b8f2c9':'Hijau lembut', '#0b3d91':'Biru', '#06255c':'Navy gelap', '#1e293b':'Slate', '#f1f5f9':'Kelabu cerah', '#fef08a':'Kuning lembut', '#fecdd3':'Merah jambu', '#ddd6fe':'Ungu lembut', '#e0e7ff':'Indigo lembut' };
   const swatchButton = (color, attr, current) => {
     const value = String(color).toLowerCase();
     return `<button type="button" class="cpop-swatch${value === String(current || '').toLowerCase() ? ' active' : ''}" ${attr}="${qa(color)}" data-color-name="${labels[value] || value}" style="--swatch-color:${color};background:${color}" aria-label="${labels[value] || color}" title="${labels[value] || color} · ${color}"></button>`;
@@ -2956,28 +2985,28 @@ function toggleColorPopover(type, btn) {
   const themes = themeSwatches.map(color => swatchButton(color, isText ? 'data-set-col' : 'data-set-fill', curHex)).join('');
   const baseColors = (isText ? TEXT_SWATCHES : FILL_SWATCHES.filter(color => color !== 'none'))
     .map(color => swatchButton(color, isText ? 'data-set-col' : 'data-set-fill', curHex)).join('');
-  const gradientColors = gradients.map((gradient, index) => `<button type="button" class="cpop-gradient-swatch${isGradient && currentCss === gradient ? ' active' : ''}" data-set-gradient="${qa(gradient)}" data-color-name="gradient ${index + 1}" style="background:${gradient}" aria-label="Gradien ${index + 1}" title="Gradien ${index + 1}"></button>`).join('');
+  const gradientColors = gradients.map((gradient, index) => `<button type="button" class="cpop-gradient-swatch${isGradient && currentCss === gradient ? ' active' : ''}" data-set-gradient="${qa(gradient)}" data-color-name="gradient ${index + 1}" style="background:${gradient}" aria-label="${isEn ? 'Gradient' : 'Gradien'} ${index + 1}" title="${isEn ? 'Gradient' : 'Gradien'} ${index + 1}"></button>`).join('');
   const customInputId = isText ? 'cpop-custom-input' : 'cpop-custom-fill-input';
   const customInputValue = /^#[\da-f]{6}$/i.test(curHex) ? curHex : '#ffffff';
   const closeButton = '<button type="button" class="color-popover-close" id="cpop-close" title="Close" aria-label="Close">✕</button>';
 
   pop.innerHTML = `
-    <div class="color-popover-head"><b>Warna</b>${closeButton}</div>
-    <label class="cpop-search"><span aria-hidden="true">⌕</span><input type="search" id="cpop-search" placeholder="Cari warna atau kod HEX" autocomplete="off"></label>
-    ${!isText ? `<div class="cpop-mode-tabs" role="tablist" aria-label="Jenis warna"><button type="button" role="tab" data-cpop-mode="solid" aria-selected="${!isGradient}" class="${!isGradient ? 'active' : ''}">Warna padu</button><button type="button" role="tab" data-cpop-mode="gradient" aria-selected="${isGradient}" class="${isGradient ? 'active' : ''}">Gradien</button></div>` : ''}
+    <div class="color-popover-head"><b>${isEn ? 'Colors' : 'Warna'}</b>${closeButton}</div>
+    <label class="cpop-search"><span aria-hidden="true">⌕</span><input type="search" id="cpop-search" placeholder="${isEn ? 'Search color or HEX code' : 'Cari warna atau kod HEX'}" autocomplete="off"></label>
+    ${!isText ? `<div class="cpop-mode-tabs" role="tablist" aria-label="${isEn ? 'Color type' : 'Jenis warna'}"><button type="button" role="tab" data-cpop-mode="solid" aria-selected="${!isGradient}" class="${!isGradient ? 'active' : ''}">${isEn ? 'Solid color' : 'Warna padu'}</button><button type="button" role="tab" data-cpop-mode="gradient" aria-selected="${isGradient}" class="${isGradient ? 'active' : ''}">${isEn ? 'Gradient' : 'Gradien'}</button></div>` : ''}
     <div class="cpop-solid-panel" id="cpop-solid-panel"${isGradient ? ' hidden' : ''}>
       <div class="cpop-current-row">
         <span class="cpop-current-swatch${!isText && b.f === 'none' ? ' is-none' : ''}" style="${isText || b.f !== 'none' ? `--current-color:${curHex};background:${curHex}` : ''}" title="${curHex}"></span>
-        <label class="cpop-hex-field"><small>Kod HEX</small><input type="text" id="cpop-hex-input" value="${customInputValue}" maxlength="7" spellcheck="false" autocomplete="off"></label>
-        <label class="cpop-picker-control" title="Pemilih warna"><input type="color" id="${customInputId}" value="${customInputValue}"><span>▧</span></label>
-        <button type="button" class="cpop-eyedropper" data-cpop-eyedropper title="Ambil warna dari skrin" aria-label="Ambil warna dari skrin"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.2 6.1 3.7 3.7M5 19l4.8-1.2L19 8.6a2.1 2.1 0 0 0-3-3L6.8 14.8 5 19Z"/><path d="m4 20 3.3-.8"/></svg></button>
+        <label class="cpop-hex-field"><small>${isEn ? 'HEX Code' : 'Kod HEX'}</small><input type="text" id="cpop-hex-input" value="${customInputValue}" maxlength="7" spellcheck="false" autocomplete="off"></label>
+        <label class="cpop-picker-control" title="${isEn ? 'Color picker' : 'Pemilih warna'}"><input type="color" id="${customInputId}" value="${customInputValue}"><span>▧</span></label>
+        <button type="button" class="cpop-eyedropper" data-cpop-eyedropper title="${isEn ? 'Pick color from screen' : 'Ambil warna dari skrin'}" aria-label="${isEn ? 'Pick color from screen' : 'Ambil warna dari skrin'}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.2 6.1 3.7 3.7M5 19l4.8-1.2L19 8.6a2.1 2.1 0 0 0-3-3L6.8 14.8 5 19Z"/><path d="m4 20 3.3-.8"/></svg></button>
       </div>
       ${colorSelectorMarkup(customInputValue)}
-      <section class="cpop-section"><div class="cpop-section-title">Warna dalam rekaan</div><div class="cpop-design-colors">${names || '<span class="cpop-empty">Warna pilihan akan muncul di sini</span>'}</div></section>
-      <section class="cpop-section"><div class="cpop-section-title">Warna tema</div><div class="cpop-theme-row">${themes}${!isText ? '<button type="button" class="cpop-swatch is-none" data-set-fill="none" data-color-name="lutsinar" aria-label="Tiada warna" title="Tiada warna"></button>' : ''}</div></section>
-      <section class="cpop-section cpop-base-section"><div class="cpop-section-title">Warna pilihan</div><div class="color-popover-grid">${baseColors}</div></section>
+      <section class="cpop-section"><div class="cpop-section-title">${isEn ? 'Document colors' : 'Warna dalam rekaan'}</div><div class="cpop-design-colors">${names || `<span class="cpop-empty">${isEn ? 'Selected colors will appear here' : 'Warna pilihan akan muncul di sini'}</span>`}</div></section>
+      <section class="cpop-section"><div class="cpop-section-title">${isEn ? 'Theme colors' : 'Warna tema'}</div><div class="cpop-theme-row">${themes}${!isText ? `<button type="button" class="cpop-swatch is-none" data-set-fill="none" data-color-name="${isEn ? 'transparent' : 'lutsinar'}" aria-label="${isEn ? 'No color' : 'Tiada warna'}" title="${isEn ? 'No color' : 'Tiada warna'}"></button>` : ''}</div></section>
+      <section class="cpop-section cpop-base-section"><div class="cpop-section-title">${isEn ? 'Default palette' : 'Warna pilihan'}</div><div class="color-popover-grid">${baseColors}</div></section>
     </div>
-    ${!isText ? `<div class="cpop-gradient-panel"${isGradient ? '' : ' hidden'}><section class="cpop-section"><div class="cpop-section-title">Gradien tema</div><div class="cpop-gradient-grid">${gradientColors}</div></section><p class="cpop-gradient-hint">Pilih gradien untuk guna pada latar elemen.</p></div>` : ''}
+    ${!isText ? `<div class="cpop-gradient-panel"${isGradient ? '' : ' hidden'}><section class="cpop-section"><div class="cpop-section-title">${isEn ? 'Theme gradients' : 'Gradien tema'}</div><div class="cpop-gradient-grid">${gradientColors}</div></section><p class="cpop-gradient-hint">${isEn ? 'Pick a gradient to apply to the element background.' : 'Pilih gradien untuk guna pada latar elemen.'}</p></div>` : ''}
   `;
   pop.hidden = false;
   syncColorSelector(customInputValue);
@@ -3019,7 +3048,7 @@ function applyPopoverNone() {
     renderCanvaBar();
   }
   const preview = $('.cpop-current-swatch');
-  if (preview) { preview.classList.add('is-none'); preview.style.background = ''; preview.title = 'Tiada warna'; }
+  if (preview) { preview.classList.add('is-none'); preview.style.background = ''; preview.title = S.lang === 'en' ? 'No color' : 'Tiada warna'; }
   document.querySelectorAll('[data-set-fill]').forEach(swatch => swatch.classList.toggle('active', swatch.dataset.setFill === 'none'));
 }
 
@@ -3249,19 +3278,21 @@ function closeAppDialog(result) {
 }
 
 function appAlert(msg, title = 'Studio Notice', icon = '💡') {
+  const isEn = S.lang === 'en';
   return new Promise(resolve => {
     showAppDialog({
       type: 'alert',
       title,
       msg,
       icon,
-      confirmText: 'Faham',
+      confirmText: isEn ? 'Got It' : 'Faham',
       onResolve: () => resolve(true)
     });
   });
 }
 
 function appConfirm(msg, title = 'Confirmation', icon = '❓', isDanger = false, confirmText = 'Yes, Continue') {
+  const isEn = S.lang === 'en';
   return new Promise(resolve => {
     showAppDialog({
       type: 'confirm',
@@ -3270,13 +3301,14 @@ function appConfirm(msg, title = 'Confirmation', icon = '❓', isDanger = false,
       icon,
       isDanger,
       confirmText,
-      cancelText: 'Cancel',
+      cancelText: isEn ? 'Cancel' : 'Batal',
       onResolve: val => resolve(val)
     });
   });
 }
 
 function appPrompt(msg, defaultValue = '', title = 'Enter Information', icon = '✏️', placeholder = '') {
+  const isEn = S.lang === 'en';
   return new Promise(resolve => {
     showAppDialog({
       type: 'prompt',
@@ -3285,8 +3317,8 @@ function appPrompt(msg, defaultValue = '', title = 'Enter Information', icon = '
       icon,
       defaultValue,
       placeholder,
-      confirmText: 'Save',
-      cancelText: 'Batal',
+      confirmText: isEn ? 'Save' : 'Simpan',
+      cancelText: isEn ? 'Cancel' : 'Batal',
       onResolve: val => resolve(val)
     });
   });
@@ -3514,11 +3546,11 @@ function initSplitResizer() {
     if (window.innerWidth <= 768) {
       stage.style.setProperty('--split-top', '50%');
       localStorage.setItem('dw_split_top_ratio', '50');
-      toast('Paparan split mobile ditetapkan semula ke 50:50');
+      toast(S.lang === 'en' ? 'Mobile split view reset to 50:50' : 'Paparan split mobile ditetapkan semula ke 50:50');
     } else {
       stage.style.setProperty('--split-left', '50%');
       localStorage.setItem('dw_split_ratio', '50');
-      toast('Split view reset to 50:50 balance');
+      toast(S.lang === 'en' ? 'Split view reset to 50:50 balance' : 'Paparan split ditetapkan semula ke 50:50');
     }
   });
 }

@@ -2118,14 +2118,7 @@ details:not([open]) summary::before { content: "> "; }
 }
 #toast.on { opacity: 1; }
 
-@media (max-width: 900px) {
-  body { overflow: auto; }
-  main { flex-direction: column; overflow: visible; }
-  .side, .right { width: auto; border: 0; border-bottom: 1px solid var(--line); }
-  .stage { flex-direction: column; order: -1; }
-  .vis { min-height: 72vh; }
-  .code { width: 100%; min-height: 380px; border: 0; }
-}
+/* Mobile layout is handled by the dedicated <= 768px responsive rules below */
 
 /* Ruang kerja cerah, fokus pada kanvas kertas bergaris. */
 :root {
@@ -3381,15 +3374,20 @@ button:hover { color: var(--tone-navy); background: var(--tone-soft); border-col
 /* Name each toolbar group so the controls scan as a compact design inspector. */
 .canva-cluster { position:relative; padding:20px 5px 5px; }
 .canva-cluster::before { position:absolute; top:4px; left:9px; color:var(--tone-navy); opacity:.72; font-size:8px; font-weight:700; line-height:1; letter-spacing:.06em; text-transform:uppercase; pointer-events:none; }
-.canva-cluster-element::before { content:"Elemen"; }
-.canva-cluster-style::before { content:"Gaya"; }
-.canva-cluster-typo::before { content:"Teks"; }
-.canva-cluster-layout::before { content:"Susun"; }
-.canva-cluster-delete::before { content:"Aksi"; }
+.canva-cluster-element::before { content:"Element"; }
+.canva-cluster-style::before { content:"Style"; }
+.canva-cluster-typo::before { content:"Text"; }
+.canva-cluster-layout::before { content:"Layout"; }
+.canva-cluster-delete::before { content:"Action"; }
+html[lang="ms"] .canva-cluster-element::before { content:"Elemen"; }
+html[lang="ms"] .canva-cluster-style::before { content:"Gaya"; }
+html[lang="ms"] .canva-cluster-typo::before { content:"Teks"; }
+html[lang="ms"] .canva-cluster-layout::before { content:"Susun"; }
+html[lang="ms"] .canva-cluster-delete::before { content:"Aksi"; }
 .canva-cluster { align-self:stretch; }
 .canva-group { align-items:stretch; }
 .canva-cluster-element, .canva-cluster-style, .canva-cluster-typo, .canva-cluster-layout { align-content:center; }
-@media (max-width:760px) { .canva-cluster { flex:1 1 100%; } }
+@media (max-width:760px) { .canva-cluster { flex:0 0 auto; } }
 
 /* Full color selector and unmistakable color chips. */
 .color-popover { width:360px; max-width:calc(100vw - 24px); max-height:calc(100vh - 120px); overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; }
@@ -4604,92 +4602,170 @@ body.is-resizing iframe {
 }
 
 /* ==========================================================================
-   MOBILE VIEW OPTIMIZATION (<= 768px): VERTICAL SPLIT (DESIGN TOP / CODE BOTTOM)
+   MOBILE VIEW OPTIMIZATION (<= 768px): SPACIOUS FULL-WIDTH WORKSPACE,
+   BOTTOM NAVIGATION DOCK & VERTICAL SPLIT (DESIGN TOP / CODE BOTTOM)
    ========================================================================== */
 @media (max-width: 768px) {
-  /* Header navigation bar */
+  body {
+    overflow: hidden !important;
+    height: 100dvh !important;
+  }
+
+  /* Compact Single-Row Top Header Bar */
   header.bar {
-    padding: 6px 8px !important;
-    gap: 6px !important;
-    min-height: 48px !important;
+    flex-wrap: nowrap !important;
+    padding: 4px 8px !important;
+    gap: 5px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
     overflow-x: auto !important;
+    overflow-y: hidden !important;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
   header.bar::-webkit-scrollbar { display: none; }
-  .brand { gap: 6px !important; }
+  .brand { gap: 4px !important; flex-shrink: 0 !important; }
   .brand > span:not(.brand-badge) {
     display: none !important;
   }
   .bar-divider {
-    height: 18px !important;
-    margin: 0 2px !important;
+    height: 16px !important;
+    margin: 0 1px !important;
+    flex-shrink: 0 !important;
+  }
+  .bar .seg-tools button,
+  .bar .seg-history button,
+  .bar .seg-history button:disabled {
+    width: 28px !important;
+    min-width: 28px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 4px !important;
   }
   .seg-dw-modes {
     padding: 2px !important;
     gap: 2px !important;
+    flex-shrink: 0 !important;
   }
   .seg-dw-modes button {
     height: 26px !important;
     min-height: 26px !important;
-    padding: 0 7px !important;
+    padding: 0 8px !important;
     font-size: 11px !important;
   }
   .btn-dl {
     padding: 4px 8px !important;
     font-size: 11px !important;
+    min-height: 28px !important;
     white-space: nowrap !important;
+    flex-shrink: 0 !important;
   }
   .btn-dl span {
     display: none !important;
   }
   .btn-lang {
-    padding: 4px 7px !important;
-    font-size: 11px !important;
+    padding: 3px 7px !important;
+    font-size: 10.5px !important;
     min-height: 28px !important;
+    flex-shrink: 0 !important;
   }
 
-  /* Main & Rail layout on Mobile */
+  /* Hide desktop copyright footer on mobile to maximize vertical workspace */
+  .app-footer {
+    display: none !important;
+  }
+
+  /* Main Workspace: Stage on Top (Full 100% Width), Rail Dock at Bottom */
   main {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
     position: relative !important;
     overflow: hidden !important;
   }
+
+  .stage {
+    order: 1 !important;
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Bottom Navigation Dock (replaces cramped left vertical rail on phone) */
   .canva-rail {
-    width: 50px !important;
-    min-width: 50px !important;
-    padding: 6px 2px 10px !important;
-    gap: 3px !important;
+    order: 2 !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    height: 50px !important;
+    min-height: 50px !important;
+    max-height: 50px !important;
+    flex-direction: row !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    padding: 2px 6px !important;
+    gap: 2px !important;
+    border-right: 0 !important;
+    border-top: 1px solid var(--tone-navy, #203a5b) !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    z-index: 90 !important;
   }
   .rail-item {
-    width: 44px !important;
+    flex: 1 1 0 !important;
+    width: auto !important;
+    min-width: 48px !important;
+    max-width: 72px !important;
+    height: 44px !important;
     min-height: 44px !important;
-    padding: 4px 1px !important;
+    padding: 3px 2px !important;
+    gap: 2px !important;
+    border-radius: 6px !important;
+  }
+  .rail-item.active,
+  .rail-item.active:hover {
+    box-shadow: inset 0 3px 0 var(--tone-navy), 0 0 0 1px var(--tone-paper) !important;
+  }
+  .rail-item.active::before {
+    display: none !important;
   }
   .rail-ic, .rail-img-ic {
-    width: 17px !important;
-    height: 17px !important;
+    width: 16px !important;
+    height: 16px !important;
   }
   .rail-lbl {
     font-size: 8.5px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
   }
 
-  /* Slide-out Drawer on Mobile floats as modal overlay so it doesn't compress stage */
+  /* Slide-up Bottom Sheet Drawer on Mobile */
   .canva-drawer {
     position: absolute !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    left: 50px !important;
-    width: min(300px, calc(100vw - 50px)) !important;
-    max-width: calc(100vw - 50px) !important;
-    z-index: 80 !important;
-    box-shadow: 6px 0 24px rgba(0, 0, 0, 0.45) !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 50px !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: min(58vh, 420px) !important;
+    z-index: 85 !important;
+    border-right: 0 !important;
+    border-top: 2px solid var(--tone-navy, #203a5b) !important;
+    border-radius: 14px 14px 0 0 !important;
+    box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.35) !important;
     margin-left: 0 !important;
-    transition: transform 0.22s ease-out, opacity 0.2s ease !important;
+    transition: transform 0.22s ease-out, opacity 0.18s ease !important;
   }
   main.drawer-collapsed .canva-drawer {
-    transform: translateX(-360px) !important;
+    transform: translateY(110%) !important;
     opacity: 0 !important;
     pointer-events: none !important;
+    margin-left: 0 !important;
   }
 
   /* --- VERTICAL SPLIT MODE ON MOBILE: DESIGN TOP & CODE BOTTOM --- */
@@ -4697,22 +4773,24 @@ body.is-resizing iframe {
     flex-direction: column !important;
   }
   .stage.s .vis {
-    flex: 0 0 var(--split-top, 50%) !important;
+    flex: 0 0 var(--split-top, 48%) !important;
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    height: var(--split-top, 50%) !important;
-    min-height: 160px !important;
-    max-height: calc(100% - 130px) !important;
+    height: var(--split-top, 48%) !important;
+    min-height: 130px !important;
+    max-height: calc(100% - 140px) !important;
     overflow: hidden !important;
-    padding: 8px 8px 4px !important;
+    padding: 4px 6px 2px !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
   .stage.s .split-gutter {
     display: flex !important;
     width: 100% !important;
-    height: 12px !important;
-    min-height: 12px !important;
-    flex: 0 0 12px !important;
+    height: 10px !important;
+    min-height: 10px !important;
+    flex: 0 0 10px !important;
     cursor: row-resize !important;
     border-left: none !important;
     border-right: none !important;
@@ -4720,32 +4798,193 @@ body.is-resizing iframe {
     border-bottom: 1px solid rgba(0, 0, 0, 0.5) !important;
   }
   .stage.s .split-gutter-handle {
-    width: 44px !important;
-    height: 3.5px !important;
+    width: 42px !important;
+    height: 3px !important;
   }
   .stage.s .code {
     flex: 1 1 0 !important;
     width: 100% !important;
+    max-width: 100% !important;
     min-width: 0 !important;
     height: auto !important;
-    min-height: 130px !important;
+    min-height: 140px !important;
+    display: flex !important;
+    flex-direction: column !important;
     border-left: none !important;
     border-top: 1px solid var(--line) !important;
+    overflow: hidden !important;
   }
 
-  /* Stage.v on mobile */
+  /* Compact page tabs & Canva toolbar on mobile so canvas has plenty of room */
+  .page-tabs-bar {
+    min-height: 28px !important;
+    padding: 2px 4px !important;
+    gap: 4px !important;
+    flex: none !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    scrollbar-width: none;
+  }
+  .page-tabs-bar::-webkit-scrollbar { display: none; }
+  .ptab {
+    padding: 3px 7px !important;
+    font-size: 10.5px !important;
+    white-space: nowrap !important;
+  }
+  .visual-toolbar-wrap {
+    flex: none !important;
+  }
+  .canva-bar {
+    padding: 3px 5px !important;
+    max-height: 38px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none;
+  }
+  .canva-bar::-webkit-scrollbar { display: none; }
+  .canva-group {
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    width: max-content !important;
+  }
+  .canva-cluster {
+    flex: 0 0 auto !important;
+    flex-wrap: nowrap !important;
+    padding: 3px 4px !important;
+    gap: 3px !important;
+  }
+  .canva-cluster::before {
+    display: none !important;
+  }
+  .canva-btn {
+    min-height: 26px !important;
+    min-width: 26px !important;
+    padding: 2px 6px !important;
+    font-size: 10.5px !important;
+  }
+  .canva-tag-select,
+  .canva-font-select {
+    width: 112px !important;
+    max-width: 112px !important;
+    height: 26px !important;
+    font-size: 10.5px !important;
+    padding: 2px 4px !important;
+  }
+  .canva-weight-wrap {
+    min-height: 26px !important;
+    flex: 0 0 88px !important;
+  }
+  .canva-weight-select {
+    width: 80px !important;
+    min-width: 76px !important;
+    font-size: 10px !important;
+  }
+
+  /* Stage.v and Stage.c on mobile */
   .stage.v .vis {
-    padding: 8px 8px 4px !important;
+    flex: 1 1 0 !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    padding: 6px 6px 2px !important;
+  }
+  .stage.c .code {
+    flex: 1 1 0 !important;
+    height: 100% !important;
+    min-height: 0 !important;
   }
 
-  /* Visual Canvas wrapper scrollable on mobile */
+  /* Visual Canvas wrapper scrollable on mobile without forcing 480px min-height */
   .cvw {
-    padding: 6px !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 4px !important;
     overflow: auto !important;
     -webkit-overflow-scrolling: touch;
   }
   #cv {
-    min-width: 320px !important;
+    min-width: 300px !important;
+    grid-template-rows: repeat(var(--rows, 12), 28px) !important;
+    min-height: calc(var(--rows, 12) * 28px) !important;
+    gap: 5px !important;
+    padding: 6px !important;
+  }
+  .blk .tag {
+    font-size: 8px !important;
+    padding: 1px 4px !important;
+    max-width: calc(100% - 4px) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+  .blk .tx {
+    font-size: 10.5px !important;
+    padding: 13px 4px 3px !important;
+    line-height: 1.2 !important;
+  }
+  .nav-chip {
+    font-size: 9px !important;
+    padding: 1px 5px !important;
+  }
+
+  /* Compact Code Editor bars & readable code lines on mobile */
+  .code-tabs-bar,
+  .code-sub-bar {
+    min-height: 28px !important;
+    max-height: 32px !important;
+    padding: 2px 6px !important;
+    gap: 4px !important;
+    flex: none !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none;
+  }
+  .code-tabs-bar::-webkit-scrollbar,
+  .code-sub-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .code-tabs-bar .seg,
+  .code-sub-bar .seg,
+  .code-mode-wrap {
+    flex-wrap: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+  .code-tabs-bar button,
+  .code-sub-bar button {
+    white-space: nowrap !important;
+    padding: 2px 7px !important;
+    font-size: 10.5px !important;
+    height: 22px !important;
+    min-height: 22px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+  }
+  .code-view-container {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  #src {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    overflow: auto !important;
+    padding: 6px 4px !important;
+    font-size: 11px !important;
+  }
+  .ln {
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+  }
+  .code-editor-wrap:not([hidden]) {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+  }
+  .code-textarea {
+    font-size: 11.5px !important;
   }
 
   /* Body resize cursor on mobile */
@@ -4756,13 +4995,17 @@ body.is-resizing iframe {
 
   /* Bottom status bar on mobile */
   .dw-status-bar {
-    height: 24px !important;
+    height: 22px !important;
+    min-height: 22px !important;
+    max-height: 22px !important;
     padding: 0 6px !important;
-    font-size: 10px !important;
+    font-size: 9.5px !important;
+    flex: none !important;
   }
   .dw-stat-pill:not(.dw-sync-pill) {
     display: none !important;
   }
 }
+
 
 
