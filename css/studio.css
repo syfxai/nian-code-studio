@@ -4029,6 +4029,10 @@ body.is-resizing iframe {
   z-index: 20;
   margin: 0;
 }
+#cv:not(.no-css):not(.code-source-preview) > .blk.single-row.same-origin-child > .lb {
+  top: auto;
+  bottom: -9px;
+}
 #cv:not(.no-css):not(.code-source-preview) > .blk.single-row > .tx {
   display: flex;
   flex: 1 1 auto;
@@ -4041,7 +4045,19 @@ body.is-resizing iframe {
 #cv:not(.no-css):not(.code-source-preview) > .blk.single-row .canvas-nav-links {
   max-width: 100%;
   max-height: none;
-  overflow: visible;
+  flex-wrap: nowrap;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#cv:not(.no-css):not(.code-source-preview) > .blk.single-row .canvas-nav-links::-webkit-scrollbar {
+  display: none;
+}
+#cv:not(.no-css):not(.code-source-preview) > .blk.single-row .canvas-nav-item {
+  padding: 2px 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* The grid dimensions describe the saved layout. They must not crop its
@@ -4521,3 +4537,69 @@ body.is-resizing * {
 body.is-resizing iframe {
   pointer-events: none !important;
 }
+
+/* Language Switcher Button & Visual Form Mockup */
+.btn-lang {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--tone-navy, #203a5b) !important;
+  background: var(--tone-soft, #e7effa) !important;
+  border: 1px solid var(--tone-navy, #203a5b) !important;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.btn-lang:hover {
+  color: var(--tone-paper, #ffffff) !important;
+  background: var(--tone-navy, #203a5b) !important;
+}
+.canvas-form-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  margin-top: 2px;
+  text-align: left;
+}
+.canvas-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.canvas-form-lbl {
+  font-size: 9.5px;
+  font-weight: 600;
+  opacity: 0.85;
+  line-height: 1.1;
+}
+.canvas-form-input {
+  display: block;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(32, 58, 91, 0.28);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 9px;
+  color: #64748b;
+}
+.canvas-form-input.is-area {
+  height: 24px;
+}
+.canvas-form-btn {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 2px 9px;
+  border-radius: 4px;
+  background: #203a5b;
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 600;
+}
+

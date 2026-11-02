@@ -76,9 +76,12 @@
     <button type="button" id="run-preview-js" aria-pressed="false" title="JavaScript pratonton dimatikan secara lalai">Jalankan JS</button>
   </div>
   <div class="bar-spacer"></div>
-  <button id="btn-dl-all" class="btn-dl" title="Download project files (index.html, style.css, script.js)">
+  <button id="btn-lang-toggle" class="btn-lang" type="button" title="Tukar Bahasa Antara Muka (Bahasa Melayu / English)" aria-label="Tukar Bahasa">
+    <span>🌐 BM</span>
+  </button>
+  <button id="btn-dl-all" class="btn-dl" title="Muat turun semua fail projek dalam arkib .zip (index.html, about.html, contact.html, style.css, script.js)">
     <img src="assets/icons/export.png" class="img-ic-sm" alt="Download">
-    <span>Muat turun projek</span>
+    <span id="btn-dl-lbl">Muat turun ZIP</span>
   </button>
 </header>
 
@@ -186,16 +189,16 @@
       <!-- 5. Drawer Panel CSS Studio (Responsif, Grid, Token & Corak) -->
       <div class="drawer-panel" id="drawer-panel-css" hidden>
         <div class="side-css-section">
-          <div class="side-css-title">
-            <img src="assets/icons/view-mobile.png" class="img-ic-sm" alt=""> Responsive Preview
+          <div class="side-css-title" id="css-sec-resp-title">
+            <img src="assets/icons/view-mobile.png" class="img-ic-sm" alt=""> Pratonton Responsif
           </div>
           <!-- Suis Pengaktifan Kod CSS Responsif (@media) -->
           <div class="responsive-toggle-wrap">
             <div class="resp-txt">
-              <span class="resp-title">Generate Responsive Code (@media)</span>
-              <span class="resp-sub">Inject media query rules into CSS output</span>
+              <span class="resp-title" id="css-resp-lbl">Jana Kod Responsif (@media)</span>
+              <span class="resp-sub" id="css-resp-sub">Suntik peraturan media query ke dalam CSS</span>
             </div>
-            <button type="button" id="btn-toggle-resp-css" class="toggle-pill-btn" aria-pressed="false" title="Toggle responsive CSS media queries on/off">
+            <button type="button" id="btn-toggle-resp-css" class="toggle-pill-btn" aria-pressed="false" title="Hidup/matikan kod CSS responsif (@media)">
               <span class="toggle-pill-dot"></span>
               <span class="toggle-pill-text">OFF</span>
             </button>
@@ -203,10 +206,10 @@
         </div>
 
         <div class="side-css-section">
-          <div class="side-css-title">
-            <img src="assets/icons/tool-dimension.png" class="img-ic-sm" alt=""> CSS Grid Spacing & Dimensions
+          <div class="side-css-title" id="css-sec-grid-title">
+            <img src="assets/icons/tool-dimension.png" class="img-ic-sm" alt=""> Jarak & Saiz Grid CSS
           </div>
-          <label style="font-size:11px;color:var(--mute);margin-top:6px;display:block">Grid Gap (gap):</label>
+          <label id="css-gap-lbl" style="font-size:11px;color:var(--mute);margin-top:6px;display:block">Jarak Grid (gap):</label>
           <div class="seg seg-sm seg-grid-ctrl" id="seg-grid-gap">
             <button type="button" data-set-gap="4">4px</button>
             <button type="button" data-set-gap="8" class="active">8px</button>
@@ -214,7 +217,7 @@
             <button type="button" data-set-gap="16">16px</button>
             <button type="button" data-set-gap="24">24px</button>
           </div>
-          <label style="font-size:11px;color:var(--mute);margin-top:8px;display:block">Row Height (grid-auto-rows):</label>
+          <label id="css-rowh-lbl" style="font-size:11px;color:var(--mute);margin-top:8px;display:block">Tinggi Baris (grid-auto-rows):</label>
           <div class="seg seg-sm seg-grid-ctrl" id="seg-grid-row">
             <button type="button" data-set-rowh="30">30px</button>
             <button type="button" data-set-rowh="40" class="active">40px</button>
@@ -224,22 +227,22 @@
         </div>
 
         <div class="side-css-section">
-          <div class="side-css-title">
-            <img src="assets/icons/tool-theme.png" class="img-ic-sm" alt=""> Global Theme (:root Tokens)
+          <div class="side-css-title" id="css-sec-token-title">
+            <img src="assets/icons/tool-theme.png" class="img-ic-sm" alt=""> Tema Sejagat (Token :root)
           </div>
           <div class="css-tokens-list">
             <div class="token-row">
-              <span>Primary Accent:</span>
+              <span id="tok-lbl-pri">Warna Utama:</span>
               <input type="color" id="token-primary" value="#00d4ff" title="Warna Utama">
               <code id="token-primary-val">#00d4ff</code>
             </div>
             <div class="token-row">
-              <span>Canvas Background:</span>
+              <span id="tok-lbl-bg">Latar Belakang:</span>
               <input type="color" id="token-bg" value="#ffffff" title="Latar Belakang">
               <code id="token-bg-val">#ffffff</code>
             </div>
             <div class="token-row">
-              <span>Primary Text:</span>
+              <span id="tok-lbl-txt">Teks Utama:</span>
               <input type="color" id="token-text" value="#12203f" title="Warna Teks">
               <code id="token-text-val">#12203f</code>
             </div>
@@ -247,21 +250,21 @@
         </div>
 
         <div class="side-css-section">
-          <div class="side-css-title">
-            <img src="assets/icons/tool-theme.png" class="img-ic-sm" alt=""> Quick Canvas Themes
+          <div class="side-css-title" id="css-sec-preset-title">
+            <img src="assets/icons/tool-theme.png" class="img-ic-sm" alt=""> Tema Pantas Kanvas
           </div>
           <div class="theme-preset-grid">
             <button type="button" class="theme-preset-btn" data-theme-preset="blueprint">
               <img src="assets/icons/theme-blueprint.png" class="img-ic-sm" alt=""> Blueprint
             </button>
             <button type="button" class="theme-preset-btn" data-theme-preset="light">
-              <img src="assets/icons/theme-light.png" class="img-ic-sm" alt=""> Clean Light
+              <img src="assets/icons/theme-light.png" class="img-ic-sm" alt=""> Cerah Bersih
             </button>
             <button type="button" class="theme-preset-btn" data-theme-preset="dark">
-              <img src="assets/icons/theme-dark.png" class="img-ic-sm" alt=""> Dark Slate
+              <img src="assets/icons/theme-dark.png" class="img-ic-sm" alt=""> Gelap Moden
             </button>
             <button type="button" class="theme-preset-btn" data-theme-preset="mint">
-              <img src="assets/icons/theme-mint.png" class="img-ic-sm" alt=""> Fresh Mint
+              <img src="assets/icons/theme-mint.png" class="img-ic-sm" alt=""> Hijau Segar
             </button>
           </div>
         </div>
@@ -270,16 +273,17 @@
       <!-- 6. Drawer Panel Guru AI -->
       <div class="drawer-panel" id="drawer-panel-ai" hidden>
         <div class="ai-audit-box" style="margin-bottom:12px">
-          <b>🔍 Live Structure Audit</b>
-          <div id="drawer-ai-audit-text" style="margin-top:6px;font-size:11.5px;color:var(--ink);line-height:1.4">Scanning layout blocks on canvas...</div>
+          <b id="drawer-ai-audit-head">🔍 Audit Struktur Semasa</b>
+          <div id="drawer-ai-audit-text" style="margin-top:6px;font-size:11.5px;color:var(--ink);line-height:1.4">Mengimbas susunan blok pada kanvas...</div>
         </div>
-        <b style="font-size:11.5px;color:var(--mute);display:block;margin-bottom:6px">Student FAQs:</b>
-        <div class="ai-q-list" style="display:flex;flex-direction:column;gap:6px">
-          <button type="button" class="ai-q-btn" data-q="order">1. What should I structure first?</button>
-          <button type="button" class="ai-q-btn" data-q="nav">2. Why use &lt;nav&gt; instead of &lt;div&gt;?</button>
-          <button type="button" class="ai-q-btn" data-q="hero">3. How do I put text next to an image in Hero?</button>
-          <button type="button" class="ai-q-btn" data-q="box">4. What's the difference between Padding and Margin?</button>
-          <button type="button" class="ai-q-btn" data-q="semantic">5. Why is Semantic HTML5 preferred over &lt;div&gt;?</button>
+        <b id="drawer-ai-faq-head" style="font-size:11.5px;color:var(--mute);display:block;margin-bottom:6px">Soalan Lazim Pelajar:</b>
+        <div class="ai-q-list" id="drawer-ai-q-list" style="display:flex;flex-direction:column;gap:6px">
+          <button type="button" class="ai-q-btn" data-q="order">1. Apakah yang perlu saya susun dahulu?</button>
+          <button type="button" class="ai-q-btn" data-q="nav">2. Mengapa guna &lt;nav&gt; bukannya &lt;div&gt;?</button>
+          <button type="button" class="ai-q-btn" data-q="hero">3. Bagaimana letak teks di sebelah gambar dalam Hero?</button>
+          <button type="button" class="ai-q-btn" data-q="box">4. Apakah beza antara Padding dan Margin?</button>
+          <button type="button" class="ai-q-btn" data-q="semantic">5. Mengapa HTML5 Semantik lebih baik daripada &lt;div&gt;?</button>
+          <button type="button" class="ai-q-btn" data-q="form">6. Bagaimana borang &lt;form&gt; berfungsi?</button>
         </div>
         <div id="drawer-ai-ans" class="card" style="margin-top:12px;border-color:var(--cy);line-height:1.5" hidden></div>
       </div>
@@ -317,16 +321,16 @@
           <div class="dw-breadcrumbs" id="dw-breadcrumbs" aria-label="Tag Selector"></div>
         </div>
         <div class="dw-status-center">
-          <span class="dw-stat-pill" id="grid-dim">📐 12 cols × auto</span>
+          <span class="dw-stat-pill" id="grid-dim">📐 12 kol × auto</span>
           <span class="dw-stat-pill dw-author-pill">
-            <span class="dw-author-lbl">Author:</span>
-            <input id="nm" placeholder="Your name" class="dw-author-input">
+            <span class="dw-author-lbl" id="dw-author-lbl">Pereka:</span>
+            <input id="nm" placeholder="Nama anda" class="dw-author-input">
           </span>
           <span class="dw-stat-pill" id="dt"></span>
         </div>
         <div class="dw-status-right">
-          <span class="dw-stat-pill dw-sync-pill" title="Bi-directional live synchronization between code and design">⚡ Live Sync</span>
-          <span class="dw-stat-pill" id="dw-cursor-stat">Ln 1, Col 1</span>
+          <span class="dw-stat-pill dw-sync-pill" id="dw-sync-pill" title="Penyegerakan langsung dua hala antara kod dan reka bentuk">⚡ Segerak Langsung</span>
+          <span class="dw-stat-pill" id="dw-cursor-stat">Baris 1, Kol 1</span>
           <span class="dw-stat-pill">UTF-8</span>
         </div>
       </div>
@@ -388,19 +392,26 @@
         <div class="error-banner-content">
           <span class="error-banner-icon"><img src="assets/icons/alert-warn.png" class="img-ic" alt="!"></span>
           <div class="error-banner-info">
-            <b class="error-banner-title">Syntax Error Detected</b>
+            <b class="error-banner-title" id="code-error-title">Ralat Sintaks Dikesan</b>
             <span class="error-banner-msg" id="code-error-msg"></span>
           </div>
         </div>
-        <button type="button" class="error-banner-btn" id="btn-goto-error" title="Jump to error line">Go to Line</button>
+        <button type="button" class="error-banner-btn" id="btn-goto-error" title="Lompat ke baris ralat">Pergi ke Baris</button>
       </div>
 
       <div class="code-view-container">
         <div class="code-action-floating">
-
-          <button id="copy" class="code-floating-btn" title="Copy code in this tab">
+          <button id="btn-apply-code" class="code-floating-btn btn-apply" title="Terapkan perubahan kod ke kanvas (Ctrl+S)" hidden>
+            <img src="assets/icons/code-sync.png" class="img-ic-sm" alt="">
+            <span id="btn-apply-lbl">Terapkan</span>
+          </button>
+          <button id="btn-revert-code" class="code-floating-btn btn-revert" title="Pulihkan kod asal daripada rekaan kanvas" hidden>
+            <img src="assets/icons/code-restore.png" class="img-ic-sm" alt="">
+            <span id="btn-revert-lbl">Pulihkan</span>
+          </button>
+          <button id="copy" class="code-floating-btn" title="Salin kod dalam tab ini">
             <svg class="ic-sm" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-            <span>Copy</span>
+            <span id="btn-copy-lbl">Salin</span>
           </button>
         </div>
         <div class="src" id="src"></div>

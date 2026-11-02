@@ -36,7 +36,8 @@ const S = {
   gridRowH: 40,
   theme: { primary: '#00d4ff', bg: '#ffffff', text: '#12203f' },
   codeMode: 'view',
-  codeEdits: {}
+  codeEdits: {},
+  lang: 'ms'
 };
 
 let hist = [];
@@ -75,8 +76,17 @@ function load() {
       if (d.responsiveCSS !== undefined) S.responsiveCSS = d.responsiveCSS;
       if (d.htmlMode) S.htmlMode = d.htmlMode;
       if (d.codeEdits && typeof d.codeEdits === 'object') S.codeEdits = d.codeEdits;
+      if (d.lang === 'en' || d.lang === 'ms') S.lang = d.lang;
     }
   } catch (e) {}
+  // Upgrade default contact.html if it still has the old placeholder without a form block
+  if (S.pages['contact.html'] && Array.isArray(S.pages['contact.html'].blocks)) {
+    const cBlocks = S.pages['contact.html'].blocks;
+    const hasForm = cBlocks.some(b => b.type === 'form');
+    if (!hasForm && cBlocks.length === 4 && cBlocks[2] && cBlocks[2].t === 'Emel: info@laman.my | Tel: 03-12345678') {
+      S.pages['contact.html'].blocks = JSON.parse(JSON.stringify(DEFAULT_PAGES['contact.html'].blocks));
+    }
+  }
   const fontMigration = {
     "'Plus Jakarta Sans', sans-serif": "'Inter', sans-serif",
     "'Poppins', sans-serif": "'Inter', sans-serif",
@@ -112,7 +122,8 @@ const save = () => {
       viewport: S.viewport,
       responsiveCSS: S.responsiveCSS,
       htmlMode: S.htmlMode,
-      codeEdits: S.codeEdits || {}
+      codeEdits: S.codeEdits || {},
+      lang: S.lang || 'ms'
     }));
     storageSaveFailed = false;
   } catch (e) {
@@ -138,7 +149,7 @@ const snap = () => {
 };
 
 function undo() {
-  if (!hist.length) return toast('Nothing more to undo');
+  if (!hist.length) return toast(S.lang === 'en' ? 'Nothing more to undo' : 'Tiada lagi perubahan untuk dibuat asal');
   fut.push(JSON.stringify(S.blocks));
   S.blocks = JSON.parse(hist.pop());
   if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
@@ -147,7 +158,7 @@ function undo() {
 }
 
 function redo() {
-  if (!fut.length) return toast('Nothing more to redo');
+  if (!fut.length) return toast(S.lang === 'en' ? 'Nothing more to redo' : 'Tiada lagi perubahan untuk dibuat semula');
   hist.push(JSON.stringify(S.blocks));
   S.blocks = JSON.parse(fut.pop());
   if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
@@ -179,12 +190,14 @@ const free = (c, r, w, h, ig, st) => {
 function hint(b) {
   const t = b.type;
   const top = !par(b);
+  const en = S.lang === 'en';
   let m = '';
-  if (top && t == 'header' && b.r > 2) m = 'Headers typically sit at the very top of the page.';
-  else if (top && t == 'footer' && b.r + b.h < R) m = 'Footers typically sit at the very bottom of the page.';
-  else if (top && t == 'nav' && b.r > 2) m = 'Navigation is usually at the top, inside or immediately beneath the header.';
-  else if (top && t == 'logo') m = 'Logos typically sit inside navigation or header.';
-  else if (b.type == 'image' && par(b) && par(b).type == 'hero') m = 'Great! Image placed inside Hero (Split Hero layout).';
+  if (top && t == 'header' && b.r > 2) m = en ? 'Headers typically sit at the very top of the page.' : 'Kepala halaman (<header>) biasanya diletakkan di baris paling atas.';
+  else if (top && t == 'footer' && b.r + b.h < R) m = en ? 'Footers typically sit at the very bottom of the page.' : 'Kaki halaman (<footer>) biasanya diletakkan di bahagian paling bawah.';
+  else if (top && t == 'nav' && b.r > 2) m = en ? 'Navigation is usually at the top, inside or beneath the header.' : 'Menu navigasi (<nav>) biasanya berada di bahagian atas halaman.';
+  else if (top && t == 'logo') m = en ? 'Logos typically sit inside navigation or header.' : 'Logo biasanya diletakkan di dalam bar navigasi atau kepala halaman.';
+  else if (b.type == 'image' && par(b) && par(b).type == 'hero') m = en ? 'Great! Image placed inside Hero (Split Hero layout).' : 'Bagus! Gambar diletakkan di dalam Hero (Susun atur Split Hero).';
+  else if (b.type == 'form') m = en ? 'Contact Form (<form>) added! Customize form fields in the Inspector.' : 'Borang Hubungan (<form>) ditambah! Ubah suai medan borang di panel Tetapan.';
   if (m) toast(m);
 }
 
@@ -197,6 +210,9 @@ function mk(type, c, r, w, h) {
     block.td = 'underline';
   } else if (type === 'button' || type === 'logo') {
     block.href = '#';
+  } else if (type === 'form') {
+    block.fields = ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
+    block.submitText = 'Hantar Mesej';
   }
   return block;
 }
@@ -245,7 +261,7 @@ function add(type, c, r) {
       }
     }
   }
-  if (!b) return toast('Please place the element in an empty area.');
+  if (!b) return toast(S.lang === 'en' ? 'Please place the element in an empty area.' : 'Sila letakkan elemen di kawasan yang kosong.');
   snap();
   S.blocks.push(b);
   S.sel = b.id;
@@ -261,7 +277,7 @@ function applyTpl(i) {
   R = Math.max(12, ...S.blocks.map(b => b.r + b.h - 1));
   S.sel = null;
   render();
-  toast('Template "' + TP[i][0] + '" applied. Press Ctrl+Z to undo.');
+  toast(S.lang === 'en' ? `Template "${TP[i][0]}" applied. Press Ctrl+Z to undo.` : `Templat "${TP[i][0]}" diterapkan. Tekan Ctrl+Z untuk buat asal.`);
 }
 
 function sorted() {
@@ -278,13 +294,13 @@ function sorted() {
 
 function deleteBox(id) {
   const target = id || S.sel;
-  if (!target) return toast('Please select an element first to delete.');
+  if (!target) return toast(S.lang === 'en' ? 'Please select an element first to delete.' : 'Sila pilih elemen terlebih dahulu untuk dipadam.');
   snap();
   S.blocks = S.blocks.filter(b => b.id != target);
   if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
   if (S.sel == target) S.sel = null;
   render();
-  toast('Element deleted. Press Ctrl+Z to undo.');
+  toast(S.lang === 'en' ? 'Element deleted. Press Ctrl+Z to undo.' : 'Elemen dipadam. Tekan Ctrl+Z untuk buat asal.');
 }
 
 function deleteSelected(id) {

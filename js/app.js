@@ -75,7 +75,12 @@ function codePreviewDocument() {
   if (!/<html\b/i.test(source)) source = `<!doctype html><html><head></head><body>${source}</body></html>`;
   if (!/<head\b/i.test(source)) source = source.replace(/<html\b[^>]*>/i, '$&<head></head>');
   if (!/<body\b/i.test(source)) source = source.replace(/<\/html\s*>/i, '<body></body></html>');
-  if (Object.prototype.hasOwnProperty.call(edits, 'css')) source = injectPreviewPart(source, 'style', edits.css);
+  if (Object.prototype.hasOwnProperty.call(edits, 'css')) {
+    source = source.replace(/<link\b([^>]*\bhref=(["'])(?:[^"']*\/)?style\.css(?:[?#][^"']*)?\2[^>]*)>/gi, (m, attrs) =>
+      `<link${attrs.replace(/\bhref=(["'])([^"']+)\1/i, 'data-studio-href="$2"')}>`
+    );
+    source = injectPreviewPart(source, 'style', edits.css);
+  }
   if (Object.prototype.hasOwnProperty.call(edits, 'js')) source = injectPreviewPart(source, 'script', edits.js);
   if (!S.hasCss) source = source.replace(/<link\b(?=[^>]*rel=[\"']?stylesheet)[^>]*>/gi, '').replace(/<style\b[^>]*>[\s\S]*?<\/style\s*>/gi, '').replace(/\sstyle=(\"[^\"]*\"|'[^']*')/gi, '');
   if (!S.hasJs || !S.previewScripts) source = stripExecutableMarkup(source);
@@ -132,6 +137,10 @@ function syncCodeCanvasFrame(frame = $('#cv .code-source-frame')) {
   const clone = doc.documentElement.cloneNode(true);
   clone.removeAttribute('data-studio-editor-ready');
   clone.querySelectorAll('[data-studio-ui], [data-studio-code-override]').forEach(node => node.remove());
+  clone.querySelectorAll('link[data-studio-href]').forEach(link => {
+    link.setAttribute('href', link.getAttribute('data-studio-href'));
+    link.removeAttribute('data-studio-href');
+  });
   clone.querySelectorAll('[data-studio-selected]').forEach(node => node.removeAttribute('data-studio-selected'));
   const body = clone.querySelector('body');
   if (body && body.getAttribute('data-studio-contenteditable-added') === 'true') {
@@ -306,20 +315,23 @@ function parseHtmlToBlocks(htmlCode) {
     return children.map((el, idx) => {
       const tag = el.tagName.toLowerCase();
       const classes = Array.from(el.classList || []);
-      const studioClass = classes.find(name => /^(?:nav|header|hero|section|card(?:-\d+)?|footer|aside|button|logo|image|text|box)(?:-\d+)?$/.test(name));
+      const studioClass = classes.find(name => /^(?:nav|header|hero|section|card(?:-\d+)?|footer|aside|button|logo|image|text|form|box)(?:-\d+)?$/.test(name));
       let type = 'box';
       if (tag === 'header' || classes.includes('header')) type = 'header';
       else if (tag === 'nav' || classes.includes('nav')) type = 'nav';
       else if (tag === 'footer' || classes.includes('footer')) type = 'footer';
+      else if (tag === 'form' || classes.includes('form')) type = 'form';
       else if (tag === 'article' || classes.some(name => /^card(?:-\d+)?$/.test(name))) type = 'card';
       else if (tag === 'figure' || classes.includes('image')) type = 'image';
       else if (tag === 'section' || classes.includes('section')) type = classes.includes('hero') ? 'hero' : 'section';
       else if (tag === 'aside' || classes.includes('aside')) type = 'aside';
-      else if (tag === 'details') type = 'accordion';
+      else if (tag === 'details') type = 'dropdown';
       else if (tag === 'a' || classes.includes('btn-cta') || classes.includes('button')) type = 'button';
 
       let textValue = '';
       let dropdowns = null;
+      let fields = null;
+      let submitText = null;
       if (type === 'nav') {
         const links = Array.from(el.querySelectorAll(':scope > a, :scope > .nav-dropdown > .nav-drop-btn'));
         const titles = links.map(link => (link.textContent || '').replace(/\s*▾\s*$/, '').trim()).filter(Boolean);
@@ -329,6 +341,12 @@ function parseHtmlToBlocks(htmlCode) {
           const menu = link.parentElement && link.parentElement.querySelector('.dropdown-content');
           if (menu) dropdowns[link.textContent.replace(/\s*▾\s*$/, '').trim()] = Array.from(menu.querySelectorAll('a')).map(a => a.textContent.trim()).filter(Boolean);
         });
+      } else if (type === 'form') {
+        const labels = Array.from(el.querySelectorAll('label')).map(l => (l.textContent || '').trim()).filter(Boolean);
+        fields = labels.length ? labels : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
+        textValue = fields.join(', ');
+        const subBtn = el.querySelector('button[type="submit"], button, input[type="submit"]');
+        submitText = subBtn ? (subBtn.textContent || subBtn.value || '').trim() : 'Hantar Mesej';
       } else {
         const content = el.querySelector('h1, h2, h3, h4, h5, h6, p');
         textValue = content ? content.innerHTML.trim() : (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 240);
@@ -339,7 +357,7 @@ function parseHtmlToBlocks(htmlCode) {
       if (existing) imported = { ...existing, type, cls: studioClass || existing.cls, t: textValue || existing.t };
       else {
         let w = type === 'button' ? 3 : 12;
-        let h = ['card', 'section'].includes(type) ? 3 : type === 'hero' ? 4 : 2;
+        let h = ['card', 'section'].includes(type) ? 3 : ['hero', 'form'].includes(type) ? 4 : 2;
         let c = 1;
         let r = currentR;
         if (studioClass && gridRules.has(studioClass)) {
@@ -353,6 +371,8 @@ function parseHtmlToBlocks(htmlCode) {
         currentR = Math.max(currentR, r + h);
       }
       if (dropdowns && Object.keys(dropdowns).length) imported.dropdowns = { ...(imported.dropdowns || {}), ...dropdowns };
+      if (fields && fields.length) imported.fields = fields;
+      if (submitText) imported.submitText = submitText;
       if (el.getAttribute('href')) imported.href = el.getAttribute('href');
       const inlineStyle = el.getAttribute('style') || '';
       const bg = inlineStyle.match(/(?:background-color|background)\s*:\s*([^;]+)/i);
@@ -446,25 +466,256 @@ function convertSourceHtmlMode(mode) {
   return true;
 }
 
+function splitCssDeclarations(declText) {
+  const results = [];
+  if (!declText || !declText.trim()) return results;
+  let current = '';
+  let parenDepth = 0;
+  let quote = '';
+  for (let i = 0; i < declText.length; i++) {
+    const ch = declText[i];
+    if (quote) {
+      current += ch;
+      if (ch === quote && declText[i - 1] !== '\\') quote = '';
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      current += ch;
+      continue;
+    }
+    if (ch === '(') parenDepth++;
+    else if (ch === ')' && parenDepth > 0) parenDepth--;
+    if (ch === ';' && parenDepth === 0) {
+      const trimmed = current.trim();
+      if (trimmed) results.push(trimmed);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) results.push(current.trim());
+  return results.map(part => {
+    const colonIdx = part.indexOf(':');
+    if (colonIdx < 1) return null;
+    const prop = part.slice(0, colonIdx).trim().toLowerCase();
+    let valRaw = part.slice(colonIdx + 1).trim();
+    const important = /!\s*important\s*$/i.test(valRaw);
+    if (important) valRaw = valRaw.replace(/!\s*important\s*$/i, '').trim();
+    if (!prop || !valRaw) return null;
+    return {
+      prop,
+      value: valRaw,
+      important,
+      formatted: `${prop}: ${valRaw}${important ? ' !important' : ''};`
+    };
+  }).filter(Boolean);
+}
+
+function canonicalCssKey(declText) {
+  return splitCssDeclarations(declText).map(d => d.formatted).join(' ');
+}
+
+function formatCssRuleBlock(selector, declText, indent = '') {
+  const decls = splitCssDeclarations(declText);
+  if (!decls.length) return '';
+  const bodyLines = decls.map(d => `${indent}  ${d.formatted}`).join('\n');
+  return `${indent}${selector.trim()} {\n${bodyLines}\n${indent}}`;
+}
+
+function formatCssStylesheet(cssText, indent = '') {
+  if (!cssText || !cssText.trim()) return '';
+  const blocks = [];
+  const clean = cssText.trim();
+  const ruleRegex = /([^{}]+)\{([^{}]*)\}/g;
+  let match;
+  let matchedAny = false;
+  while ((match = ruleRegex.exec(clean)) !== null) {
+    matchedAny = true;
+    const rawSel = match[1].trim();
+    const rawBody = match[2].trim();
+    if (!rawSel || !rawBody) continue;
+    const commentMatch = rawSel.match(/^((?:\/\*[\s\S]*?\*\/\s*)+)([\s\S]*)$/);
+    if (commentMatch) {
+      const comments = commentMatch[1].trim().split(/\r?\n/).map(l => `${indent}${l.trim()}`).join('\n');
+      const selOnly = commentMatch[2].trim();
+      const ruleFormatted = formatCssRuleBlock(selOnly, rawBody, indent);
+      if (ruleFormatted) blocks.push(`${comments}\n${ruleFormatted}`);
+    } else {
+      const ruleFormatted = formatCssRuleBlock(rawSel, rawBody, indent);
+      if (ruleFormatted) blocks.push(ruleFormatted);
+    }
+  }
+  return matchedAny && blocks.length ? blocks.join('\n\n') : clean;
+}
+
+function stripLegacyInlineClasses(doc) {
+  doc.querySelectorAll('[class]').forEach(el => {
+    const legacy = Array.from(el.classList).filter(c => /^bcs-inline-\d+$/i.test(c));
+    legacy.forEach(c => el.classList.remove(c));
+    if (!el.classList.length && el.getAttribute('class') !== null) {
+      el.removeAttribute('class');
+    }
+  });
+}
+
+function previousElementComment(element) {
+  let node = element.previousSibling;
+  while (node && node.nodeType === 3 && !node.textContent.trim()) {
+    node = node.previousSibling;
+  }
+  return node && node.nodeType === 8 ? node.textContent.toLowerCase() : '';
+}
+
+function isCardLikeElement(element) {
+  if (!element || !element.querySelector) return false;
+  const tag = element.tagName.toLowerCase();
+  if (!['div', 'article', 'section', 'li'].includes(tag)) return false;
+  const comment = previousElementComment(element);
+  if (/\bkad\b|\bcard\b/.test(comment) && !/bahagian|kumpulan|container|section/.test(comment)) return true;
+  return !!(element.querySelector(':scope > img') && element.querySelector('h2, h3, h4, h5, h6') && element.querySelector('p'));
+}
+
+function inferSemanticBaseClass(element) {
+  const tag = element.tagName.toLowerCase();
+  const comment = previousElementComment(element);
+  const parent = element.parentElement;
+  const parentTag = parent ? parent.tagName.toLowerCase() : '';
+  const parentClasses = parent ? Array.from(parent.classList) : [];
+  const parentComment = parent ? previousElementComment(parent) : '';
+
+  if (tag === 'nav' || /menu atas|navbar|navigasi|\bmenu\b/.test(comment)) return 'navbar';
+  if (/hero|sepanduk utama/.test(comment)) return 'hero';
+  if (/bahagian.*kad|cards|senarai kad/.test(comment)) return 'cards-section';
+  if (isCardLikeElement(element)) return 'card';
+  if (tag === 'div' && Array.from(element.children).filter(isCardLikeElement).length >= 2) return 'cards-section';
+
+  const inNavbar = parentTag === 'nav' || parentClasses.includes('navbar') || /menu atas|navbar|navigasi/.test(parentComment);
+  if (inNavbar && tag === 'a') return 'nav-link';
+
+  const inHero = parentClasses.includes('hero') || /hero/.test(parentComment);
+  if (inHero) {
+    if (/^h[1-6]$/.test(tag)) return 'hero-title';
+    if (tag === 'p') return 'hero-text';
+    if (tag === 'a' || tag === 'button') return 'hero-btn';
+  }
+
+  const cardAncestor = element.closest && element.closest('.card, article');
+  const inCard = !!cardAncestor || (parent && isCardLikeElement(parent)) || (parent && parent.parentElement && isCardLikeElement(parent.parentElement));
+  if (inCard) {
+    if (tag === 'img') return 'card-img';
+    if (tag === 'div') return 'card-body';
+    if (/^h[1-6]$/.test(tag)) return 'card-title';
+    if (tag === 'p') return 'card-text';
+    if (tag === 'a' || tag === 'button') return 'card-btn';
+  }
+
+  const inFooter = parentTag === 'footer' || parentClasses.includes('footer') || Boolean(element.closest && element.closest('footer'));
+  if (inFooter && tag === 'p') return 'footer-text';
+  if (inFooter && tag === 'a') return 'footer-link';
+
+  const fallbackMap = {
+    header: 'site-header',
+    nav: 'navbar',
+    main: 'main-content',
+    section: 'section-box',
+    article: 'card',
+    aside: 'sidebar',
+    footer: 'site-footer',
+    div: 'container-box',
+    h1: 'title-main',
+    h2: 'title-section',
+    h3: 'title-sub',
+    p: 'text-block',
+    a: 'link-btn',
+    button: 'btn',
+    img: 'image-item',
+    form: 'form-box',
+    input: 'form-input',
+    textarea: 'form-textarea'
+  };
+  return fallbackMap[tag] || `el-${tag}`;
+}
+
 function sourceInlineStylesToRules(doc) {
+  stripLegacyInlineClasses(doc);
   const rules = [];
-  let index = 1;
+  const styleGroupMap = new Map();
+  const baseNameCounts = new Map();
+  const uniqueTags = new Set(['body', 'main', 'header', 'nav', 'footer']);
+
   doc.querySelectorAll('[style]').forEach(element => {
     const declarations = element.getAttribute('style');
-    if (!declarations || !declarations.trim()) return;
-    let selector = '';
-    if (element.id && doc.querySelectorAll(`#${CSS.escape(element.id)}`).length === 1) {
-      selector = `#${CSS.escape(element.id)}`;
-    } else {
-      let className;
-      do { className = `bcs-inline-${index++}`; } while (doc.getElementsByClassName(className).length);
-      element.classList.add(className);
-      selector = `.${className}`;
+    const canonical = canonicalCssKey(declarations);
+    if (!canonical) {
+      element.removeAttribute('style');
+      return;
     }
-    rules.push(`${selector} { ${declarations} }`);
+
+    const tag = element.tagName.toLowerCase();
+    const existingClasses = Array.from(element.classList).filter(c => !/^bcs-inline-\d+$/i.test(c));
+
+    // 1. Unique root/landmark tags (body, header, nav, main, footer) with no id or class
+    if (uniqueTags.has(tag) && !element.id && existingClasses.length === 0 && doc.getElementsByTagName(tag).length === 1) {
+      rules.push(formatCssRuleBlock(tag, canonical));
+      element.removeAttribute('style');
+      return;
+    }
+
+    // 2. Unique #id selector
+    if (element.id && doc.querySelectorAll(`#${CSS.escape(element.id)}`).length === 1) {
+      rules.push(formatCssRuleBlock(`#${CSS.escape(element.id)}`, canonical));
+      element.removeAttribute('style');
+      return;
+    }
+
+    // 3. Deduplicate elements that share the exact same semantic role + inline style declarations
+    const baseRole = existingClasses[0] || inferSemanticBaseClass(element);
+    const groupKey = `${tag}::${baseRole}::${canonical}`;
+    if (styleGroupMap.has(groupKey)) {
+      const reusedClass = styleGroupMap.get(groupKey);
+      if (!element.classList.contains(reusedClass)) element.classList.add(reusedClass);
+      element.removeAttribute('style');
+      return;
+    }
+
+    // 4. Reuse existing clean class if all elements with that class share this style
+    let chosenClass = '';
+    if (existingClasses.length === 1) {
+      const candidate = existingClasses[0];
+      const peers = Array.from(doc.getElementsByClassName(candidate));
+      const allSameStyle = peers.every(peer => canonicalCssKey(peer.getAttribute('style') || '') === canonical);
+      if (allSameStyle && ! Array.from(styleGroupMap.values()).includes(candidate)) {
+        chosenClass = candidate;
+      }
+    }
+
+    if (!chosenClass) {
+      const count = (baseNameCounts.get(baseRole) || 0) + 1;
+      baseNameCounts.set(baseRole, count);
+      // Check if another element with the same baseRole has a DIFFERENT style
+      const sameRoleElements = Array.from(doc.querySelectorAll('[style]')).filter(el => {
+        const cls = Array.from(el.classList).filter(c => !/^bcs-inline-\d+$/i.test(c))[0];
+        return (cls || inferSemanticBaseClass(el)) === baseRole;
+      });
+      const distinctStylesForRole = new Set(sameRoleElements.map(el => canonicalCssKey(el.getAttribute('style') || ''))).size;
+
+      let candidate = (count === 1 && distinctStylesForRole <= 1) ? baseRole : `${baseRole}-${count}`;
+      let suffix = count;
+      while (doc.getElementsByClassName(candidate).length > 0 && !element.classList.contains(candidate)) {
+        suffix++;
+        candidate = `${baseRole}-${suffix}`;
+      }
+      chosenClass = candidate;
+    }
+
+    if (!element.classList.contains(chosenClass)) element.classList.add(chosenClass);
+    styleGroupMap.set(groupKey, chosenClass);
+    rules.push(formatCssRuleBlock(`.${chosenClass}`, canonical));
     element.removeAttribute('style');
   });
-  return rules;
+
+  return rules.filter(Boolean);
 }
 
 function sourceHead(doc) {
@@ -475,8 +726,39 @@ function sourceHead(doc) {
   return doc.head;
 }
 
+function formatSourceHead(doc) {
+  const head = sourceHead(doc);
+  const children = Array.from(head.children);
+  if (!children.length) return;
+  while (head.firstChild) head.removeChild(head.firstChild);
+  head.appendChild(doc.createTextNode('\n'));
+  children.forEach(child => {
+    head.appendChild(doc.createTextNode('    '));
+    if (child.tagName === 'STYLE' && child.textContent) {
+      const formattedCss = formatCssStylesheet(child.textContent, '      ');
+      child.textContent = `\n${formattedCss}\n    `;
+    }
+    head.appendChild(child);
+    head.appendChild(doc.createTextNode('\n'));
+  });
+}
+
 function sourceHasStudioStylesheet(doc) {
   return Array.from(doc.querySelectorAll('link[rel~="stylesheet"][href]')).some(link => /(?:^|\/)style\.css(?:[?#]|$)/i.test(link.getAttribute('href')));
+}
+
+function detectSourceCssMode(htmlCode) {
+  if (!htmlCode || !htmlCode.trim()) return null;
+  try {
+    const doc = new DOMParser().parseFromString(htmlCode, 'text/html');
+    if (sourceHasStudioStylesheet(doc)) return 'ext';
+    const hasInternal = Array.from(doc.querySelectorAll('style:not([data-studio-ui])')).some(s => (s.textContent || '').trim().length > 0);
+    const hasInline = doc.querySelectorAll('[style]').length > 0;
+    if (hasInternal && !hasInline) return 'int';
+    if (hasInline && !hasInternal) return 'inl';
+    if (hasInternal) return 'int';
+  } catch (_) {}
+  return null;
 }
 
 function sourceCssSpecificity(selector) {
@@ -488,12 +770,14 @@ function sourceCssSpecificity(selector) {
 }
 
 function applySourceCssInline(doc, cssText) {
+  stripLegacyInlineClasses(doc);
   if (!cssText.trim()) return '';
   const parser = doc.createElement('style');
   parser.textContent = cssText;
   sourceHead(doc).appendChild(parser);
   const candidates = [];
   const leftovers = [];
+  const inlinedClassSelectors = new Set();
   let order = 0;
   const collect = rules => Array.from(rules || []).forEach(rule => {
     if (rule.type === 1 && rule.selectorText) {
@@ -502,10 +786,22 @@ function applySourceCssInline(doc, cssText) {
       let matches = [];
       try { matches = Array.from(doc.querySelectorAll(selector)); } catch (_) { leftovers.push(rule.cssText); return; }
       const specificity = Math.max(...selector.split(',').map(sourceCssSpecificity));
+      // Parse raw declaration text so shorthands (padding, margin, border, flex) are preserved without CSSOM longhand expansion
+      const rawBodyMatch = (rule.cssText || '').match(/\{([\s\S]*)\}/);
+      const decls = rawBodyMatch ? splitCssDeclarations(rawBodyMatch[1]) : [];
+      if (/^\.[\w-]+$/.test(selector.trim())) {
+        inlinedClassSelectors.add(selector.trim().slice(1));
+      }
       matches.forEach(element => {
-        for (let i = 0; i < rule.style.length; i++) {
-          const property = rule.style[i];
-          candidates.push({ element, property, value: rule.style.getPropertyValue(property), important: rule.style.getPropertyPriority(property) === 'important', specificity, order: order++ });
+        if (decls.length) {
+          decls.forEach(d => {
+            candidates.push({ element, property: d.prop, value: d.value, important: d.important, specificity, order: order++ });
+          });
+        } else {
+          for (let i = 0; i < rule.style.length; i++) {
+            const property = rule.style[i];
+            candidates.push({ element, property, value: rule.style.getPropertyValue(property), important: rule.style.getPropertyPriority(property) === 'important', specificity, order: order++ });
+          }
         }
       });
     } else if (rule.cssRules) {
@@ -517,29 +813,76 @@ function applySourceCssInline(doc, cssText) {
   catch (_) { leftovers.push(cssText); }
   parser.remove();
   candidates.sort((a, b) => Number(a.important) - Number(b.important) || a.specificity - b.specificity || a.order - b.order);
-  candidates.forEach(({ element, property, value, important }) => {
-    const existingPriority = element.style.getPropertyPriority(property);
-    const existingInlineValue = element.style.getPropertyValue(property);
-    if (existingInlineValue && (existingPriority === 'important' || !important)) return;
-    element.style.setProperty(property, value, important ? 'important' : '');
+
+  // Build clean inline style maps per element preserving shorthand properties
+  const elementDeclMaps = new Map();
+  doc.querySelectorAll('[style]').forEach(el => {
+    const map = new Map();
+    splitCssDeclarations(el.getAttribute('style') || '').forEach(d => {
+      map.set(d.prop, { value: d.value, important: d.important, fromInline: true });
+    });
+    elementDeclMaps.set(el, map);
   });
-  return leftovers.filter(Boolean).join('\n');
+
+  candidates.forEach(({ element, property, value, important }) => {
+    let map = elementDeclMaps.get(element);
+    if (!map) {
+      map = new Map();
+      elementDeclMaps.set(element, map);
+    }
+    const existing = map.get(property);
+    if (existing && existing.fromInline && (existing.important || !important)) return;
+    map.set(property, { value, important, fromInline: false });
+  });
+
+  elementDeclMaps.forEach((map, element) => {
+    const styleStr = Array.from(map.entries())
+      .map(([prop, info]) => `${prop}: ${info.value}${info.important ? ' !important' : ''};`)
+      .join(' ');
+    if (styleStr) element.setAttribute('style', styleStr);
+  });
+
+  const remaining = leftovers.filter(Boolean).join('\n');
+  if (!remaining.trim()) {
+    inlinedClassSelectors.forEach(cls => {
+      doc.querySelectorAll(`.${CSS.escape(cls)}`).forEach(el => {
+        el.classList.remove(cls);
+        if (!el.classList.length) el.removeAttribute('class');
+      });
+    });
+  }
+  return remaining;
 }
 
 function convertSourceCssMode(mode) {
+  if (autoApplyTimer) {
+    clearTimeout(autoApplyTimer);
+    autoApplyTimer = null;
+    if (S.codeMode === 'edit') {
+      const textarea = $('#code-textarea');
+      if (textarea && textarea.value.trim()) {
+        pageCodeEdits()[S.tab] = textarea.value;
+      }
+    }
+  }
   if (!hasCodeHtmlOverride() || !['int', 'ext', 'inl', 'all'].includes(mode)) return false;
   const edits = pageCodeEdits();
   const doc = new DOMParser().parseFromString(edits.html, 'text/html');
+  const hasExternalLink = sourceHasStudioStylesheet(doc);
   const inlineRules = mode === 'inl' ? [] : sourceInlineStylesToRules(doc);
   const internalParts = Array.from(doc.querySelectorAll('style:not([data-studio-ui])')).map(style => style.textContent || '').filter(text => text.trim());
   doc.querySelectorAll('style:not([data-studio-ui])').forEach(style => style.remove());
-  const editorCss = Object.prototype.hasOwnProperty.call(edits, 'css') ? String(edits.css || '') : '';
-  const collectedCss = [editorCss, ...internalParts, ...inlineRules].filter(text => text.trim()).join('\n\n');
+  // Only include edits.css if the document actually links style.css or has no inline/internal styles of its own
+  const editorCss = (Object.prototype.hasOwnProperty.call(edits, 'css') && (hasExternalLink || (!internalParts.length && !inlineRules.length)))
+    ? String(edits.css || '')
+    : '';
+  const rawCollectedCss = [editorCss, ...internalParts, ...inlineRules].filter(text => text.trim()).join('\n\n');
+  const collectedCss = formatCssStylesheet(rawCollectedCss);
   const head = sourceHead(doc);
 
   if (mode === 'int') {
     doc.querySelectorAll('link[rel~="stylesheet"][href]').forEach(link => {
-      if (editorCss.trim() && /(?:^|\/)style\.css(?:[?#]|$)/i.test(link.getAttribute('href'))) link.remove();
+      if (/(?:^|\/)style\.css(?:[?#]|$)/i.test(link.getAttribute('href'))) link.remove();
     });
     if (collectedCss.trim()) {
       const style = doc.createElement('style');
@@ -561,13 +904,14 @@ function convertSourceCssMode(mode) {
       const style = doc.createElement('style');
       style.textContent = remainingCss;
       head.appendChild(style);
-    } else delete edits.css;
+    }
     delete edits.css;
     doc.querySelectorAll('link[rel~="stylesheet"][href]').forEach(link => {
       if (/(?:^|\/)style\.css(?:[?#]|$)/i.test(link.getAttribute('href'))) link.remove();
     });
   }
 
+  formatSourceHead(doc);
   const doctype = edits.html.match(/^\s*(<!doctype[^>]*>)/i)?.[1] || '<!DOCTYPE html>';
   edits.html = `${doctype}\n${doc.documentElement.outerHTML}`;
   save();
@@ -596,7 +940,15 @@ function onEditorInput(fromUser = false) {
 
   const code = textarea.value;
   if (fromUser) {
-    pageCodeEdits()[S.tab] = code;
+    const edits = pageCodeEdits();
+    edits[S.tab] = code;
+    if (S.tab === 'html') {
+      const detectedMode = detectSourceCssMode(code);
+      if (detectedMode) {
+        S.sty = detectedMode;
+        if (detectedMode !== 'ext') delete edits.css;
+      }
+    }
     save();
   }
   const lines = code.split('\n');
@@ -679,25 +1031,33 @@ function applyCodeChanges(showToast = true) {
 
   if (S.tab === 'html') {
     const studioExport = isStudioExportHtml(code);
-    const parsed = parseHtmlToBlocks(code);
-    if (parsed && parsed.length) {
+    const parsed = studioExport ? parseHtmlToBlocks(code) : null;
+    if (studioExport && parsed && parsed.length) {
       snap();
       S.blocks = parsed;
       if (S.pages[S.curPage]) S.pages[S.curPage].blocks = parsed;
-      if (studioExport) delete pageCodeEdits()[S.tab];
+      delete pageCodeEdits()[S.tab];
+    } else {
+      const detectedMode = detectSourceCssMode(code);
+      if (detectedMode) {
+        S.sty = detectedMode;
+        if (detectedMode !== 'ext') delete pageCodeEdits().css;
+      }
     }
+    document.querySelectorAll('[data-sty]').forEach(x => x.setAttribute('aria-pressed', x.dataset.sty === S.sty));
     renderCanvas();
     renderTabsBar();
     renderPreview();
     renderIns();
     renderCanvaBar();
-    if (!parsed || !parsed.length) toast('Code preserved and displayed. This layout cannot be converted to visual blocks.');
-    else if (studioExport) toast('Studio export recognized: grid canvas and visual controls are active.');
+    if (studioExport) toast('Studio export recognized: grid canvas and visual controls are active.');
   } else if (S.tab === 'css') {
     S.customCss = code;
+    renderCanvas();
     renderPreview();
   } else if (S.tab === 'js') {
     S.customJs = code;
+    renderCanvas();
     renderPreview();
   }
 
@@ -931,6 +1291,7 @@ function refresh() {
   renderCanvas();
   renderCode();
   renderTabsBar();
+  renderBreadcrumbs();
   if (S.view === 'nodes') renderNodes();
   if (S.view === 'prev') renderPreview();
   save();
@@ -1041,7 +1402,6 @@ function render() {
     cssTabBtn.disabled = false;
     cssTabBtn.removeAttribute('aria-disabled');
     cssTabBtn.title = 'Buka style.css; kod CSS boleh ditambah bila-bila masa';
-    cssTabBtn.innerHTML = 'style.css';
   }
 
   $('#layer-css').setAttribute('aria-pressed', S.hasCss);
@@ -1059,13 +1419,14 @@ function render() {
     btn.classList.toggle('active', btn.dataset.rail === S.railTab);
   });
 
+  const isEn = S.lang === 'en';
   const drawerTitleMap = {
-    elem: { icon: '📦', title: S.htmlMode === 'div' ? 'Elemen <div>' : 'Elemen HTML5' },
-    tpl: { icon: '📐', title: 'Templat susun atur' },
-    ins: { icon: '⚙️', title: 'Tetapan elemen' },
-    layers: { icon: '📑', title: 'Susunan lapisan' },
-    css: { icon: '🎨', title: 'Gaya dan saiz peranti' },
-    ai: { icon: '💡', title: 'Tutor AI' }
+    elem: { icon: '📦', title: S.htmlMode === 'div' ? (isEn ? '<div> Elements' : 'Elemen <div>') : (isEn ? 'HTML5 Elements' : 'Elemen HTML5') },
+    tpl: { icon: '📐', title: isEn ? 'Layout Templates' : 'Templat susun atur' },
+    ins: { icon: '⚙️', title: isEn ? 'Element Settings' : 'Tetapan elemen' },
+    layers: { icon: '📑', title: isEn ? 'Layers Order' : 'Susunan lapisan' },
+    css: { icon: '🎨', title: isEn ? 'Styles & Viewport' : 'Gaya dan saiz peranti' },
+    ai: { icon: '💡', title: isEn ? 'AI Tutor' : 'Tutor AI' }
   };
 
   const curDrawerMeta = drawerTitleMap[S.railTab] || drawerTitleMap.elem;
@@ -1086,6 +1447,7 @@ function render() {
     if (panels[k]) panels[k].hidden = (k !== S.railTab);
   });
 
+  if (typeof applyLanguage === 'function') applyLanguage();
   if (S.railTab === 'ins') renderIns();
   if (S.railTab === 'layers') renderLayersPanel();
   if (S.railTab === 'ai') runAiAudit();
@@ -1366,25 +1728,41 @@ function renderNodes() {
 }
 
 function runAiAudit() {
+  const isEn = S.lang === 'en';
   const types = S.blocks.map(b => b.type);
   const hasHead = types.includes('header');
   const hasNav = types.includes('nav');
   const hasHero = types.includes('hero') || types.includes('slider');
-  const hasContent = types.includes('section') || types.includes('card');
+  const hasContent = types.includes('section') || types.includes('card') || types.includes('form');
   const hasFoot = types.includes('footer');
 
   const report = [];
-  if (!hasHead) report.push('⚠️ No <b>&lt;header&gt;</b> yet. Following human anatomy, start with the page header on the very top row.');
-  else if (!hasNav) report.push('💡 You have a Header, try adding a <b>&lt;nav&gt;</b> for menu navigation links.');
-  if (!hasHero) report.push('💡 Add a <b>Hero</b> or <b>Slider</b> beneath the header as the primary visitor highlight.');
-  if (!hasContent) report.push('💡 Main body is currently empty. Add several <b>&lt;section&gt;</b> or <b>Card (&lt;article&gt;)</b> blocks.');
-  if (!hasFoot) report.push('⚠️ No <b>&lt;footer&gt;</b> at the bottom yet for copyright and footer links.');
-  if (hasHead && hasHero && hasContent && hasFoot) report.push('🎉 <b>Excellent!</b> Your webpage anatomical structure is complete (Header ➡ Hero ➡ Body ➡ Footer).');
+  if (isEn) {
+    if (!hasHead) report.push('⚠️ No <b>&lt;header&gt;</b> yet. Following webpage anatomy, start with the page header on the very top row.');
+    else if (!hasNav) report.push('💡 You have a Header, try adding a <b>&lt;nav&gt;</b> for menu navigation links.');
+    if (!hasHero) report.push('💡 Add a <b>Hero</b> or <b>Slider</b> beneath the header as the primary visitor highlight.');
+    if (!hasContent) report.push('💡 Main body is currently empty. Add several <b>&lt;section&gt;</b>, <b>Card (&lt;article&gt;)</b>, or <b>Form (&lt;form&gt;)</b> blocks.');
+    if (!hasFoot) report.push('⚠️ No <b>&lt;footer&gt;</b> at the bottom yet for copyright and footer links.');
+    if (hasHead && hasHero && hasContent && hasFoot) report.push('🎉 <b>Excellent!</b> Your webpage anatomical structure is complete (Header ➡ Hero ➡ Body ➡ Footer).');
 
-  if (S.htmlMode === 'div') {
-    report.push('⚠️ <b>Plain HTML Mode Active:</b> Your site currently uses classic <code>&lt;div&gt;</code> tags (Div Soup). For full W3C standard compliance, screen-reader accessibility, and optimal SEO, click <b>🏷️ Semantic HTML5</b>.');
+    if (S.htmlMode === 'div') {
+      report.push('⚠️ <b>Plain HTML Mode Active:</b> Your site currently uses classic <code>&lt;div&gt;</code> tags (Div Soup). For full W3C standard compliance and SEO, click <b>🏷️ Semantic HTML5</b>.');
+    } else {
+      report.push('🏷️ <b>Semantic HTML5 Compliant:</b> Your code complies with official W3C semantic standards (&lt;header&gt;, &lt;nav&gt;, &lt;main&gt;, &lt;section&gt;, &lt;form&gt;, &lt;footer&gt;).');
+    }
   } else {
-    report.push('🏷️ <b>Semantic HTML5 Compliant:</b> Your code complies with official W3C semantic standards (&lt;header&gt;, &lt;nav&gt;, &lt;main&gt;, &lt;section&gt;, &lt;footer&gt;).');
+    if (!hasHead) report.push('⚠️ Belum ada <b>&lt;header&gt;</b>. Mengikut anatomi laman web, mulakan dengan Kepala Halaman di baris paling atas.');
+    else if (!hasNav) report.push('💡 Anda sudah mempunyai Header, cuba tambah <b>&lt;nav&gt;</b> untuk pautan menu navigasi.');
+    if (!hasHero) report.push('💡 Tambahkan blok <b>Hero</b> atau <b>Slider</b> di bawah header sebagai tarikan utama pelawat.');
+    if (!hasContent) report.push('💡 Bahagian kandungan masih kosong. Tambahkan blok <b>&lt;section&gt;</b>, <b>Kad (&lt;article&gt;)</b>, atau <b>Borang (&lt;form&gt;)</b>.');
+    if (!hasFoot) report.push('⚠️ Belum ada <b>&lt;footer&gt;</b> di bahagian paling bawah untuk maklumat hak cipta.');
+    if (hasHead && hasHero && hasContent && hasFoot) report.push('🎉 <b>Syabas!</b> Struktur anatomi halaman web anda sudah lengkap (Header ➡ Hero ➡ Kandungan ➡ Footer).');
+
+    if (S.htmlMode === 'div') {
+      report.push('⚠️ <b>Mod HTML Biasa Aktif:</b> Laman anda sedang menggunakan tag klasik <code>&lt;div&gt;</code> (Div Soup). Untuk piawaian W3C dan SEO terbaik, pilih <b>🏷️ Semantik HTML5</b>.');
+    } else {
+      report.push('🏷️ <b>Patuh Piawaian HTML5 Semantik:</b> Kod anda mematuhi piawaian rasmi W3C (&lt;header&gt;, &lt;nav&gt;, &lt;main&gt;, &lt;section&gt;, &lt;form&gt;, &lt;footer&gt;).');
+    }
   }
 
   const auditHtml = report.join('<br><br>');
@@ -1396,48 +1774,61 @@ function runAiAudit() {
 const PAL_GROUPS = [
   {
     title: '🔝 Bahagian atas',
+    enTitle: '🔝 Top Section',
     keys: ['header', 'nav', 'logo']
   },
   {
     title: '🏛️ Kandungan',
+    enTitle: '🏛️ Content',
     keys: ['hero', 'section', 'card', 'aside']
   },
   {
     title: '🧱 Pautan & komponen',
-    keys: ['text', 'link', 'button', 'dropdown']
+    enTitle: '🧱 Links & Components',
+    keys: ['text', 'link', 'button', 'dropdown', 'form']
   },
   {
     title: '🖼️ Media',
+    enTitle: '🖼️ Media',
     keys: ['image', 'slider']
   },
   {
     title: '🔻 Bahagian bawah',
+    enTitle: '🔻 Bottom Section',
     keys: ['footer']
   }
 ];
 
-$('#pal').innerHTML = PAL_GROUPS.map(g => `
-  <div class="pal-group">
-    <div class="pal-group-head">
-      <span class="pal-group-title">${g.title}</span>
-      <span class="pal-group-count">${g.keys.length}</span>
+function renderPalette() {
+  const palEl = $('#pal');
+  if (!palEl) return;
+  const isEn = S.lang === 'en';
+  palEl.innerHTML = PAL_GROUPS.map(g => `
+    <div class="pal-group">
+      <div class="pal-group-head">
+        <span class="pal-group-title">${isEn ? g.enTitle : g.title}</span>
+        <span class="pal-group-count">${g.keys.length}</span>
+      </div>
+      <div class="pal-grid">
+        ${g.keys.map(k => {
+          const item = TY[k] || { n: k, en: k, tag: 'div' };
+          const label = isEn ? (item.en || item.n) : item.n;
+          return `
+            <button type="button" draggable="true" data-add="${k}" class="pal-btn" title="${isEn ? `Drag or click to add ${label}` : `Seret atau klik untuk tambah ${label}`} (&lt;${item.tag}&gt;)">
+              <span class="pal-ic-wrap">${icon(k, 'pal-ic', 14)}</span>
+              <span class="pal-txt-wrap">
+                <span class="pal-title">${label}</span>
+                <small class="pal-sub">&lt;${item.tag}&gt;</small>
+              </span>
+            </button>
+          `;
+        }).join('')}
+      </div>
     </div>
-    <div class="pal-grid">
-      ${g.keys.map(k => {
-        const item = TY[k] || { n: k, tag: 'div' };
-        return `
-          <button type="button" draggable="true" data-add="${k}" class="pal-btn" title="Drag or click to add ${item.n} (&lt;${item.tag}&gt;)">
-            <span class="pal-ic-wrap">${icon(k, 'pal-ic', 14)}</span>
-            <span class="pal-txt-wrap">
-              <span class="pal-title">${item.n}</span>
-              <small class="pal-sub">&lt;${item.tag}&gt;</small>
-            </span>
-          </button>
-        `;
-      }).join('')}
-    </div>
-  </div>
-`).join('');
+  `).join('');
+}
+renderPalette();
+
 /**
  * Menghasilkan pratonton lakaran kenit (thumbnail SVG) bagi susun atur templat.
  * @param {Array} t Data templat daripada TP
@@ -1450,7 +1841,87 @@ const thumb = t => {
 };
 
 $('#tpl').innerHTML = TP.map((t, i) => `<button type="button" data-tpl="${i}" title="${esc(t[0])}"><div class="tpl-thumb">${thumb(t)}</div><span class="tpl-title">${esc(t[0])}</span></button>`).join('');
-$('#dt').textContent = 'Date: ' + new Date().toLocaleDateString('en-US');
+$('#dt').textContent = (S.lang === 'en' ? 'Date: ' : 'Tarikh: ') + new Date().toLocaleDateString('ms-MY');
+
+function applyLanguage() {
+  const isEn = S.lang === 'en';
+  document.documentElement.lang = isEn ? 'en' : 'ms';
+  const langBtn = $('#btn-lang-toggle');
+  if (langBtn) {
+    langBtn.innerHTML = `<span>🌐 ${isEn ? 'EN' : 'BM'}</span>`;
+    langBtn.title = isEn ? 'Switch Language to Bahasa Melayu (BM)' : 'Tukar Bahasa ke Bahasa Inggeris (EN)';
+  }
+  const dlLbl = $('#btn-dl-lbl');
+  if (dlLbl) dlLbl.textContent = isEn ? 'Download ZIP' : 'Muat turun ZIP';
+
+  // Top mode buttons
+  const modeMap = {
+    c: isEn ? 'Code' : 'Kod',
+    s: 'Split',
+    plan: isEn ? 'Design' : 'Reka bentuk',
+    prev: isEn ? 'Preview' : 'Pratonton',
+    nodes: isEn ? 'Flow' : 'Aliran'
+  };
+  document.querySelectorAll('#mode button').forEach(btn => {
+    const key = btn.dataset.m === 'c' ? 'c' : btn.dataset.m === 's' ? 's' : btn.dataset.dwView;
+    if (key && modeMap[key]) btn.textContent = modeMap[key];
+  });
+
+  // Rail labels
+  const railMap = {
+    elem: isEn ? 'Elements' : 'Elemen',
+    tpl: isEn ? 'Templates' : 'Templat',
+    ins: isEn ? 'Settings' : 'Tetapan',
+    layers: isEn ? 'Layers' : 'Lapisan',
+    css: isEn ? 'Styles' : 'Gaya',
+    ai: isEn ? 'AI Tutor' : 'Tutor AI'
+  };
+  document.querySelectorAll('.rail-item[data-rail]').forEach(btn => {
+    const lbl = btn.querySelector('.rail-lbl');
+    if (lbl && railMap[btn.dataset.rail]) lbl.textContent = railMap[btn.dataset.rail];
+  });
+
+  // CSS drawer labels
+  const setTxt = (sel, txt) => { const el = $(sel); if (el) el.textContent = txt; };
+  setTxt('#css-resp-lbl', isEn ? 'Generate Responsive Code (@media)' : 'Jana Kod Responsif (@media)');
+  setTxt('#css-resp-sub', isEn ? 'Inject media query rules into CSS output' : 'Suntik peraturan media query ke dalam CSS');
+  setTxt('#css-gap-lbl', isEn ? 'Grid Gap (gap):' : 'Jarak Grid (gap):');
+  setTxt('#css-rowh-lbl', isEn ? 'Row Height (grid-auto-rows):' : 'Tinggi Baris (grid-auto-rows):');
+  setTxt('#tok-lbl-pri', isEn ? 'Primary Accent:' : 'Warna Utama:');
+  setTxt('#tok-lbl-bg', isEn ? 'Canvas Background:' : 'Latar Belakang:');
+  setTxt('#tok-lbl-txt', isEn ? 'Primary Text:' : 'Teks Utama:');
+  setTxt('#dw-author-lbl', isEn ? 'Author:' : 'Pereka:');
+  if ($('#nm')) $('#nm').placeholder = isEn ? 'Your name' : 'Nama anda';
+  setTxt('#dw-sync-pill', isEn ? '⚡ Live Sync' : '⚡ Segerak Langsung');
+  setTxt('#btn-apply-lbl', isEn ? 'Apply' : 'Terapkan');
+  setTxt('#btn-revert-lbl', isEn ? 'Revert' : 'Pulihkan');
+  setTxt('#btn-copy-lbl', isEn ? 'Copy' : 'Salin');
+  setTxt('#dt', (isEn ? 'Date: ' : 'Tarikh: ') + new Date().toLocaleDateString(isEn ? 'en-US' : 'ms-MY'));
+
+  // Code mode tabs
+  const viewBtn = document.querySelector('[data-cmode="view"]');
+  const editBtn = document.querySelector('[data-cmode="edit"]');
+  if (viewBtn) viewBtn.textContent = isEn ? 'View' : 'Papar';
+  if (editBtn) editBtn.textContent = isEn ? 'Edit · Auto' : 'Sunting · Auto';
+
+  // AI Tutor FAQs
+  setTxt('#drawer-ai-audit-head', isEn ? '🔍 Live Structure Audit' : '🔍 Audit Struktur Semasa');
+  setTxt('#drawer-ai-faq-head', isEn ? 'Student FAQs:' : 'Soalan Lazim Pelajar:');
+  const faqLabels = {
+    order: isEn ? '1. What should I structure first?' : '1. Apakah yang perlu saya susun dahulu?',
+    nav: isEn ? '2. Why use <nav> instead of <div>?' : '2. Mengapa guna <nav> bukannya <div>?',
+    hero: isEn ? '3. How do I put text next to an image in Hero?' : '3. Bagaimana letak teks di sebelah gambar dalam Hero?',
+    box: isEn ? '4. What is the difference between Padding and Margin?' : '4. Apakah beza antara Padding dan Margin?',
+    semantic: isEn ? '5. Why is Semantic HTML5 preferred over <div>?' : '5. Mengapa HTML5 Semantik lebih baik daripada <div>?',
+    form: isEn ? '6. How does the <form> element work?' : '6. Bagaimana borang <form> berfungsi?'
+  };
+  document.querySelectorAll('#drawer-ai-q-list [data-q]').forEach(btn => {
+    const qk = btn.dataset.q;
+    if (faqLabels[qk]) btn.textContent = faqLabels[qk];
+  });
+
+  renderPalette();
+}
 
 $('#pal').addEventListener('dragstart', e => {
   const b = e.target.closest('[data-add]');
@@ -1484,7 +1955,11 @@ function tp(id) {
 document.addEventListener('click', e => {
   const q = s => e.target.closest(s);
   let x;
-  if (x = q('#run-preview-js')) {
+  if (x = q('#btn-lang-toggle')) {
+    S.lang = S.lang === 'en' ? 'ms' : 'en';
+    render();
+    toast(S.lang === 'en' ? '🌐 Interface language switched to English (EN)' : '🌐 Bahasa antara muka ditukar ke Bahasa Melayu (BM)');
+  } else if (x = q('#run-preview-js')) {
     S.previewScripts = !S.previewScripts;
     if (S.previewScripts) S.hasJs = true;
     render();
@@ -1522,24 +1997,33 @@ document.addEventListener('click', e => {
   }
   else if (x = q('#tl,#side-close-btn,#side-open-btn')) tp('tl');
   else if (x = q('#ti')) tp('ti');
-  else if (x = q('#layer-html')) toast('HTML is the fundamental skeleton of the webpage, always active.');
+  else if (x = q('#layer-html')) toast(S.lang === 'en' ? 'HTML is the fundamental skeleton of the webpage, always active.' : 'HTML ialah rangka asas halaman web dan sentiasa aktif.');
   else if (x = q('#layer-css')) {
     S.hasCss = !S.hasCss;
     render();
-    toast(S.hasCss ? 'CSS Enabled (+ CSS)' : 'CSS Disabled (No CSS)');
+    toast(S.hasCss ? 'CSS Dihidupkan (+ CSS)' : 'CSS Dimatikan (Tanpa CSS)');
   } else if (x = q('#layer-js')) {
     S.hasJs = !S.hasJs;
     render();
-    toast(S.hasJs ? 'JS Enabled (+ JS)' : 'JS Disabled (No JS)');
+    toast(S.hasJs ? 'JS Dihidupkan (+ JS)' : 'JS Dimatikan (Tanpa JS)');
   } else if (x = q('#ai-btn')) {
     $('#ai-modal').hidden = false;
     runAiAudit();
   } else if (x = q('#ai-close-btn')) {
     $('#ai-modal').hidden = true;
   } else if (x = q('[data-q]')) {
+    const dict = S.lang === 'en' ? (typeof AI_KNOWLEDGE_EN !== 'undefined' ? AI_KNOWLEDGE_EN : AI_KNOWLEDGE) : (typeof AI_KNOWLEDGE_BM !== 'undefined' ? AI_KNOWLEDGE_BM : AI_KNOWLEDGE);
+    const htmlAns = dict[x.dataset.q] || '';
     const ansBox = $('#ai-ans');
-    ansBox.innerHTML = AI_KNOWLEDGE[x.dataset.q] || '';
-    ansBox.classList.add('show');
+    if (ansBox) {
+      ansBox.innerHTML = htmlAns;
+      ansBox.classList.add('show');
+    }
+    const drawerAns = $('#drawer-ai-ans');
+    if (drawerAns) {
+      drawerAns.innerHTML = htmlAns;
+      drawerAns.hidden = !htmlAns;
+    }
   } else if (x = q('[data-cmode]')) {
     setCodeMode(x.dataset.cmode);
   } else if (q('#btn-apply-code')) {
@@ -1733,8 +2217,8 @@ document.addEventListener('click', e => {
     S.view = x.dataset.v;
     render();
   } else if (x = q('[data-t]')) {
-    S.tab = x.dataset.t;
-    if (S.tab === 'css') {
+    const nextTab = x.dataset.t;
+    if (nextTab === 'css') {
       const cssWasOff = !S.hasCss || !['ext', 'all'].includes(S.sty);
       S.hasCss = true;
       if (hasCodeHtmlOverride()) convertSourceCssMode('ext');
@@ -1743,9 +2227,10 @@ document.addEventListener('click', e => {
       S.sideTab = 'css';
       if (cssWasOff) toast('style.css dibuka; CSS dihidupkan dalam mod External.');
       else toast('style.css dibuka.');
-    } else if (S.tab === 'html') {
+    } else if (nextTab === 'html') {
       S.sideTab = 'html';
     }
+    S.tab = nextTab;
     render();
   } else if (x = q('[data-sidetab]')) {
     S.sideTab = x.dataset.sidetab;
@@ -2248,7 +2733,7 @@ function toggleColorPopover(type, btn) {
     <div class="color-popover-head"><b>Warna</b>${closeButton}</div>
     <label class="cpop-search"><span aria-hidden="true">⌕</span><input type="search" id="cpop-search" placeholder="Cari warna atau kod HEX" autocomplete="off"></label>
     ${!isText ? `<div class="cpop-mode-tabs" role="tablist" aria-label="Jenis warna"><button type="button" role="tab" data-cpop-mode="solid" aria-selected="${!isGradient}" class="${!isGradient ? 'active' : ''}">Warna padu</button><button type="button" role="tab" data-cpop-mode="gradient" aria-selected="${isGradient}" class="${isGradient ? 'active' : ''}">Gradien</button></div>` : ''}
-    <div class="cpop-solid-panel"${isGradient ? ' hidden' : ''}>
+    <div class="cpop-solid-panel" id="cpop-solid-panel"${isGradient ? ' hidden' : ''}>
       <div class="cpop-current-row">
         <span class="cpop-current-swatch${!isText && b.f === 'none' ? ' is-none' : ''}" style="${isText || b.f !== 'none' ? `--current-color:${curHex};background:${curHex}` : ''}" title="${curHex}"></span>
         <label class="cpop-hex-field"><small>Kod HEX</small><input type="text" id="cpop-hex-input" value="${customInputValue}" maxlength="7" spellcheck="false" autocomplete="off"></label>
@@ -2267,7 +2752,7 @@ function toggleColorPopover(type, btn) {
 }
 
 function setColorPopoverMode(mode) {
-  const solid = $('#cpop-solid-panel');
+  const solid = $('.cpop-solid-panel');
   const gradient = $('.cpop-gradient-panel');
   if (!solid || !gradient) return;
   const isGradient = mode === 'gradient';

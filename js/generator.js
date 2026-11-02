@@ -32,7 +32,9 @@ const twc = (b, n) => {
   if (shdCls) t += ` ${shdCls}`;
   if (b.f == 3) t += ' text-white';
   if (b.ta) t += ` text-${b.ta}`;
-  if (n) t += ` grid grid-cols-${b.w} auto-rows-[40px] gap-2`;
+  const rowH = S.gridRowH || 40;
+  const gap = S.gridGap !== undefined ? S.gridGap : 8;
+  if (n) t += ` grid grid-cols-${b.w} auto-rows-[${rowH}px] gap-[${gap}px]`;
   return t;
 };
 
@@ -40,6 +42,8 @@ const inls = (b, n) => {
   const q = rl(b);
   const pad = b.pad !== undefined ? b.pad + 'px' : (n ? '8px' : '16px');
   const bg = b.f === 'none' ? 'transparent' : (FILLS[b.f] || '#ffffff');
+  const rowH = S.gridRowH || 40;
+  const gap = S.gridGap !== undefined ? S.gridGap : 8;
   let s = `grid-column:${q.c}/span ${b.w};grid-row:${q.r}/span ${b.h};background-color:${bg};padding:${pad};`;
   if (b.font) s += `font-family:${b.font};`;
   if (b.col) s += `color:${b.col};`;
@@ -57,7 +61,7 @@ const inls = (b, n) => {
     const sh = b.shd == 'sm' ? '0 2px 4px rgba(0,0,0,0.1)' : b.shd == 'md' ? '0 4px 12px rgba(0,0,0,0.15)' : '0 10px 25px rgba(0,0,0,0.2)';
     s += `box-shadow:${sh};`;
   }
-  if (n) s += `display:grid;grid-template-columns:repeat(${b.w},1fr);grid-auto-rows:40px;gap:8px;`;
+  if (n) s += `display:grid;grid-template-columns:repeat(${b.w},1fr);grid-auto-rows:${rowH}px;gap:${gap}px;`;
   return s;
 };
 
@@ -69,11 +73,28 @@ const inner = b => {
   const defImg = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=80';
   return b.type == 'slider' ? (S.hasJs ? '<div class="swiper-wrapper">\n' + [1, 2, 3].map(n => '  <div class="swiper-slide">Slide ' + n + '</div>').join('\n') + '\n</div>\n<div class="swiper-pagination"></div>' : '<div class="slider-box">\n  <p>[ Static Slider ]</p>\n</div>') :
     b.type == 'dropdown' ? (function() {
-      const dropItems = (b.items && b.items.length) ? b.items : ['Option 1', 'Option 2', 'Option 3'];
+      const dropItems = (b.items && b.items.length) ? b.items : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
       const innerLinks = dropItems.map(it => `  <a href="#">${esc(it)}</a>`).join('\n');
       return isDiv
         ? `<div class="dropdown-header">${t} ▾</div>\n<div class="dropdown-content">\n${innerLinks}\n</div>`
         : `<summary>${t}</summary>\n<div class="dropdown-content">\n${innerLinks}\n</div>`;
+    })() :
+    b.type == 'form' ? (function() {
+      const fields = (b.fields && b.fields.length) ? b.fields : (b.t ? b.t.split(',').map(x => x.trim()).filter(Boolean) : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda']);
+      const subTxt = b.submitText || 'Hantar Mesej';
+      const rows = fields.map((f, idx) => {
+        const lbl = f.trim() || `Medan ${idx + 1}`;
+        const idName = `field-${b.id}-${idx + 1}`;
+        const isEmail = /emel|email/i.test(lbl);
+        const isPhone = /tel|fon|phone|whatsapp/i.test(lbl);
+        const isArea = /mesej|message|komen|comment|ulasan|pertanyaan/i.test(lbl);
+        if (isArea) {
+          return `<div class="form-group">\n  <label for="${idName}">${esc(lbl)}</label>\n  <textarea id="${idName}" name="${idName}" rows="3" placeholder="Taip ${qa(lbl.toLowerCase())}..." required></textarea>\n</div>`;
+        }
+        const inputType = isEmail ? 'email' : isPhone ? 'tel' : 'text';
+        return `<div class="form-group">\n  <label for="${idName}">${esc(lbl)}</label>\n  <input type="${inputType}" id="${idName}" name="${idName}" placeholder="Masukkan ${qa(lbl.toLowerCase())}..." required>\n</div>`;
+      }).join('\n');
+      return `${rows}\n<button type="submit" class="btn-cta form-submit">${esc(subTxt)}</button>`;
     })() :
     b.type == 'nav' ? (function() {
       let items = [];
@@ -100,7 +121,7 @@ const inner = b => {
         return `<a href="${href}"${cls}>${esc(title)}</a>`;
       }).filter(Boolean).join('\n');
     })() :
-    b.type == 'image' ? (isDiv ? `<div class="image-box"><img src="${b.imgUrl || defImg}" alt="${qa(cleanAlt)}">${cleanCaption ? `\n  <div class="caption">${cleanCaption}</div>` : ''}</div>` : `<figure><img src="${b.imgUrl || defImg}" alt="${qa(cleanAlt)}">${cleanCaption ? `\n<figcaption>${cleanCaption}</figcaption>` : ''}</figure>`) :
+    b.type == 'image' ? (isDiv ? `<div class="image-box"><img src="${b.imgUrl || defImg}" alt="${qa(cleanAlt)}">${cleanCaption ? `\n  <div class="caption">${cleanCaption}</div>` : ''}</div>` : `<img src="${b.imgUrl || defImg}" alt="${qa(cleanAlt)}">${cleanCaption ? `\n<figcaption>${cleanCaption}</figcaption>` : ''}`) :
     b.type == 'header' ? (hasBlockTag(b.t) ? b.t : `<h1>${b.t}</h1>`) :
     ['hero', 'section', 'card'].includes(b.type) ? (hasBlockTag(b.t) ? b.t : `<h2>${b.t}</h2>`) :
     b.type == 'text' ? (hasBlockTag(b.t) ? b.t : `<p>${b.t}</p>`) : b.t;
@@ -164,12 +185,14 @@ function body(mode) {
   const mainIdAttr = isDiv ? ' id="main"' : '';
   const mainClose = isDiv ? '</div><!-- /.main-container -->' : '</main>';
 
+  const rowH = S.gridRowH || 40;
+  const gap = S.gridGap !== undefined ? S.gridGap : 8;
   if (!S.hasCss) {
     L.push({ s: `<${mainTag}${mainIdAttr}${isDiv ? ' class="main-container"' : ''}>`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body' });
   } else if (mode == 'tw') {
-    L.push({ s: `<${mainTag}${mainIdAttr} class="${mainCls}grid grid-cols-12 auto-rows-[40px] gap-2 p-4">`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body' });
+    L.push({ s: `<${mainTag}${mainIdAttr} class="${mainCls}grid grid-cols-12 auto-rows-[${rowH}px] gap-[${gap}px] p-4">`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body' });
   } else if (mode == 'inl') {
-    L.push({ s: `<${mainTag}${mainIdAttr}${isDiv ? ' class="main-container"' : ''} style="display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:40px;gap:8px;padding:16px;">`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body', isCssInline: true });
+    L.push({ s: `<${mainTag}${mainIdAttr}${isDiv ? ' class="main-container"' : ''} style="display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:${rowH}px;gap:${gap}px;padding:16px;">`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body', isCssInline: true });
   } else {
     L.push({ s: `<${mainTag}${mainIdAttr}${isDiv ? ' class="main-container"' : ''}>`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body' });
   }
@@ -303,6 +326,17 @@ function getCssRules() {
   L.push({ s: 'nav details.nav-dropdown .dropdown-content { position: absolute; top: calc(100% + 4px); left: 0; min-width: 140px; background: #ffffff; color: #12203f; border: 1px solid rgba(0,0,0,0.15); border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.15); padding: 6px 0; z-index: 100; display: flex; flex-direction: column; }' });
   L.push({ s: 'nav details.nav-dropdown .dropdown-content a { padding: 6px 14px; color: #12203f !important; text-decoration: none !important; font-size: 13px !important; display: block !important; }' });
   L.push({ s: 'nav details.nav-dropdown .dropdown-content a:hover { background: rgba(0,212,255,0.12) !important; color: #0077b6 !important; }' });
+
+  // 📝 Gaya untuk Borang Interaktif (<form>)
+  if (S.blocks.some(b => b.type === 'form')) {
+    L.push({ s: '' });
+    L.push({ s: '/* 📝 Borang Hubungan Interaktif (<form>) */' });
+    L.push({ s: 'form { display: flex; flex-direction: column; gap: 10px; }' });
+    L.push({ s: 'form .form-group { display: flex; flex-direction: column; gap: 4px; text-align: left; }' });
+    L.push({ s: 'form label { font-size: 12.5px; font-weight: 600; opacity: 0.9; }' });
+    L.push({ s: 'form input, form textarea { width: 100%; padding: 8px 10px; border: 1px solid rgba(18,32,63,0.22); border-radius: 6px; font: inherit; font-size: 13px; background: #ffffff; color: #12203f; box-sizing: border-box; }' });
+    L.push({ s: 'form button.form-submit { align-self: flex-start; padding: 9px 18px; border: none; border-radius: 6px; background: #203a5b; color: #ffffff; font-weight: 600; cursor: pointer; }' });
+  }
 
   // 📱 Gaya Responsif untuk Telefon Pintar & Peranti Skrin Kecil (Media Query)
   // Hanya disuntik jika pengguna mengaktifkan suis "Jana Kod Responsif" (S.responsiveCSS === true)
@@ -571,6 +605,18 @@ function js() {
     L.push({ s: '  }' });
   }
 
+  if (S.blocks.some(b => b.type === 'form')) {
+    L.push({ s: '' });
+    L.push({ s: '  // 5. Pengendalian Penghantaran Borang (<form>)' });
+    L.push({ s: '  document.querySelectorAll("form").forEach(form => {' });
+    L.push({ s: '    form.addEventListener("submit", e => {' });
+    L.push({ s: '      e.preventDefault();' });
+    L.push({ s: '      console.log("📩 Borang berjaya dihantar!");' });
+    L.push({ s: '      form.reset();' });
+    L.push({ s: '    });' });
+    L.push({ s: '  });' });
+  }
+
   L.push({ s: '});' });
   return L;
 }
@@ -764,6 +810,11 @@ function preview() {
       border-radius: 3px;
     }
     .dropdown-content a:hover { background: #edf2f7; }
+    form { display: flex; flex-direction: column; gap: 10px; }
+    form .form-group { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+    form label { font-size: 12.5px; font-weight: 600; opacity: 0.9; }
+    form input, form textarea { width: 100%; padding: 8px 10px; border: 1px solid rgba(18,32,63,0.22); border-radius: 6px; font: inherit; font-size: 13px; background: #ffffff; color: #12203f; box-sizing: border-box; }
+    form button.form-submit { align-self: flex-start; padding: 9px 18px; border: none; border-radius: 6px; background: #203a5b; color: #ffffff; font-weight: 600; cursor: pointer; }
     ${cs}
     ${extraCss}
   </style>
@@ -772,12 +823,13 @@ function preview() {
   ${S.hasJs ? `<script>
   if(document.querySelector('.swiper')){new Swiper('.swiper',{loop:true,autoplay:{delay:2500}})}
   document.querySelectorAll('a').forEach(a=>a.addEventListener('click',e=>{if(a.getAttribute('href')=='#'){e.preventDefault();const t=document.createElement('div');t.style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#0b3d91;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);font-family:Inter,system-ui;';t.textContent='Pautan/Butang diklik!';document.body.appendChild(t);setTimeout(()=>t.remove(),2500);}}));
+  document.querySelectorAll('form').forEach(f=>f.addEventListener('submit',e=>{e.preventDefault();const t=document.createElement('div');t.style='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#065f46;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);font-family:Inter,system-ui;';t.textContent='📩 Mesej borang telah dihantar!';document.body.appendChild(t);f.reset();setTimeout(()=>t.remove(),2500);}));
   <\/script>` : ''}
   </body></html>`;
 }
 
 function downloadFile(name, content, type) {
-  const b = new Blob([content], { type: type || 'text/plain' });
+  const b = content instanceof Blob ? content : new Blob([content], { type: type || 'text/plain' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(b);
   a.download = name;
@@ -785,22 +837,163 @@ function downloadFile(name, content, type) {
   URL.revokeObjectURL(a.href);
 }
 
-function exportProject() {
-  const isExtOrAll = S.hasCss && (S.sty === 'ext' || S.sty === 'all');
-  const pageEdits = S.codeEdits && S.codeEdits[S.curPage] || {};
-  const curHtml = Object.prototype.hasOwnProperty.call(pageEdits, 'html')
-    ? pageEdits.html : htmlLines().map(l => l.s).join('\n');
-  const curJs = Object.prototype.hasOwnProperty.call(pageEdits, 'js')
-    ? pageEdits.js : js().map(l => l.s).join('\n');
+/**
+ * Pembina arkib .ZIP tulen (pure JS, tanpa pustaka luar).
+ * Menyokong pengekodan UTF-8 dan pengiraan CRC32 standard PKZIP.
+ * @param {Array<{name: string, content: string}>} files Senarai fail dalam projek
+ * @returns {Uint8Array} Data binari arkib ZIP
+ */
+function createZipArchive(files) {
+  const encoder = new TextEncoder();
+  const crcTable = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) {
+      c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    }
+    crcTable[n] = c >>> 0;
+  }
+  const crc32 = bytes => {
+    let crc = 0xFFFFFFFF;
+    for (let i = 0; i < bytes.length; i++) {
+      crc = (crc >>> 8) ^ crcTable[(crc ^ bytes[i]) & 0xFF];
+    }
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  };
 
-  downloadFile(S.curPage || 'index.html', curHtml, 'text/html');
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+
+  files.forEach(file => {
+    const nameBytes = encoder.encode(file.name);
+    const dataBytes = encoder.encode(String(file.content || ''));
+    const crc = crc32(dataBytes);
+    const size = dataBytes.length;
+
+    const localHeader = new Uint8Array(30 + nameBytes.length);
+    const lv = new DataView(localHeader.buffer);
+    lv.setUint32(0, 0x04034b50, true); // Local file header signature
+    lv.setUint16(4, 20, true);         // Version needed to extract (2.0)
+    lv.setUint16(6, 0x0800, true);     // UTF-8 filename flag
+    lv.setUint16(8, 0, true);          // Compression method: 0 (Stored)
+    lv.setUint16(10, 0, true);         // Mod time
+    lv.setUint16(12, 0x5421, true);    // Mod date
+    lv.setUint32(14, crc, true);       // CRC-32
+    lv.setUint32(18, size, true);      // Compressed size
+    lv.setUint32(22, size, true);      // Uncompressed size
+    lv.setUint16(26, nameBytes.length, true); // Filename length
+    lv.setUint16(28, 0, true);         // Extra field length
+    localHeader.set(nameBytes, 30);
+
+    const centralHeader = new Uint8Array(46 + nameBytes.length);
+    const cv = new DataView(centralHeader.buffer);
+    cv.setUint32(0, 0x02014b50, true); // Central directory signature
+    cv.setUint16(4, 20, true);         // Version made by
+    cv.setUint16(6, 20, true);         // Version needed
+    cv.setUint16(8, 0x0800, true);     // UTF-8 flag
+    cv.setUint16(10, 0, true);         // Compression method: 0
+    cv.setUint16(12, 0, true);         // Mod time
+    cv.setUint16(14, 0x5421, true);    // Mod date
+    cv.setUint32(16, crc, true);       // CRC-32
+    cv.setUint32(20, size, true);      // Compressed size
+    cv.setUint32(24, size, true);      // Uncompressed size
+    cv.setUint16(28, nameBytes.length, true); // Filename length
+    cv.setUint16(30, 0, true);         // Extra field length
+    cv.setUint16(32, 0, true);         // File comment length
+    cv.setUint16(34, 0, true);         // Disk number start
+    cv.setUint16(36, 0, true);         // Internal file attributes
+    cv.setUint32(38, 0, true);         // External file attributes
+    cv.setUint32(42, offset, true);    // Relative offset of local header
+    centralHeader.set(nameBytes, 46);
+
+    localParts.push(localHeader, dataBytes);
+    centralParts.push(centralHeader);
+    offset += localHeader.length + dataBytes.length;
+  });
+
+  const centralSize = centralParts.reduce((acc, p) => acc + p.length, 0);
+  const eocd = new Uint8Array(22);
+  const ev = new DataView(eocd.buffer);
+  ev.setUint32(0, 0x06054b50, true); // End of central directory signature
+  ev.setUint16(4, 0, true);          // Number of this disk
+  ev.setUint16(6, 0, true);          // Disk where central directory starts
+  ev.setUint16(8, files.length, true); // Number of central directory records on this disk
+  ev.setUint16(10, files.length, true); // Total number of central directory records
+  ev.setUint32(12, centralSize, true); // Size of central directory
+  ev.setUint32(16, offset, true);    // Offset of start of central directory
+  ev.setUint16(20, 0, true);         // Comment length
+
+  const totalLen = offset + centralSize + eocd.length;
+  const out = new Uint8Array(totalLen);
+  let pos = 0;
+  for (const part of localParts) { out.set(part, pos); pos += part.length; }
+  for (const part of centralParts) { out.set(part, pos); pos += part.length; }
+  out.set(eocd, pos);
+  return out;
+}
+
+function exportProject() {
+  if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+  const savedPage = S.curPage;
+  const isExtOrAll = S.hasCss && (S.sty === 'ext' || S.sty === 'all');
+  const files = [];
+  const cssSections = [];
+
+  Object.keys(S.pages).forEach(pageKey => {
+    S.curPage = pageKey;
+    S.blocks = S.pages[pageKey].blocks || [];
+    const pageEdits = (S.codeEdits && S.codeEdits[pageKey]) || {};
+    const htmlContent = Object.prototype.hasOwnProperty.call(pageEdits, 'html')
+      ? pageEdits.html
+      : htmlLines().map(l => l.s).join('\n');
+    files.push({ name: pageKey, content: htmlContent });
+
+    if (isExtOrAll) {
+      const pageCss = Object.prototype.hasOwnProperty.call(pageEdits, 'css')
+        ? pageEdits.css
+        : getCssRules().map(l => l.s).join('\n');
+      cssSections.push(`/* ========================================== */\n/* Halaman: ${pageKey} */\n/* ========================================== */\n${pageCss}`);
+    }
+  });
+
+  // Pulihkan halaman aktif
+  S.curPage = savedPage;
+  S.blocks = S.pages[savedPage] ? S.pages[savedPage].blocks : [];
+
   if (isExtOrAll) {
-    const curCss = Object.prototype.hasOwnProperty.call(pageEdits, 'css')
-      ? pageEdits.css : getCssRules().map(l => l.s).join('\n');
-    setTimeout(() => downloadFile('style.css', curCss, 'text/css'), 250);
+    files.push({ name: 'style.css', content: cssSections.join('\n\n') });
   }
   if (S.hasJs) {
-    setTimeout(() => downloadFile('script.js', curJs, 'application/javascript'), isExtOrAll ? 500 : 250);
+    const curEdits = (S.codeEdits && S.codeEdits[savedPage]) || {};
+    const jsContent = Object.prototype.hasOwnProperty.call(curEdits, 'js')
+      ? curEdits.js
+      : js().map(l => l.s).join('\n');
+    files.push({ name: 'script.js', content: jsContent });
   }
-  toast(isExtOrAll ? `Fail projek (${S.curPage || 'index.html'}, style.css, script.js) sedang dimuat turun!` : `Fail projek (${S.curPage || 'index.html'}, script.js) dimuat turun! (Gaya CSS disimpan dalam HTML).`);
+
+  const readmeContent = [
+    'NIAN CODE STUDIO - Pakej Eksport Projek Laman Web',
+    '=================================================',
+    `Pereka: ${S.name || 'Pelajar / Pereka Web'}`,
+    `Tarikh: ${new Date().toLocaleDateString('ms-MY')}`,
+    '',
+    'Senarai Fail dalam Arkib ZIP ini:',
+    ...files.map(f => `- ${f.name}`),
+    '',
+    'Cara Penggunaan:',
+    '1. Ekstrak (Unzip) fail nian-code-studio-projek.zip ke dalam satu folder.',
+    '2. Buka fail index.html menggunakan pelayar web (Chrome, Edge, Firefox, Safari) atau editor kod (VS Code).'
+  ].join('\n');
+  files.push({ name: 'README.txt', content: readmeContent });
+
+  const zipBytes = createZipArchive(files);
+  const blob = new Blob([zipBytes], { type: 'application/zip' });
+  downloadFile('nian-code-studio-projek.zip', blob, 'application/zip');
+
+  const isEn = S.lang === 'en';
+  toast(isEn
+    ? `📦 Project archive (nian-code-studio-projek.zip with ${files.length} files) downloaded!`
+    : `📦 Arkib projek (nian-code-studio-projek.zip mengandungi ${files.length} fail) berjaya dimuat turun!`);
 }
+

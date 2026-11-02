@@ -176,16 +176,21 @@ function renderIns() {
     return;
   }
   if (!b) {
-    el.innerHTML = '<div class="ins-empty"><b>Pilih elemen</b><span>Klik elemen pada kanvas untuk melihat dan menyunting tetapannya.</span></div>';
+    el.innerHTML = S.lang === 'en'
+      ? '<div class="ins-empty"><b>Select an element</b><span>Click an element on the canvas to view and edit its settings.</span></div>'
+      : '<div class="ins-empty"><b>Pilih elemen</b><span>Klik elemen pada kanvas untuk melihat dan menyunting tetapannya.</span></div>';
     return;
   }
 
-  const T = TY[b.type] || { n: 'Element', tag: 'div' };
+  const isEn = S.lang === 'en';
+  const T = TY[b.type] || { n: 'Elemen', en: 'Element', tag: 'div' };
+  const tName = isEn ? (T.en || T.n) : T.n;
   const isContainer = ['header', 'hero', 'section', 'card', 'aside', 'footer'].includes(b.type);
   const isImage = b.type === 'image';
   const isLink = b.type === 'button' || b.type === 'logo' || b.type === 'link';
   const isNav = b.type === 'nav';
   const isDropdown = b.type === 'dropdown';
+  const isForm = b.type === 'form';
   const bgMode = b.bgMode || (String(b.bgImg || '').startsWith('pattern-') ? 'pattern' : b.bgImg ? 'image' : 'color');
 
   let contextHtml = '';
@@ -295,8 +300,30 @@ function renderIns() {
       </div>
 
       <button type="button" class="ins-action-btn ins-wide-action" data-drop-add-item="true" style="margin-top:4px">
-        + Add New Option
+        ${isEn ? '+ Add New Option' : '+ Tambah Pilihan Baharu'}
       </button>
+    </section>`;
+  } else if (isForm) {
+    b.fields = (b.fields && b.fields.length) ? b.fields : (b.t ? b.t.split(',').map(x => x.trim()).filter(Boolean) : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda']);
+    b.submitText = b.submitText || (isEn ? 'Send Message' : 'Hantar Mesej');
+    const fieldsCount = b.fields.length;
+    contextHtml = `<section class="ins-section">
+      <div class="ins-section-heading">${isEn ? 'Form Fields (&lt;form&gt;)' : 'Medan Borang (&lt;form&gt;)'}</div>
+      <p class="ins-help" style="margin:0 0 8px">${isEn ? 'Customize input labels and submit button for this form:' : 'Ubah suai label medan input dan teks butang hantar:'}</p>
+      <div class="dropdown-items-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+        ${b.fields.map((fld, idx) => `
+          <div class="dropdown-item-row" style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:11px;font-family:var(--font-mono);color:var(--mute);min-width:18px">${idx + 1}.</span>
+            <input type="text" class="ins-form-field-input" data-form-field-idx="${idx}" value="${esc(fld)}" placeholder="${isEn ? 'Field' : 'Medan'} ${idx + 1}" style="flex:1;padding:4px 8px;font-size:12px">
+            <button type="button" class="ins-form-field-del" data-form-field-del="${idx}" title="${isEn ? 'Delete field' : 'Padam medan'}" style="background:rgba(255,60,60,0.15);border:1px solid rgba(255,80,80,0.3);color:#ff8888;padding:4px 8px;border-radius:4px;cursor:pointer"${fieldsCount <= 1 ? ' disabled style="opacity:0.3;cursor:not-allowed"' : ''}>✕</button>
+          </div>
+        `).join('')}
+      </div>
+      <button type="button" class="ins-action-btn ins-wide-action" data-form-add-field="true" style="margin-bottom:10px">
+        ${isEn ? '+ Add Form Field' : '+ Tambah Medan Borang'}
+      </button>
+      <label class="ins-label" for="ins-form-submit">${isEn ? 'Submit Button Text' : 'Teks Butang Hantar'}</label>
+      <input type="text" id="ins-form-submit" value="${qa(b.submitText)}" placeholder="${isEn ? 'Send Message' : 'Hantar Mesej'}">
     </section>`;
   } else if (isNav) {
     const items = b.t.includes(',') ? b.t.split(',') : b.t.includes('|') ? b.t.split('|') : b.t.includes('\n') ? b.t.split('\n') : b.t.trim().split(/\s+/);
@@ -309,7 +336,7 @@ function renderIns() {
     const subCount = subItems.length;
 
     contextHtml = `<section class="ins-section">
-      <div class="ins-section-heading">Navigation Menu Links</div>
+      <div class="ins-section-heading">${isEn ? 'Navigation Menu Links' : 'Pautan Menu Navigasi'}</div>
       <div class="ins-choice-row ins-nav-choices">${items.map((item, index) => {
         const title = item.trim();
         if (!title) return '';
@@ -325,11 +352,11 @@ function renderIns() {
 
           <!-- Stepper Bilangan Sub-Pilihan -->
           <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.25);padding:6px 8px;border-radius:4px;margin-bottom:8px">
-            <span style="font-size:11px">Sub-Options Count:</span>
+            <span style="font-size:11px">${isEn ? 'Sub-Options Count:' : 'Bilangan Sub-Pilihan:'}</span>
             <div style="display:flex;align-items:center;gap:6px">
-              <button type="button" class="ins-stepper-btn" data-nav-sub-step="-1" data-target-title="${esc(curTitle)}" title="Decrease count" ${subCount <= 1 ? 'disabled' : ''}>−</button>
+              <button type="button" class="ins-stepper-btn" data-nav-sub-step="-1" data-target-title="${esc(curTitle)}" title="Kurangkan" ${subCount <= 1 ? 'disabled' : ''}>−</button>
               <span style="font-family:var(--font-mono);font-size:11.5px;font-weight:700;color:var(--cy)">${subCount}</span>
-              <button type="button" class="ins-stepper-btn" data-nav-sub-step="1" data-target-title="${esc(curTitle)}" title="Increase count">+</button>
+              <button type="button" class="ins-stepper-btn" data-nav-sub-step="1" data-target-title="${esc(curTitle)}" title="Tambah">+</button>
             </div>
           </div>
 
@@ -338,69 +365,76 @@ function renderIns() {
             ${subItems.map((sub, sIdx) => `
               <div style="display:flex;align-items:center;gap:6px">
                 <span style="font-size:10.5px;font-family:var(--font-mono);color:var(--mute);min-width:16px">${sIdx + 1}.</span>
-                <input type="text" class="ins-nav-sub-input" data-nav-sub-idx="${sIdx}" data-target-title="${esc(curTitle)}" value="${esc(sub)}" placeholder="Sub-option ${sIdx + 1}" style="flex:1;padding:4px 8px;font-size:11.5px">
-                <button type="button" class="ins-nav-sub-del" data-nav-sub-del="${sIdx}" data-target-title="${esc(curTitle)}" title="Delete" style="background:rgba(255,60,60,0.15);border:1px solid rgba(255,80,80,0.3);color:#ff8888;padding:3px 7px;border-radius:4px;cursor:pointer"${subCount <= 1 ? ' disabled style="opacity:0.3"' : ''}>✕</button>
+                <input type="text" class="ins-nav-sub-input" data-nav-sub-idx="${sIdx}" data-target-title="${esc(curTitle)}" value="${esc(sub)}" placeholder="Sub-pilihan ${sIdx + 1}" style="flex:1;padding:4px 8px;font-size:11.5px">
+                <button type="button" class="ins-nav-sub-del" data-nav-sub-del="${sIdx}" data-target-title="${esc(curTitle)}" title="Padam" style="background:rgba(255,60,60,0.15);border:1px solid rgba(255,80,80,0.3);color:#ff8888;padding:3px 7px;border-radius:4px;cursor:pointer"${subCount <= 1 ? ' disabled style="opacity:0.3"' : ''}>✕</button>
               </div>
             `).join('')}
           </div>
 
           <button type="button" class="ins-action-btn ins-wide-action" data-nav-sub-add="true" data-target-title="${esc(curTitle)}" style="margin-bottom:8px">
-            + Add Sub-Option
+            ${isEn ? '+ Add Sub-Option' : '+ Tambah Sub-Pilihan'}
           </button>
 
           <button type="button" class="ins-action-btn ins-wide-action" data-ins-nav-drop="remove" data-target-title="${esc(curTitle)}" style="background:rgba(255,60,60,0.12);border-color:rgba(255,80,80,0.3);color:#ff8888">
-            Revert to Regular Link
+            ${isEn ? 'Revert to Regular Link' : 'Tukar Semula ke Pautan Biasa'}
           </button>
         </div>
       ` : `
         <button type="button" class="ins-action-btn ins-wide-action" data-ins-nav-drop="add" data-target-title="${esc(curTitle)}" style="margin-top:10px">
-          Convert to Dropdown Menu
+          ${isEn ? 'Convert to Dropdown Menu' : 'Tukar kepada Menu Dropdown'}
         </button>
       `}
     </section>`;
   }
 
-  const contentLabel = isImage ? 'Image caption' : isNav ? 'Link labels (separated by commas)' : 'Displayed text content';
-  const componentOptions = Object.keys(TY).map(key => `<option value="${key}"${key === b.type ? ' selected' : ''}>${esc(TY[key].n)}</option>`).join('');
-  const advancedHtml = `<details class="ins-advanced ins-code-advanced"><summary>Advanced options</summary>
-    <p class="ins-help">Optional technical component settings.</p>
-    <div class="ins-advanced-tag">Rendered HTML tag: <code>&lt;${T.tag}&gt;</code></div>
-    <div class="ins-quick-converts"><button type="button" class="ins-choice" data-convert-type="nav">Navigation</button><button type="button" class="ins-choice" data-convert-type="button">CTA Button</button><button type="button" class="ins-choice" data-convert-type="header">Header</button><button type="button" class="ins-choice" data-convert-type="hero">Hero Section</button></div>
+  const contentLabel = isImage
+    ? (isEn ? 'Image caption' : 'Kapsyen gambar')
+    : isNav
+      ? (isEn ? 'Link labels (separated by commas)' : 'Label pautan (pisahkan dengan koma)')
+      : isForm
+        ? (isEn ? 'Form field labels (separated by commas)' : 'Label medan borang (pisahkan dengan koma)')
+        : (isEn ? 'Displayed text content' : 'Kandungan teks dipaparkan');
+  const componentOptions = Object.keys(TY).map(key => `<option value="${key}"${key === b.type ? ' selected' : ''}>${esc(isEn ? (TY[key].en || TY[key].n) : TY[key].n)}</option>`).join('');
+  const advancedHtml = `<details class="ins-advanced ins-code-advanced"><summary>${isEn ? 'Advanced options' : 'Tetapan lanjutan'}</summary>
+    <p class="ins-help">${isEn ? 'Optional technical component settings.' : 'Tetapan teknikal tambahan untuk komponen ini.'}</p>
+    <div class="ins-advanced-tag">${isEn ? 'Rendered HTML tag:' : 'Tag HTML dijana:'} <code>&lt;${T.tag}&gt;</code></div>
+    <div class="ins-quick-converts"><button type="button" class="ins-choice" data-convert-type="nav">Navigasi</button><button type="button" class="ins-choice" data-convert-type="button">Butang CTA</button><button type="button" class="ins-choice" data-convert-type="header">Header</button><button type="button" class="ins-choice" data-convert-type="form">Borang</button></div>
   </details>`;
 
   el.innerHTML = `
     <section class="ins-section ins-item-section">
-      <div class="ins-head-row"><span class="ins-title">${esc(T.n)}</span></div>
-      <label class="ins-label" for="ty">Component Type</label>
-      <select id="ty" aria-label="Component Type">${componentOptions}</select>
+      <div class="ins-head-row"><span class="ins-title">${esc(tName)}</span></div>
+      <label class="ins-label" for="ty">${isEn ? 'Component Type' : 'Jenis Komponen'}</label>
+      <select id="ty" aria-label="Jenis Komponen">${componentOptions}</select>
     </section>
     <section class="ins-section ins-content-section">
       <label class="ins-label" for="tx">${contentLabel}</label>
-      <textarea id="tx" rows="3" placeholder="Type content here...">${qa(b.t)}</textarea>
+      <textarea id="tx" rows="3" placeholder="${isEn ? 'Type content here...' : 'Taip kandungan di sini...'}">${qa(b.t)}</textarea>
     </section>
     <section class="ins-section ins-size-section">
-      <div class="ins-section-heading">Canvas Grid Size</div>
+      <div class="ins-section-heading">${isEn ? 'Canvas Grid Size' : 'Saiz Grid Kanvas'}</div>
       <div class="steppers-row">
-        <div class="stepper-box"><span class="stepper-lbl">Width</span><div class="stepper-ctrls">
-          <button type="button" data-step="w-dec" aria-label="Decrease width">−</button><span class="stepper-num"><b>${b.w}</b><small>cols</small></span><button type="button" data-step="w-inc" aria-label="Increase width">+</button>
+        <div class="stepper-box"><span class="stepper-lbl">${isEn ? 'Width' : 'Lebar'}</span><div class="stepper-ctrls">
+          <button type="button" data-step="w-dec" aria-label="Kurangkan lebar">−</button><span class="stepper-num"><b>${b.w}</b><small>${isEn ? 'cols' : 'kol'}</small></span><button type="button" data-step="w-inc" aria-label="Tambahkan lebar">+</button>
         </div></div>
-        <div class="stepper-box"><span class="stepper-lbl">Height</span><div class="stepper-ctrls">
-          <button type="button" data-step="h-dec" aria-label="Decrease height">−</button><span class="stepper-num"><b>${b.h}</b><small>rows</small></span><button type="button" data-step="h-inc" aria-label="Increase height">+</button>
+        <div class="stepper-box"><span class="stepper-lbl">${isEn ? 'Height' : 'Tinggi'}</span><div class="stepper-ctrls">
+          <button type="button" data-step="h-dec" aria-label="Kurangkan tinggi">−</button><span class="stepper-num"><b>${b.h}</b><small>${isEn ? 'rows' : 'baris'}</small></span><button type="button" data-step="h-inc" aria-label="Tambahkan tinggi">+</button>
         </div></div>
       </div>
     </section>
     ${contextHtml}
     ${advancedHtml}
-    <button class="del" id="del" title="Delete this element from canvas">Delete Element</button>`;
+    <button class="del" id="del" title="${isEn ? 'Delete this element from canvas' : 'Padam elemen ini daripada kanvas'}">${isEn ? 'Delete Element' : 'Padam Elemen'}</button>`;
 }
 
 function renderLayersPanel() {
   const panel = $('#layers-panel');
   if (!panel) return;
+  const isEn = S.lang === 'en';
 
   const labelFor = b => {
     const clean = String(b.t || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-    return clean || TY[b.type]?.n || 'Element';
+    return clean || (isEn ? (TY[b.type]?.en || TY[b.type]?.n) : TY[b.type]?.n) || 'Elemen';
   };
 
   const renderBranch = parent => S.blocks
@@ -410,17 +444,17 @@ function renderLayersPanel() {
       const siblings = S.blocks.filter(x => par(x) === parent).sort((a, c) => S.blocks.indexOf(a) - S.blocks.indexOf(c));
       const index = siblings.findIndex(x => x.id === b.id);
       const title = labelFor(b);
-      const meta = TY[b.type]?.n || 'Element';
+      const meta = (isEn ? (TY[b.type]?.en || TY[b.type]?.n) : TY[b.type]?.n) || 'Elemen';
       const children = renderBranch(b);
       return `<div class="layer-node" data-layer-row data-layer-id="${qa(b.id)}" draggable="true">
         <div class="layer-row${b.id == S.sel ? ' selected' : ''}" style="--layer-depth:${dep(b)}">
-          <button type="button" class="layer-select" data-layer-select="${qa(b.id)}" title="Select ${qa(title)}">
+          <button type="button" class="layer-select" data-layer-select="${qa(b.id)}" title="${qa(title)}">
             <span class="layer-row-icon">${icon(b.type, 'layer-icon', 16)}</span>
             <span class="layer-row-copy"><b>${esc(title.slice(0, 38))}${title.length > 38 ? '…' : ''}</b><small>${meta}</small></span>
           </button>
           <span class="layer-row-actions">
-            <button type="button" data-layer-move="up" data-layer-id="${qa(b.id)}" aria-label="Move layer up" title="Move layer up"${index === siblings.length - 1 ? ' disabled' : ''}>↑</button>
-            <button type="button" data-layer-move="down" data-layer-id="${qa(b.id)}" aria-label="Move layer down" title="Move layer down"${index === 0 ? ' disabled' : ''}>↓</button>
+            <button type="button" data-layer-move="up" data-layer-id="${qa(b.id)}" aria-label="Naikkan lapisan" title="Naikkan lapisan"${index === siblings.length - 1 ? ' disabled' : ''}>↑</button>
+            <button type="button" data-layer-move="down" data-layer-id="${qa(b.id)}" aria-label="Turunkan lapisan" title="Turunkan lapisan"${index === 0 ? ' disabled' : ''}>↓</button>
           </span>
         </div>
         ${children ? `<div class="layer-children">${children}</div>` : ''}
@@ -430,19 +464,19 @@ function renderLayersPanel() {
   const roots = renderBranch(null);
   panel.innerHTML = `
     <div class="layers-head">
-      <div><h3>Layers</h3><p>${S.blocks.length} elements · top to bottom stack</p></div>
+      <div><h3>${isEn ? 'Layers' : 'Susunan Lapisan'}</h3><p>${S.blocks.length} ${isEn ? 'elements · top to bottom stack' : 'elemen · susunan atas ke bawah'}</p></div>
       <span class="layers-count">${S.blocks.length}</span>
     </div>
-    <div class="layers-hint">Drag to reorder or use the arrow buttons.</div>
-    <div class="layer-list">${roots || '<div class="layers-empty">No elements on this canvas yet.</div>'}</div>`;
+    <div class="layers-hint">${isEn ? 'Drag to reorder or use the arrow buttons.' : 'Seret untuk susun semula atau gunakan butang anak panah.'}</div>
+    <div class="layer-list">${roots || `<div class="layers-empty">${isEn ? 'No elements on this canvas yet.' : 'Belum ada elemen pada kanvas ini.'}</div>`}</div>`;
 
   document.querySelectorAll('[data-right-tab]').forEach(tab => {
     const active = tab.dataset.rightTab === S.rightTab;
     tab.classList.toggle('active', active);
     tab.setAttribute('aria-selected', active ? 'true' : 'false');
   });
-  $('#inspector-content').hidden = S.rightTab === 'layers';
-  panel.hidden = S.rightTab !== 'layers';
+  $('#inspector-content').hidden = false;
+  panel.hidden = false;
 }
 
 function moveLayer(id, direction) {
@@ -540,9 +574,24 @@ document.addEventListener('drop', e => {
   if (!b) return;
   if (e.target.id == 'tx') {
     b.t = e.target.value;
+    if (b.type === 'form') {
+      b.fields = b.t.split(',').map(s => s.trim()).filter(Boolean);
+    }
     if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
     refresh();
     renderCanvaBar();
+  } else if (e.target.id == 'ins-form-submit') {
+    b.submitText = e.target.value;
+    if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+    refresh();
+  } else if (e.target.classList.contains('ins-form-field-input')) {
+    const idx = parseInt(e.target.dataset.formFieldIdx, 10);
+    b.fields = (b.fields && b.fields.length) ? b.fields : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
+    b.fields[idx] = e.target.value;
+    b.t = b.fields.join(', ');
+    if ($('#tx')) $('#tx').value = b.t;
+    if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+    refresh();
   } else if (e.target.id == 'ins-bg-img') {
     b.bgImg = e.target.value.trim();
     b.bgMode = 'image';
@@ -606,6 +655,10 @@ document.addEventListener('drop', e => {
     if (b.t == o.t) b.t = TY[b.type].t;
     if (['button', 'logo', 'link'].includes(b.type) && !b.href) b.href = '#';
     if (b.type === 'dropdown' && !b.items) b.items = ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
+    if (b.type === 'form') {
+      if (!b.fields) b.fields = ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
+      if (!b.submitText) b.submitText = 'Hantar Mesej';
+    }
     if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
     render();
   } else if (e.target.id == 'ins-bg-repeat') {
@@ -809,6 +862,24 @@ document.addEventListener('drop', e => {
     b.items = (b.items && b.items.length) ? b.items : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
     if (b.items.length > 1) {
       b.items.splice(idx, 1);
+      snap();
+      if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+      render();
+    }
+  } else if (target.closest('[data-form-add-field]')) {
+    b.fields = (b.fields && b.fields.length) ? b.fields : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
+    b.fields.push((S.lang === 'en' ? 'Field ' : 'Medan ') + (b.fields.length + 1));
+    b.t = b.fields.join(', ');
+    snap();
+    if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+    render();
+  } else if (target.closest('[data-form-field-del]')) {
+    const btn = target.closest('[data-form-field-del]');
+    const idx = parseInt(btn.dataset.formFieldDel, 10);
+    b.fields = (b.fields && b.fields.length) ? b.fields : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
+    if (b.fields.length > 1) {
+      b.fields.splice(idx, 1);
+      b.t = b.fields.join(', ');
       snap();
       if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
       render();
