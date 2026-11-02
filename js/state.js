@@ -24,7 +24,7 @@ const S = {
   cssHighlight: true,
   folded: {},
   railTab: 'elem',
-  drawerOpen: true,
+  drawerOpen: typeof window !== 'undefined' && window.innerWidth <= 768 ? false : true,
   sideTab: 'html',
   rightTab: 'inspector',
   viewport: 'desktop',
@@ -37,7 +37,7 @@ const S = {
   theme: { primary: '#00d4ff', bg: '#ffffff', text: '#12203f' },
   codeMode: 'view',
   codeEdits: {},
-  lang: 'ms'
+  lang: 'en'
 };
 
 let hist = [];
@@ -70,13 +70,18 @@ function load() {
       if (d.gridRowH !== undefined) S.gridRowH = d.gridRowH;
       if (d.theme) S.theme = d.theme;
       if (d.railTab) S.railTab = d.railTab;
-      if (d.drawerOpen !== undefined) S.drawerOpen = d.drawerOpen;
+      if (d.drawerOpen !== undefined) {
+        S.drawerOpen = (typeof window !== 'undefined' && window.innerWidth <= 768) ? false : d.drawerOpen;
+      }
       if (d.sideTab) S.sideTab = d.sideTab;
       if (d.viewport) S.viewport = d.viewport;
       if (d.responsiveCSS !== undefined) S.responsiveCSS = d.responsiveCSS;
-      if (d.htmlMode) S.htmlMode = d.htmlMode;
       if (d.codeEdits && typeof d.codeEdits === 'object') S.codeEdits = d.codeEdits;
       if (d.lang === 'en' || d.lang === 'ms') S.lang = d.lang;
+      if (!localStorage.getItem('bcs_default_en_v3')) {
+        S.lang = 'en';
+        localStorage.setItem('bcs_default_en_v3', '1');
+      }
     }
   } catch (e) {}
   // Upgrade default contact.html if it still has the old placeholder without a form block
@@ -203,7 +208,9 @@ function hint(b) {
 
 function mk(type, c, r, w, h) {
   const T = TY[type];
-  const block = { id: String(uid++), type, c, r, w, h, t: T.t, f: T.f };
+  const isEn = S.lang === 'en';
+  const defaultText = (isEn ? (T.enText || T.t) : (T.tMs || T.t)) || T.t;
+  const block = { id: String(uid++), type, c, r, w, h, t: defaultText, f: T.f };
   if (type === 'link') {
     block.href = '#';
     block.col = '#315f9c';
@@ -211,8 +218,8 @@ function mk(type, c, r, w, h) {
   } else if (type === 'button' || type === 'logo') {
     block.href = '#';
   } else if (type === 'form') {
-    block.fields = ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
-    block.submitText = 'Hantar Mesej';
+    block.fields = isEn ? ['Full Name', 'Email Address', 'Your Message'] : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
+    block.submitText = isEn ? 'Send Message' : 'Hantar Mesej';
   }
   return block;
 }

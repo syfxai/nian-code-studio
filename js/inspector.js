@@ -8,7 +8,7 @@ function setCodeSourceSelectedElement(element) {
   document.querySelectorAll('.rail-item[data-rail]').forEach(button => button.classList.toggle('active', button.dataset.rail === 'ins'));
   const panels = { elem: $('#drawer-panel-elem'), tpl: $('#drawer-panel-tpl'), ins: $('#drawer-panel-ins'), layers: $('#drawer-panel-layers'), css: $('#drawer-panel-css'), ai: $('#drawer-panel-ai') };
   Object.entries(panels).forEach(([key, panel]) => { if (panel) panel.hidden = key !== 'ins'; });
-  if ($('#drawer-title')) $('#drawer-title').textContent = 'Tetapan elemen';
+  if ($('#drawer-title')) $('#drawer-title').textContent = S.lang === 'en' ? 'Element Settings' : 'Tetapan elemen';
   if ($('#drawer-icon')) $('#drawer-icon').textContent = '⚙️';
   if ($('#ti')) $('#ti').setAttribute('aria-pressed', 'true');
   renderIns();
@@ -255,23 +255,23 @@ function renderIns() {
           <button type="button" class="ins-choice" data-set-img="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop&q=80">Team</button>
           <button type="button" class="ins-choice" data-set-img="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80">Analytics</button>
         </div>
-        <details class="ins-advanced"><summary>Pilihan gambar</summary><label class="ins-label" for="ins-obj-fit">Frame fit mode</label><select id="ins-obj-fit">
-          <option value="cover"${b.objFit === 'cover' ? ' selected' : ''}>Penuhkan ruang</option>
-          <option value="contain"${b.objFit === 'contain' ? ' selected' : ''}>Contain (Show whole)</option>
-          <option value="fill"${b.objFit === 'fill' ? ' selected' : ''}>Regangkan</option>
+        <details class="ins-advanced"><summary>${isEn ? 'Image options' : 'Pilihan gambar'}</summary><label class="ins-label" for="ins-obj-fit">${isEn ? 'Frame fit mode' : 'Cara muat dalam bingkai'}</label><select id="ins-obj-fit">
+          <option value="cover"${b.objFit === 'cover' ? ' selected' : ''}>${isEn ? 'Fill area (Cover)' : 'Penuhkan ruang'}</option>
+          <option value="contain"${b.objFit === 'contain' ? ' selected' : ''}>${isEn ? 'Contain (Show whole)' : 'Muat penuh (Contain)'}</option>
+          <option value="fill"${b.objFit === 'fill' ? ' selected' : ''}>${isEn ? 'Stretch (Fill)' : 'Regangkan'}</option>
         </select></details>
       </section>`;
   } else if (isLink) {
     contextHtml = `
       <section class="ins-section">
-        <div class="ins-section-heading">Apabila ditekan, buka</div>
-        <select id="ins-link-dest" aria-label="Pilih halaman atau pautan">
-          <option value="#">Tiada pautan</option>
-          ${Object.keys(S.pages).map(pg => `<option value="${qa(pg)}"${b.href === pg ? ' selected' : ''}>Halaman: ${esc(S.pages[pg].name)}</option>`).join('')}
+        <div class="ins-section-heading">${isEn ? 'When clicked, open' : 'Apabila ditekan, buka'}</div>
+        <select id="ins-link-dest" aria-label="${isEn ? 'Select page or link' : 'Pilih halaman atau pautan'}">
+          <option value="#">${isEn ? 'No link' : 'Tiada pautan'}</option>
+          ${Object.keys(S.pages).map(pg => `<option value="${qa(pg)}"${b.href === pg ? ' selected' : ''}>${isEn ? 'Page' : 'Halaman'}: ${esc(S.pages[pg].name)}</option>`).join('')}
           ${S.extLinks.map(ext => `<option value="${qa(ext.url)}"${b.href === ext.url ? ' selected' : ''}>${esc(ext.title)}</option>`).join('')}
         </select>
-        <label class="ins-label" for="ins-link-url">Atau masukkan alamat sendiri</label>
-        <input type="url" id="ins-link-url" value="${qa(b.href || '')}" placeholder="https://laman.com atau /halaman.html">
+        <label class="ins-label" for="ins-link-url">${isEn ? 'Or enter custom URL' : 'Atau masukkan alamat sendiri'}</label>
+        <input type="url" id="ins-link-url" value="${qa(b.href || '')}" placeholder="${isEn ? 'https://example.com or /page.html' : 'https://laman.com atau /halaman.html'}">
       </section>`;
   } else if (isDropdown) {
     b.items = (b.items && b.items.length) ? b.items : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
@@ -350,17 +350,17 @@ function renderIns() {
             <span class="ins-badge" style="font-size:9.5px">Dropdown HTML5</span>
           </div>
 
-          <!-- Stepper Bilangan Sub-Pilihan -->
+          <!-- Sub-options count stepper -->
           <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,0.25);padding:6px 8px;border-radius:4px;margin-bottom:8px">
             <span style="font-size:11px">${isEn ? 'Sub-Options Count:' : 'Bilangan Sub-Pilihan:'}</span>
             <div style="display:flex;align-items:center;gap:6px">
-              <button type="button" class="ins-stepper-btn" data-nav-sub-step="-1" data-target-title="${esc(curTitle)}" title="Kurangkan" ${subCount <= 1 ? 'disabled' : ''}>−</button>
+              <button type="button" class="ins-stepper-btn" data-nav-sub-step="-1" data-target-title="${esc(curTitle)}" title="${isEn ? 'Decrease' : 'Kurangkan'}" ${subCount <= 1 ? 'disabled' : ''}>−</button>
               <span style="font-family:var(--font-mono);font-size:11.5px;font-weight:700;color:var(--cy)">${subCount}</span>
-              <button type="button" class="ins-stepper-btn" data-nav-sub-step="1" data-target-title="${esc(curTitle)}" title="Tambah">+</button>
+              <button type="button" class="ins-stepper-btn" data-nav-sub-step="1" data-target-title="${esc(curTitle)}" title="${isEn ? 'Increase' : 'Tambah'}">+</button>
             </div>
           </div>
 
-          <!-- Senarai Sub-Pilihan Item-by-Item -->
+          <!-- Item-by-item sub-options list -->
           <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
             ${subItems.map((sub, sIdx) => `
               <div style="display:flex;align-items:center;gap:6px">
@@ -398,7 +398,7 @@ function renderIns() {
   const advancedHtml = `<details class="ins-advanced ins-code-advanced"><summary>${isEn ? 'Advanced options' : 'Tetapan lanjutan'}</summary>
     <p class="ins-help">${isEn ? 'Optional technical component settings.' : 'Tetapan teknikal tambahan untuk komponen ini.'}</p>
     <div class="ins-advanced-tag">${isEn ? 'Rendered HTML tag:' : 'Tag HTML dijana:'} <code>&lt;${T.tag}&gt;</code></div>
-    <div class="ins-quick-converts"><button type="button" class="ins-choice" data-convert-type="nav">Navigasi</button><button type="button" class="ins-choice" data-convert-type="button">Butang CTA</button><button type="button" class="ins-choice" data-convert-type="header">Header</button><button type="button" class="ins-choice" data-convert-type="form">Borang</button></div>
+    <div class="ins-quick-converts"><button type="button" class="ins-choice" data-convert-type="nav">${isEn ? 'Navigation' : 'Navigasi'}</button><button type="button" class="ins-choice" data-convert-type="button">${isEn ? 'CTA Button' : 'Butang CTA'}</button><button type="button" class="ins-choice" data-convert-type="header">Header</button><button type="button" class="ins-choice" data-convert-type="form">${isEn ? 'Form' : 'Borang'}</button></div>
   </details>`;
 
   el.innerHTML = `
@@ -431,21 +431,26 @@ function renderLayersPanel() {
   const panel = $('#layers-panel');
   if (!panel) return;
   const isEn = S.lang === 'en';
+  if (!S.layerSortMode) S.layerSortMode = 'flow';
+  const isZIndex = S.layerSortMode === 'zindex';
 
   const labelFor = b => {
     const clean = String(b.t || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     return clean || (isEn ? (TY[b.type]?.en || TY[b.type]?.n) : TY[b.type]?.n) || 'Elemen';
   };
 
-  const renderBranch = parent => S.blocks
-    .filter(b => par(b) === parent)
-    .sort((a, b) => S.blocks.indexOf(b) - S.blocks.indexOf(a))
-    .map(b => {
-      const siblings = S.blocks.filter(x => par(x) === parent).sort((a, c) => S.blocks.indexOf(a) - S.blocks.indexOf(c));
-      const index = siblings.findIndex(x => x.id === b.id);
+  const sortFn = isZIndex
+    ? (a, b) => S.blocks.indexOf(b) - S.blocks.indexOf(a)
+    : (a, b) => (a.r - b.r) || (a.c - b.c) || (S.blocks.indexOf(a) - S.blocks.indexOf(b));
+
+  const renderBranch = parent => {
+    const siblings = S.blocks.filter(b => par(b) === parent).sort(sortFn);
+    return siblings.map((b, index) => {
       const title = labelFor(b);
       const meta = (isEn ? (TY[b.type]?.en || TY[b.type]?.n) : TY[b.type]?.n) || 'Elemen';
       const children = renderBranch(b);
+      const canMoveUp = index > 0;
+      const canMoveDown = index < siblings.length - 1;
       return `<div class="layer-node" data-layer-row data-layer-id="${qa(b.id)}" draggable="true">
         <div class="layer-row${b.id == S.sel ? ' selected' : ''}" style="--layer-depth:${dep(b)}">
           <button type="button" class="layer-select" data-layer-select="${qa(b.id)}" title="${qa(title)}">
@@ -453,19 +458,28 @@ function renderLayersPanel() {
             <span class="layer-row-copy"><b>${esc(title.slice(0, 38))}${title.length > 38 ? '…' : ''}</b><small>${meta}</small></span>
           </button>
           <span class="layer-row-actions">
-            <button type="button" data-layer-move="up" data-layer-id="${qa(b.id)}" aria-label="Naikkan lapisan" title="Naikkan lapisan"${index === siblings.length - 1 ? ' disabled' : ''}>↑</button>
-            <button type="button" data-layer-move="down" data-layer-id="${qa(b.id)}" aria-label="Turunkan lapisan" title="Turunkan lapisan"${index === 0 ? ' disabled' : ''}>↓</button>
+            <button type="button" data-layer-move="up" data-layer-id="${qa(b.id)}" aria-label="${isEn ? 'Move up' : 'Naikkan ke atas'}" title="${isEn ? 'Move up' : 'Naikkan ke atas'}"${!canMoveUp ? ' disabled' : ''}>↑</button>
+            <button type="button" data-layer-move="down" data-layer-id="${qa(b.id)}" aria-label="${isEn ? 'Move down' : 'Turunkan ke bawah'}" title="${isEn ? 'Move down' : 'Turunkan ke bawah'}"${!canMoveDown ? ' disabled' : ''}>↓</button>
           </span>
         </div>
         ${children ? `<div class="layer-children">${children}</div>` : ''}
       </div>`;
     }).join('');
+  };
 
   const roots = renderBranch(null);
+  const subtitleText = isEn
+    ? (isZIndex ? `${S.blocks.length} elements · graphic stack (Front ➡ Back)` : `${S.blocks.length} elements · webpage flow (Header ➡ Footer)`)
+    : (isZIndex ? `${S.blocks.length} elemen · tindihan grafik (Hadapan ➡ Belakang)` : `${S.blocks.length} elemen · susunan laman (Pengepala ➡ Pengaki)`);
+
   panel.innerHTML = `
     <div class="layers-head">
-      <div><h3>${isEn ? 'Layers' : 'Susunan Lapisan'}</h3><p>${S.blocks.length} ${isEn ? 'elements · top to bottom stack' : 'elemen · susunan atas ke bawah'}</p></div>
+      <div><h3>${isEn ? 'Layers' : 'Susunan Lapisan'}</h3><p>${subtitleText}</p></div>
       <span class="layers-count">${S.blocks.length}</span>
+    </div>
+    <div class="layers-mode-toggle" role="group" aria-label="Mod susunan lapisan" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">
+      <button type="button" class="ins-choice${!isZIndex ? ' active' : ''}" data-layer-sort="flow" title="${isEn ? 'Sort by natural webpage flow: Header at top, Footer at bottom' : 'Susun mengikut aliran fizikal laman: Pengepala di atas, Pengaki di bawah'}">${isEn ? '📄 Page Flow (DOM)' : '📄 Aliran Laman (DOM)'}</button>
+      <button type="button" class="ins-choice${isZIndex ? ' active' : ''}" data-layer-sort="zindex" title="${isEn ? 'Sort by graphic design overlapping stack (Z-Index / Front to Back)' : 'Susun mengikut tindihan grafik ala Photoshop/Canva (Z-Index / Depan ke Belakang)'}">${isEn ? '📑 Z-Index Stack' : '📑 Tindihan Z-Index'}</button>
     </div>
     <div class="layers-hint">${isEn ? 'Drag to reorder or use the arrow buttons.' : 'Seret untuk susun semula atau gunakan butang anak panah.'}</div>
     <div class="layer-list">${roots || `<div class="layers-empty">${isEn ? 'No elements on this canvas yet.' : 'Belum ada elemen pada kanvas ini.'}</div>`}</div>`;
@@ -479,20 +493,93 @@ function renderLayersPanel() {
   panel.hidden = false;
 }
 
+function shiftSubtree(root, deltaR, deltaC) {
+  if (!deltaR && !deltaC) return;
+  const moveDescendants = p => {
+    kids(p).forEach(child => {
+      child.r += deltaR;
+      child.c += deltaC;
+      moveDescendants(child);
+    });
+  };
+  moveDescendants(root);
+}
+
+function swapFlowBlocks(first, second, isFirstMovingUp) {
+  if (first.r !== second.r) {
+    if (isFirstMovingUp) {
+      const newFirstR = second.r;
+      const newSecondR = second.r + first.h;
+      const deltaFirstR = newFirstR - first.r;
+      const deltaSecondR = newSecondR - second.r;
+      first.r = newFirstR;
+      shiftSubtree(first, deltaFirstR, 0);
+      second.r = newSecondR;
+      shiftSubtree(second, deltaSecondR, 0);
+    } else {
+      const newSecondR = first.r;
+      const newFirstR = first.r + second.h;
+      const deltaSecondR = newSecondR - second.r;
+      const deltaFirstR = newFirstR - first.r;
+      second.r = newSecondR;
+      shiftSubtree(second, deltaSecondR, 0);
+      first.r = newFirstR;
+      shiftSubtree(first, deltaFirstR, 0);
+    }
+  } else if (first.c !== second.c) {
+    if (isFirstMovingUp) {
+      const newFirstC = second.c;
+      const newSecondC = second.c + first.w;
+      const deltaFirstC = newFirstC - first.c;
+      const deltaSecondC = newSecondC - second.c;
+      first.c = newFirstC;
+      shiftSubtree(first, 0, deltaFirstC);
+      second.c = newSecondC;
+      shiftSubtree(second, 0, deltaSecondC);
+    } else {
+      const newSecondC = first.c;
+      const newFirstC = first.c + second.w;
+      const deltaSecondC = newSecondC - second.c;
+      const deltaFirstC = newFirstC - first.c;
+      second.c = newSecondC;
+      shiftSubtree(second, 0, deltaSecondC);
+      first.c = newFirstC;
+      shiftSubtree(first, 0, deltaFirstC);
+    }
+  }
+  const fromIndex = S.blocks.indexOf(first);
+  const toIndex = S.blocks.indexOf(second);
+  S.blocks[fromIndex] = second;
+  S.blocks[toIndex] = first;
+  R = Math.max(12, ...S.blocks.map(b => b.r + b.h - 1));
+  sorted();
+}
+
 function moveLayer(id, direction) {
   const block = get(id);
   if (!block) return;
   const parent = par(block);
-  const siblings = S.blocks.filter(item => par(item) === parent).sort((a, b) => S.blocks.indexOf(a) - S.blocks.indexOf(b));
+  const isZIndex = S.layerSortMode === 'zindex';
+  const sortFn = isZIndex
+    ? (a, b) => S.blocks.indexOf(b) - S.blocks.indexOf(a)
+    : (a, b) => (a.r - b.r) || (a.c - b.c) || (S.blocks.indexOf(a) - S.blocks.indexOf(b));
+
+  const siblings = S.blocks.filter(item => par(item) === parent).sort(sortFn);
   const index = siblings.findIndex(item => item.id === block.id);
-  const target = siblings[index + (direction === 'up' ? 1 : -1)];
+  const targetIndex = index + (direction === 'up' ? -1 : 1);
+  const target = siblings[targetIndex];
   if (!target) return;
 
   snap();
-  const fromIndex = S.blocks.indexOf(block);
-  S.blocks.splice(fromIndex, 1);
-  const targetIndex = S.blocks.indexOf(target);
-  S.blocks.splice(targetIndex + (direction === 'up' ? 1 : 0), 0, block);
+  if (isZIndex) {
+    const fromIndex = S.blocks.indexOf(block);
+    S.blocks.splice(fromIndex, 1);
+    const toIndex = S.blocks.indexOf(target);
+    S.blocks.splice(toIndex + (direction === 'up' ? 1 : 0), 0, block);
+  } else {
+    const isMovingUp = direction === 'up';
+    swapFlowBlocks(block, target, isMovingUp);
+  }
   if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
   render();
 }
@@ -534,14 +621,17 @@ document.addEventListener('drop', e => {
   const source = get(draggingLayerId);
   const target = get(row.dataset.layerId);
   if (!source || !target || source === target || par(source) !== par(target)) return;
-  const sourceIndex = S.blocks.indexOf(source);
-  const targetIndexBeforeMove = S.blocks.indexOf(target);
   snap();
-  S.blocks.splice(sourceIndex, 1);
-  const targetIndex = S.blocks.indexOf(target);
-  // Panel dipaparkan dari atas ke bawah, susunan blok pula dari bawah ke atas.
-  // Letakkan sumber selepas sasaran dalam array supaya ia muncul tepat di atas sasaran.
-  S.blocks.splice(targetIndex + 1, 0, source);
+  const isZIndex = S.layerSortMode === 'zindex';
+  if (isZIndex) {
+    const sourceIndex = S.blocks.indexOf(source);
+    S.blocks.splice(sourceIndex, 1);
+    const targetIndex = S.blocks.indexOf(target);
+    S.blocks.splice(targetIndex + 1, 0, source);
+  } else {
+    const isMovingUp = (source.r > target.r) || (source.r === target.r && source.c > target.c);
+    swapFlowBlocks(source, target, isMovingUp);
+  }
   if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
   render();
 });
@@ -1015,12 +1105,12 @@ function renderCanvaBar() {
   bar.innerHTML = `
     <div class="canva-group">
       <div class="canva-cluster canva-cluster-element">
-      <!-- 1. Tag Semantik Elemen W3C (Boleh ditukar terus dari bar kanvas) -->
-      <select id="canva-tag-sel" class="canva-tag-select" title="Change W3C semantic tag">
-        ${Object.keys(TY).map(k => `<option value="${k}"${k === b.type ? ' selected' : ''}>&lt;${TY[k].tag}&gt; ${TY[k].n}</option>`).join('')}
+      <!-- 1. W3C Semantic Element Tag (switchable directly from canvas bar) -->
+      <select id="canva-tag-sel" class="canva-tag-select" title="${isEn ? 'Change W3C semantic tag' : 'Tukar tag semantik W3C'}">
+        ${Object.keys(TY).map(k => `<option value="${k}"${k === b.type ? ' selected' : ''}>&lt;${TY[k].tag}&gt; ${esc(isEn ? (TY[k].en || TY[k].n) : TY[k].n)}</option>`).join('')}
       </select>
 
-      <!-- Butang Pantas: Tukar ke Navigasi / Pautan -->
+      <!-- Quick Action: Convert to Navigation / Link -->
       <button type="button" class="canva-btn${b.type === 'nav' ? ' active' : ''}" data-cbar="to-nav" title="Convert to navigation links (<nav>)">
         ${icon('nav', 'canva-ic', 14)}
         <span style="font-size:11px;margin-left:3px;font-weight:600">Nav</span>
@@ -1030,7 +1120,7 @@ function renderCanvaBar() {
         <span style="font-size:11px;margin-left:3px;font-weight:600">Link</span>
       </button>
 
-      ${['button', 'link'].includes(b.type) ? `<button type="button" class="canva-btn" data-cbar="to-dropdown" title="Tukar pautan ini menjadi menu dropdown">▾ Dropdown</button>` : ''}
+      ${['button', 'link'].includes(b.type) ? `<button type="button" class="canva-btn" data-cbar="to-dropdown" title="${isEn ? 'Convert this link into a dropdown menu' : 'Tukar pautan ini menjadi menu dropdown'}">▾ Dropdown</button>` : ''}
 
       ${b.type === 'nav' ? (function() {
         const drops = b.dropdowns || {};
@@ -1046,17 +1136,17 @@ function renderCanvaBar() {
       </div>
       <div class="canva-cluster canva-cluster-style">
 
-      <!-- 2. Butang Warna Latar (Fill Swatch) -> Buka Popover Jadual Warna -->
+      <!-- 2. Fill Color Swatch -> Opens Color Palette Popover -->
       <button type="button" class="canva-btn canva-swatch-btn" id="canva-fill-btn" data-cpop="fill" title="${fillTitle}">
-        ${isNoneFill ? '<span class="canva-swatch-none" title="Lutsinar"></span>' : `<span class="canva-swatch-dot" style="background:${curFillColor}"></span>`}
+        ${isNoneFill ? `<span class="canva-swatch-none" title="${isEn ? 'Transparent' : 'Lutsinar'}"></span>` : `<span class="canva-swatch-dot" style="background:${curFillColor}"></span>`}
       </button>
 
-      <!-- 3. Butang Garisan Border (Cycle) -->
+      <!-- 3. Border Stroke (Cycle) -->
       <button type="button" class="canva-btn${curBw ? ' active' : ''}" data-cbar="border" title="Border Style: ${borderDesc} (Click to cycle)">
         ${icon('border', 'canva-ic', 15)}
       </button>
 
-      <!-- 4. Butang Lengkungan Bucu (Radius Cycle) -->
+      <!-- 4. Corner Radius (Cycle) -->
       <button type="button" class="canva-btn${curRad ? ' active' : ''}" data-cbar="radius" title="Corner Radius: ${radDesc} (Click to cycle)">
         ${icon('radius', 'canva-ic', 15)}
       </button>
@@ -1065,36 +1155,36 @@ function renderCanvaBar() {
       ${hasTypo ? `
         <div class="canva-cluster canva-cluster-typo">
 
-        <!-- 5. Dropdown Google Fonts (Compact) -->
+        <!-- 5. Google Fonts Dropdown (Compact) -->
         <select id="canva-font-sel" class="canva-font-select" aria-label="Google Fonts" title="Select Google Font">
           ${fontOptionsHtml}
         </select>
 
-        <!-- 6. Stepper Saiz Fon ala Canva (− 16 +) -->
+        <!-- 6. Font Size Stepper (− 16 +) -->
         <div class="canva-stepper" title="Font Size (px)">
           <button type="button" data-cfs="dec" title="Decrease Font Size">−</button>
-          <input type="number" id="canva-fs-input" class="canva-fs-input" value="${curFs}" min="8" max="72" title="Saiz Fon">
+          <input type="number" id="canva-fs-input" class="canva-fs-input" value="${curFs}" min="8" max="72" title="${isEn ? 'Font Size' : 'Saiz Fon'}">
           <button type="button" data-cfs="inc" title="Increase Font Size">+</button>
         </div>
 
-        <label class="canva-weight-wrap" title="Ketebalan teks">
-          <select id="canva-weight-sel" class="canva-weight-select" aria-label="Ketebalan teks">
-            ${[[400,'Biasa'],[500,'Sederhana'],[600,'Separa tebal'],[700,'Tebal'],[800,'Sangat tebal']].map(([value,label]) => `<option value="${value}"${currentWeight === value ? ' selected' : ''}>${label}</option>`).join('')}
+        <label class="canva-weight-wrap" title="${isEn ? 'Text weight' : 'Ketebalan teks'}">
+          <select id="canva-weight-sel" class="canva-weight-select" aria-label="${isEn ? 'Text weight' : 'Ketebalan teks'}">
+            ${(isEn ? [[400,'Regular'],[500,'Medium'],[600,'Semi-bold'],[700,'Bold'],[800,'Extra bold']] : [[400,'Biasa'],[500,'Sederhana'],[600,'Separa tebal'],[700,'Tebal'],[800,'Sangat tebal']]).map(([value,label]) => `<option value="${value}"${currentWeight === value ? ' selected' : ''}>${label}</option>`).join('')}
           </select>
         </label>
 
-        <!-- 7. Butang Warna Teks (A) -> Buka Popover Jadual Warna -->
+        <!-- 7. Text Color Button (A) -> Opens Color Palette Popover -->
         <button type="button" class="canva-btn canva-txtcol-btn" id="canva-col-btn" data-cpop="col" title="Text Color (Click to open color palette)">
           <span class="canva-txt-a" style="color:${curCol}">A</span>
           <span class="canva-rainbow-bar"></span>
         </button>
 
-        <!-- 8. Format Teks: B, I, U -->
+        <!-- 8. Text Formatting: B, I, U -->
         <button type="button" class="canva-btn${isBold ? ' active' : ''}" data-cbar="bold" title="Bold"><b>B</b></button>
         <button type="button" class="canva-btn${isItalic ? ' active' : ''}" data-cbar="italic" title="Italic"><i>I</i></button>
         <button type="button" class="canva-btn${isUnderline ? ' active' : ''}" data-cbar="underline" title="Underline"><span style="text-decoration:underline">U</span></button>
 
-        <!-- 9. Penjajaran Teks Kitar (1 Butang Pantas: Kiri -> Tengah -> Kanan) -->
+        <!-- 9. Text Alignment Cycle (Left -> Center -> Right) -->
         <button type="button" class="canva-btn active" data-cbar="align" title="${alignTitle}">
           ${icon(alignIcon, 'canva-ic', 15)}
         </button>
@@ -1103,23 +1193,23 @@ function renderCanvaBar() {
 
       <div class="canva-cluster canva-cluster-layout">
 
-      <!-- 10. Jarak / Ruang Dalam (Padding Spacing ↕) -->
+      <!-- 10. Inner Padding Spacing ↕ -->
       <button type="button" class="canva-btn${curPad ? ' active' : ''}" data-cbar="pad" title="Inner Padding: ${curPad}px (Click to cycle)">
         ${icon('spacing', 'canva-ic', 15)}
       </button>
 
-      <!-- 11. Kesan Bayang (Effects) -> Ikon Ringkas -->
+      <!-- 11. Box Shadow Effects -->
       <button type="button" class="canva-btn${curShd !== 'none' ? ' active' : ''}" data-cbar="effects" title="Box Shadow: ${curShd} (Click to cycle)">
         ${icon('effects', 'canva-ic', 14)}
       </button>
 
-      <!-- 12. Susunan Lapisan (Position) -> Ikon Ringkas -->
+      <!-- 12. Layer Stacking Order (Position) -->
       <button type="button" class="canva-btn" data-cbar="position" title="Layer Stacking Order (Bring Forward)">
         ${icon('layers', 'canva-ic', 14)}
       </button>
       </div>
 
-      <!-- 13. Padam Elemen Pantas -->
+      <!-- 13. Quick Delete Element -->
       <div class="canva-cluster canva-cluster-delete">
       <button type="button" class="canva-btn canva-btn-del" data-cbar="del" title="Delete Element (Del)">
         ${icon('trash', 'canva-ic', 15)}

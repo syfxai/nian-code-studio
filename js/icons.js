@@ -1,11 +1,11 @@
 /**
- * NIAN CODE STUDIO - Pustaka Ikon Vektor Web & Pengekodan (icons.js)
- * Koleksi ikon SVG berasaskan garisan (stroke) piawai 24x24 gaya Web Code / Developer (Flaticon / Iconfinder standard).
- * Menggantikan semua ikon tidak konsisten dengan gaya geometri bersih dan profesional.
+ * NIAN CODE STUDIO - Vector Web & Coding Icon Library (icons.js)
+ * Standard 24x24 stroke-based SVG icons styled for developer tools (Flaticon / Iconfinder standard).
+ * Replaces inconsistent iconography with clean, professional geometric vectors.
  */
 
 const ICONS = {
-  // Alat Kawalan Utama (Main Tools)
+  // Main Tools
   select: '<path d="M4 4l7.07 17 2.51-7.39L21 11.1z"/>',
   rect: '<rect x="3" y="3" width="18" height="18" rx="2"/>',
   undo: '<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>',
@@ -17,7 +17,7 @@ const ICONS = {
   highlight: '<path d="m14 12-8.5 8.5H2v-3.5L10.5 8.5"/><path d="m18 8 2.5-2.5a2.12 2.12 0 0 0 0-3l-1-1a2.12 2.12 0 0 0-3 0L14 4"/><path d="m10.5 8.5 5 5"/>',
   eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
 
-  // Elemen HTML & Web Code
+  // HTML & Web Code Elements
   header: '<rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="7" y1="6.5" x2="11" y2="6.5"/>',
   nav: '<line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>',
   hero: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m12 8 1.5 3 3.5.5-2.5 2.5.5 3.5-3-1.5-3 1.5.5-3.5-2.5-2.5 3.5-.5z"/>',
@@ -82,11 +82,11 @@ const PNG_ICON_MAP = {
 };
 
 /**
- * Penjana Ikon Piawai NIAN CODE STUDIO (Menyokong PNG Tempatan & SVG Fallback)
- * @param {string} name - Nama ikon dalam PNG_ICON_MAP atau ICONS
- * @param {string} cls - Kelas CSS tambahan
- * @param {number} size - Saiz ikon dalam piksel (lalai 18)
- * @returns {string} Markup <img> PNG atau SVG lengkap
+ * Standard Icon Generator for NIAN CODE STUDIO (Supports Local PNGs & SVG Fallbacks)
+ * @param {string} name - Icon name in PNG_ICON_MAP or ICONS
+ * @param {string} cls - Additional CSS classes
+ * @param {number} size - Icon size in pixels (default 18)
+ * @returns {string} <img> PNG or complete SVG markup
  */
 function icon(name, cls = '', size = 18) {
   if (PNG_ICON_MAP[name]) {

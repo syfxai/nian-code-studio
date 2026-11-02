@@ -72,65 +72,68 @@ function getPatternCss(name) {
 }
 
 const TY = {
-  header: { tag: 'header', n: 'Pengepala', en: 'Header', w: 12, h: 1, f: 0, t: 'Nama laman', y: 'Bahagian paling atas laman untuk nama atau logo.' },
-  nav: { tag: 'nav', n: 'Navigasi', en: 'Navigation', w: 12, h: 1, f: 0, t: 'Utama, Tentang, Hubungi', y: 'Bar menu yang mengandungi pautan ke halaman lain.' },
-  hero: { tag: 'section', n: 'Bahagian Utama', en: 'Hero Section', w: 12, h: 5, f: 1, t: 'Tajuk utama yang menarik perhatian', y: 'Bahagian besar yang biasanya mula-mula dilihat pelawat.' },
-  section: { tag: 'section', n: 'Bahagian', en: 'Section', w: 6, h: 3, f: 1, t: 'Tajuk bahagian', y: 'Kumpulan kandungan yang berkaitan.' },
-  card: { tag: 'article', n: 'Kad', en: 'Card', w: 4, h: 3, f: 1, t: 'Tajuk kad', y: 'Kotak ringkas untuk maklumat, servis atau produk.' },
-  image: { tag: 'figure', n: 'Imej', en: 'Image', w: 4, h: 3, f: 1, t: 'Penerangan imej', y: 'Imej dengan ruang untuk penerangan ringkas.' },
-  text: { tag: 'div', n: 'Teks', en: 'Text', w: 6, h: 2, f: 0, t: 'Tulis teks di sini', y: 'Ruang untuk perenggan atau maklumat.' },
-  link: { tag: 'a', n: 'Pautan', en: 'Link', w: 3, h: 1, f: 'none', t: 'Teks pautan', y: 'Pautan biasa untuk membawa pelawat ke halaman lain atau alamat web.' },
-  button: { tag: 'a', n: 'Butang CTA', en: 'CTA Button', w: 3, h: 1, f: 2, t: 'Mula sekarang', y: 'Butang ajakan seperti Mula, Daftar atau Hubungi.' },
-  dropdown: { tag: 'details', n: 'Menu Dropdown', en: 'Dropdown Menu', w: 4, h: 2, f: 2, t: 'Pilih menu ▾', y: 'Menu yang dibuka untuk menunjukkan beberapa pilihan.' },
-  form: { tag: 'form', n: 'Borang Hubungan', en: 'Contact Form', w: 6, h: 4, f: 0, t: 'Nama Penuh, Alamat Emel, Mesej Anda', y: 'Borang input interaktif untuk pelawat menghantar maklumat atau pertanyaan.' },
-  aside: { tag: 'aside', n: 'Ruang Sisi', en: 'Sidebar Aside', w: 3, h: 6, f: 1, t: 'Maklumat sampingan', y: 'Ruang untuk maklumat tambahan di sisi kandungan.' },
-  footer: { tag: 'footer', n: 'Pengaki', en: 'Footer', w: 12, h: 1, f: 0, t: 'Hak cipta © 2026', y: 'Bahagian paling bawah untuk hak cipta atau maklumat hubungan.' },
-  logo: { tag: 'a', n: 'Logo', en: 'Logo', w: 2, h: 1, f: 0, t: 'Logo', y: 'Logo yang biasanya membawa pelawat kembali ke halaman utama.' },
-  slider: { tag: 'div', n: 'Slider Imej', en: 'Image Slider', w: 12, h: 4, f: 1, t: 'Slider imej', y: 'Paparan beberapa imej secara bergilir.' }
+  header: { tag: 'header', n: 'Pengepala', en: 'Header', w: 12, h: 1, f: 0, t: 'Site Name', tMs: 'Nama laman', y: 'Top section of page for site name or logo.', yMs: 'Bahagian paling atas laman untuk nama atau logo.' },
+  nav: { tag: 'nav', n: 'Navigasi', en: 'Navigation', w: 12, h: 1, f: 0, t: 'Home, About, Contact', tMs: 'Utama, Tentang, Hubungi', y: 'Navigation menu bar containing links to other pages.', yMs: 'Bar menu yang mengandungi pautan ke halaman lain.' },
+  hero: { tag: 'section', n: 'Bahagian Utama', en: 'Hero Section', w: 12, h: 5, f: 1, t: 'Eye-Catching Headline', tMs: 'Tajuk utama yang menarik perhatian', y: 'Prominent header banner visitors first see.', yMs: 'Bahagian besar yang biasanya mula-mula dilihat pelawat.' },
+  section: { tag: 'section', n: 'Bahagian', en: 'Section', w: 6, h: 3, f: 1, t: 'Section Heading', tMs: 'Tajuk bahagian', y: 'Group of related content.', yMs: 'Kumpulan kandungan yang berkaitan.' },
+  card: { tag: 'article', n: 'Kad', en: 'Card', w: 4, h: 3, f: 1, t: 'Card Title', tMs: 'Tajuk kad', y: 'Compact card for info, services or products.', yMs: 'Kotak ringkas untuk maklumat, servis atau produk.' },
+  image: { tag: 'figure', n: 'Imej', en: 'Image', w: 4, h: 3, f: 1, t: 'Image description', tMs: 'Penerangan imej', y: 'Image placeholder with space for caption.', yMs: 'Imej dengan ruang untuk penerangan ringkas.' },
+  text: { tag: 'div', n: 'Teks', en: 'Text', w: 6, h: 2, f: 0, t: 'Write text here', tMs: 'Tulis teks di sini', y: 'Space for paragraph or content.', yMs: 'Ruang untuk perenggan atau maklumat.' },
+  link: { tag: 'a', n: 'Pautan', en: 'Link', w: 3, h: 1, f: 'none', t: 'Link text', tMs: 'Teks pautan', y: 'Hyperlink to another page or URL.', yMs: 'Pautan biasa untuk membawa pelawat ke halaman lain atau alamat web.' },
+  button: { tag: 'a', n: 'Butang CTA', en: 'CTA Button', w: 3, h: 1, f: 2, t: 'Get Started', tMs: 'Mula sekarang', y: 'Call to action button.', yMs: 'Butang ajakan seperti Mula, Daftar atau Hubungi.' },
+  dropdown: { tag: 'details', n: 'Menu Dropdown', en: 'Dropdown Menu', w: 4, h: 2, f: 2, t: 'Select menu ▾', tMs: 'Pilih menu ▾', y: 'Expandable menu dropdown with options.', yMs: 'Menu yang dibuka untuk menunjukkan beberapa pilihan.' },
+  form: { tag: 'form', n: 'Borang Hubungan', en: 'Contact Form', w: 6, h: 4, f: 0, t: 'Full Name, Email Address, Your Message', tMs: 'Nama Penuh, Alamat Emel, Mesej Anda', y: 'Interactive form for visitor inquiries.', yMs: 'Borang input interaktif untuk pelawat menghantar maklumat atau pertanyaan.' },
+  aside: { tag: 'aside', n: 'Ruang Sisi', en: 'Sidebar Aside', w: 3, h: 6, f: 1, t: 'Sidebar content', tMs: 'Maklumat sampingan', y: 'Side column for complementary info.', yMs: 'Ruang untuk maklumat tambahan di sisi kandungan.' },
+  footer: { tag: 'footer', n: 'Pengaki', en: 'Footer', w: 12, h: 1, f: 0, t: 'Copyright © 2026', tMs: 'Hak cipta © 2026', y: 'Bottom area for copyright and legal links.', yMs: 'Bahagian paling bawah untuk hak cipta atau maklumat hubungan.' },
+  logo: { tag: 'a', n: 'Logo', en: 'Logo', w: 2, h: 1, f: 0, t: 'Logo', tMs: 'Logo', y: 'Logo linked back to home.', yMs: 'Logo yang biasanya membawa pelawat kembali ke halaman utama.' },
+  slider: { tag: 'div', n: 'Slider Imej', en: 'Image Slider', w: 12, h: 4, f: 1, t: 'Image slider', tMs: 'Slider imej', y: 'Rotating carousel banner.', yMs: 'Paparan beberapa imej secara bergilir.' }
 };
 
 const TP = [
-  ['Laman Utama (Home)', [['header',1,1,12,1],['logo',1,1,2,1],['nav',4,1,6,1],['button',11,1,2,1],['hero',1,2,12,5],['text',2,3,6,2],['button',2,6,3,1],['image',8,3,4,3],['card',1,7,4,5],['card',5,7,4,5],['card',9,7,4,5],['footer',1,12,12,1]]],
-  ['Hero + Imej (Bersebelahan)', [['header',1,1,12,1],['logo',1,1,2,1],['nav',4,1,6,1],['hero',1,2,12,6],['text',2,3,5,3],['button',2,6,3,1],['image',7,3,5,4],['card',1,8,4,4],['card',5,8,4,4],['card',9,8,4,4],['footer',1,12,12,1]]],
-  ['Hero Slider (Bergilir)', [['header',1,1,12,1],['logo',1,1,2,1],['nav',4,1,6,1],['slider',1,2,12,5],['section',1,7,12,4],['card',2,8,4,3],['card',7,8,4,3],['footer',1,12,12,1]]],
-  ['Halaman Arahan (Landing)', [['header',1,1,12,1],['logo',1,1,2,1],['button',11,1,2,1],['hero',1,2,12,6],['text',2,3,6,3],['button',2,6,3,1],['image',8,3,4,4],['section',1,8,12,4],['card',2,9,3,2],['card',5,9,3,2],['card',8,9,3,2],['footer',1,12,12,1]]],
-  ['Dua Lajur (Sidebar)', [['header',1,1,12,1],['aside',1,2,3,10],['section',4,2,9,10],['footer',1,12,12,1]]],
-  ['Skrin Terbahagi (Split)', [['hero',1,1,6,12],['image',7,1,6,12]]],
-  ['Asimetri Moden', [['section',1,1,3,5],['card',4,1,5,3],['hero',9,1,4,5],['card',4,4,5,2],['section',1,6,8,6],['card',9,6,4,6]]],
-  ['Corak Bacaan F-Shape', [['header',1,1,12,2],['hero',1,3,9,2],['image',1,5,3,7],['text',4,5,6,2],['section',4,7,9,5]]],
-  ['Corak Bacaan Z-Shape', [['header',1,1,12,1],['hero',1,2,12,6],['card',1,9,3,3],['card',5,9,3,3],['button',10,10,3,2]]],
-  ['Grid Kad / Blok', [['header',1,1,12,1],['card',1,2,4,5],['card',5,2,4,5],['card',9,2,4,5],['card',1,7,4,5],['card',5,7,4,5],['card',9,7,4,5]]],
-  ['Gaya Majalah', [['image',1,1,4,5],['text',5,1,8,5],['card',1,6,6,6],['card',7,6,6,6]]],
-  ['Imej Utama (Featured)', [['image',1,1,5,12],['hero',6,1,7,4],['text',6,5,7,5],['button',6,11,3,1]]],
-  ['Susunan Masonry', [['card',1,1,4,5],['card',5,1,4,3],['card',9,1,4,6],['card',5,4,4,6],['card',1,6,4,4],['card',9,7,4,4]]],
-  ['Navigasi Tetap', [['nav',1,1,12,1],['hero',1,2,12,5],['section',1,7,6,5],['section',7,7,6,5]]],
-  ['Borang & Hubungan', [['header',1,1,12,1],['nav',4,1,6,1],['section',1,2,5,8],['form',6,2,7,8],['footer',1,12,12,1]]]
+  ['Home Page', [['header',1,1,12,1],['logo',1,1,2,1],['nav',4,1,6,1],['button',11,1,2,1],['hero',1,2,12,5],['text',2,3,6,2],['button',2,6,3,1],['image',8,3,4,3],['card',1,7,4,5],['card',5,7,4,5],['card',9,7,4,5],['footer',1,12,12,1]], 'Laman Utama (Home)'],
+  ['Hero + Image (Side-by-Side)', [['header',1,1,12,1],['logo',1,1,2,1],['nav',4,1,6,1],['hero',1,2,12,6],['text',2,3,5,3],['button',2,6,3,1],['image',7,3,5,4],['card',1,8,4,4],['card',5,8,4,4],['card',9,8,4,4],['footer',1,12,12,1]], 'Hero + Imej (Bersebelahan)'],
+  ['Hero Slider (Carousel)', [['header',1,1,12,1],['logo',1,1,2,1],['nav',4,1,6,1],['slider',1,2,12,5],['section',1,7,12,4],['card',2,8,4,3],['card',7,8,4,3],['footer',1,12,12,1]], 'Hero Slider (Bergilir)'],
+  ['Landing Page', [['header',1,1,12,1],['logo',1,1,2,1],['button',11,1,2,1],['hero',1,2,12,6],['text',2,3,6,3],['button',2,6,3,1],['image',8,3,4,4],['section',1,8,12,4],['card',2,9,3,2],['card',5,9,3,2],['card',8,9,3,2],['footer',1,12,12,1]], 'Halaman Arahan (Landing)'],
+  ['Two Columns (Sidebar)', [['header',1,1,12,1],['aside',1,2,3,10],['section',4,2,9,10],['footer',1,12,12,1]], 'Dua Lajur (Sidebar)'],
+  ['Split Screen', [['hero',1,1,6,12],['image',7,1,6,12]], 'Skrin Terbahagi (Split)'],
+  ['Modern Asymmetry', [['section',1,1,3,5],['card',4,1,5,3],['hero',9,1,4,5],['card',4,4,5,2],['section',1,6,8,6],['card',9,6,4,6]], 'Asimetri Moden'],
+  ['F-Shape Reading Pattern', [['header',1,1,12,2],['hero',1,3,9,2],['image',1,5,3,7],['text',4,5,6,2],['section',4,7,9,5]], 'Corak Bacaan F-Shape'],
+  ['Z-Shape Reading Pattern', [['header',1,1,12,1],['hero',1,2,12,6],['card',1,9,3,3],['card',5,9,3,3],['button',10,10,3,2]], 'Corak Bacaan Z-Shape'],
+  ['Card / Block Grid', [['header',1,1,12,1],['card',1,2,4,5],['card',5,2,4,5],['card',9,2,4,5],['card',1,7,4,5],['card',5,7,4,5],['card',9,7,4,5]], 'Grid Kad / Blok'],
+  ['Magazine Style', [['image',1,1,4,5],['text',5,1,8,5],['card',1,6,6,6],['card',7,6,6,6]], 'Gaya Majalah'],
+  ['Featured Hero Image', [['image',1,1,5,12],['hero',6,1,7,4],['text',6,5,7,5],['button',6,11,3,1]], 'Imej Utama (Featured)'],
+  ['Masonry Layout', [['card',1,1,4,5],['card',5,1,4,3],['card',9,1,4,6],['card',5,4,4,6],['card',1,6,4,4],['card',9,7,4,4]], 'Susunan Masonry'],
+  ['Sticky Navigation', [['nav',1,1,12,1],['hero',1,2,12,5],['section',1,7,6,5],['section',7,7,6,5]], 'Navigasi Tetap'],
+  ['Form & Contact', [['header',1,1,12,1],['nav',4,1,6,1],['section',1,2,5,8],['form',6,2,7,8],['footer',1,12,12,1]], 'Borang & Hubungan']
 ];
 
 const DEFAULT_PAGES = {
   'index.html': {
-    name: 'Utama (index.html)',
+    name: 'Home (index.html)',
+    nameMs: 'Utama (index.html)',
     blocks: TP[0][1].map((a, i) => ({ id: String(i + 1), type: a[0], c: a[1], r: a[2], w: a[3], h: a[4], t: TY[a[0]].t, f: TY[a[0]].f })),
     links: ['about.html', 'contact.html']
   },
   'about.html': {
-    name: 'Tentang Kami (about.html)',
+    name: 'About Us (about.html)',
+    nameMs: 'Tentang Kami (about.html)',
     blocks: [
-      { id: '1', type: 'header', c: 1, r: 1, w: 12, h: 1, t: 'Tentang Kami', f: 0 },
-      { id: '2', type: 'nav', c: 4, r: 1, w: 6, h: 1, t: 'Utama, Tentang, Hubungi', f: 0 },
-      { id: '3', type: 'hero', c: 1, r: 2, w: 12, h: 5, t: 'Kenali Pasukan Dedikasi Kami', f: 1 },
-      { id: '4', type: 'footer', c: 1, r: 12, w: 12, h: 1, t: 'Hak cipta © 2026', f: 0 }
+      { id: '1', type: 'header', c: 1, r: 1, w: 12, h: 1, t: 'About Us', f: 0 },
+      { id: '2', type: 'nav', c: 4, r: 1, w: 6, h: 1, t: 'Home, About, Contact', f: 0 },
+      { id: '3', type: 'hero', c: 1, r: 2, w: 12, h: 5, t: 'Meet Our Dedicated Team', f: 1 },
+      { id: '4', type: 'footer', c: 1, r: 12, w: 12, h: 1, t: 'Copyright © 2026', f: 0 }
     ],
     links: ['index.html']
   },
   'contact.html': {
-    name: 'Hubungi (contact.html)',
+    name: 'Contact (contact.html)',
+    nameMs: 'Hubungi (contact.html)',
     blocks: [
-      { id: '1', type: 'header', c: 1, r: 1, w: 12, h: 1, t: 'Hubungi Kami', f: 0 },
-      { id: '2', type: 'nav', c: 4, r: 1, w: 6, h: 1, t: 'Utama, Tentang, Hubungi', f: 0 },
-      { id: '3', type: 'section', c: 1, r: 3, w: 5, h: 6, t: 'Maklumat Lokasi & Waktu Operasi', f: 1 },
-      { id: '4', type: 'form', c: 6, r: 3, w: 7, h: 6, t: 'Nama Penuh, Alamat Emel, Mesej Anda', f: 0, fields: ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'], submitText: 'Hantar Mesej' },
-      { id: '5', type: 'footer', c: 1, r: 12, w: 12, h: 1, t: 'Hak cipta © 2026', f: 0 }
+      { id: '1', type: 'header', c: 1, r: 1, w: 12, h: 1, t: 'Contact Us', f: 0 },
+      { id: '2', type: 'nav', c: 4, r: 1, w: 6, h: 1, t: 'Home, About, Contact', f: 0 },
+      { id: '3', type: 'section', c: 1, r: 3, w: 5, h: 6, t: 'Location & Business Hours', f: 1 },
+      { id: '4', type: 'form', c: 6, r: 3, w: 7, h: 6, t: 'Full Name, Email Address, Your Message', f: 0, fields: ['Full Name', 'Email Address', 'Your Message'], submitText: 'Send Message' },
+      { id: '5', type: 'footer', c: 1, r: 12, w: 12, h: 1, t: 'Copyright © 2026', f: 0 }
     ],
     links: ['index.html']
   }
@@ -163,7 +166,11 @@ const AI_KNOWLEDGE_BM = {
   links: `<b>Cara menghubungkan Halaman dalam Peta Aliran (Sitemap):</b><br>
   1. Klik mod <b>Aliran</b> di bar atas.<br>
   2. Pilih halaman sasaran pada kad halaman &amp; klik <b>+ Sambung</b>.<br>
-  3. Pautan <code>&lt;a href="..."&gt;</code> akan dijana secara automatik dalam menu navigasi anda!`
+  3. Pautan <code>&lt;a href="..."&gt;</code> akan dijana secara automatik dalam menu navigasi anda!`,
+  form: `<b>Bagaimana borang &lt;form&gt; berfungsi?</b><br>
+  • Gunakan tag <code>&lt;form&gt;</code> untuk membalut medan input seperti Nama, Emel, dan Mesej.<br>
+  • Setiap kotak input mempunyai label yang jelas dan butang hantar (submit) untuk memproses borang.<br>
+  • Anda boleh menambah atau mengurangkan medan borang di panel Tetapan (Inspector).`
 };
 
 const AI_KNOWLEDGE_EN = {
@@ -193,10 +200,14 @@ const AI_KNOWLEDGE_EN = {
   links: `<b>How to connect Pages with Sitemap Links:</b><br>
   1. Switch top view to <b>Page Flow (Sitemap)</b>.<br>
   2. Select target page on card dropdown &amp; click <b>+ Connect</b>.<br>
-  3. Clean &lt;a href="..."&gt; links are automatically generated in your navigation!`
+  3. Clean &lt;a href="..."&gt; links are automatically generated in your navigation!`,
+  form: `<b>How does the &lt;form&gt; element work?</b><br>
+  • Use the <code>&lt;form&gt;</code> tag to wrap input fields such as Name, Email, and Message.<br>
+  • Each field is paired with clear labels and a submit button to handle submissions.<br>
+  • Customize, add, or remove fields anytime in the Settings (Inspector) panel.`
 };
 
-const AI_KNOWLEDGE = AI_KNOWLEDGE_BM;
+const AI_KNOWLEDGE = AI_KNOWLEDGE_EN;
 
 const TEXT_SWATCHES = [
   '#ffffff', '#000000', '#1e293b', '#64748b',

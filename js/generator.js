@@ -1,7 +1,7 @@
 /**
- * NIAN CODE STUDIO - Penjana Kod & Pratonton (generator.js)
- * Menjana kod standard HTML5, CSS Grid (External, Internal, Inline, 3-in-1, Tailwind), JavaScript,
- * pewarnaan sintaks (syntax highlighting), dan dokumen pratonton masa nyata.
+ * NIAN CODE STUDIO - Code Generator & Preview (generator.js)
+ * Generates standard HTML5, CSS Grid (External, Internal, Inline, 3-in-1, Tailwind), JavaScript,
+ * syntax-highlighted tokens, and real-time live preview documents.
  */
 
 const rl = b => {
@@ -161,12 +161,16 @@ function emit(b, d, mode, L, parentFk) {
   const fk = 'blk-' + b.id;
   const bColor = FILLS[b.f];
 
-  // 📝 Komen Penerangan Struktur Semantik / HTML Biasa untuk Pelajar/Pereka
+  // 📝 Explanatory comment for Semantic HTML5 / Standard Div structure
   if (d === 1) {
+    const isMs = S.lang === 'ms';
+    const tagLabel = isMs ? T.n : (T.en || T.n);
+    const colWord = isMs ? 'kol' : 'cols';
+    const rowWord = isMs ? 'baris' : 'rows';
     if (isDiv) {
-      L.push({ s: `${pad}<!-- 📦 ${T.n} (HTML Biasa): <div class="${b.cls}"> (${b.w} kol × ${b.h} baris) -->`, parentFk, blockColor: bColor });
+      L.push({ s: `${pad}<!-- 📦 ${tagLabel} (${isMs ? 'HTML Biasa' : 'Standard Div'}): <div class="${b.cls}"> (${b.w} ${colWord} × ${b.h} ${rowWord}) -->`, parentFk, blockColor: bColor });
     } else {
-      L.push({ s: `${pad}<!-- 🧱 ${T.n} (Semantik): <${T.tag}> .${b.cls} (${b.w} kol × ${b.h} baris) -->`, parentFk, blockColor: bColor });
+      L.push({ s: `${pad}<!-- 🧱 ${tagLabel} (${isMs ? 'Semantik' : 'Semantic'}): <${T.tag}> .${b.cls} (${b.w} ${colWord} × ${b.h} ${rowWord}) -->`, parentFk, blockColor: bColor });
     }
   }
 
@@ -249,8 +253,12 @@ function getCssRules() {
     const sampleBg = gradientBg ? (bgVal.match(/#[\da-f]{6}/i)?.[0] || '#ffffff') : bgVal;
     const isDark = isColorDark(sampleBg);
 
-    // 🎨 Komen Penerangan Gaya Setiap Elemen untuk Pelajar/Pereka
-    L.push({ s: `/* 🎨 ${TY[b.type].n}: .${b.cls} (<${TY[b.type].tag}>) - Kolum ${rl(b).c} & Baris ${rl(b).r} */`, parentFk: fk, isCss: true });
+    // 🎨 Explanatory style comment for each element
+    const isMs = S.lang === 'ms';
+    const tagLabel = isMs ? TY[b.type].n : (TY[b.type].en || TY[b.type].n);
+    const colWord = isMs ? 'Kolum' : 'Column';
+    const rowWord = isMs ? 'Baris' : 'Row';
+    L.push({ s: `/* 🎨 ${tagLabel}: .${b.cls} (<${TY[b.type].tag}>) - ${colWord} ${rl(b).c} & ${rowWord} ${rl(b).r} */`, parentFk: fk, isCss: true });
 
     const extra = [];
     if (b.font) extra.push(`  font-family: ${b.font};`);
@@ -316,7 +324,7 @@ function getCssRules() {
     });
   });
 
-  // 🧭 Gaya untuk Menu Dropdown Navigasi (<details class="nav-dropdown">)
+  // 🧭 Navigation dropdown styles (<details class="nav-dropdown">)
   L.push({ s: '' });
   L.push({ s: '/* 🧭 Navigation Dropdown Menu (<details class="nav-dropdown">) */' });
   L.push({ s: 'nav details.nav-dropdown { position: relative; display: inline-block; }' });
@@ -327,10 +335,10 @@ function getCssRules() {
   L.push({ s: 'nav details.nav-dropdown .dropdown-content a { padding: 6px 14px; color: #12203f !important; text-decoration: none !important; font-size: 13px !important; display: block !important; }' });
   L.push({ s: 'nav details.nav-dropdown .dropdown-content a:hover { background: rgba(0,212,255,0.12) !important; color: #0077b6 !important; }' });
 
-  // 📝 Gaya untuk Borang Interaktif (<form>)
+  // 📝 Interactive form styles (<form>)
   if (S.blocks.some(b => b.type === 'form')) {
     L.push({ s: '' });
-    L.push({ s: '/* 📝 Borang Hubungan Interaktif (<form>) */' });
+    L.push({ s: '/* 📝 Interactive Contact Form (<form>) */' });
     L.push({ s: 'form { display: flex; flex-direction: column; gap: 10px; }' });
     L.push({ s: 'form .form-group { display: flex; flex-direction: column; gap: 4px; text-align: left; }' });
     L.push({ s: 'form label { font-size: 12.5px; font-weight: 600; opacity: 0.9; }' });
@@ -338,8 +346,8 @@ function getCssRules() {
     L.push({ s: 'form button.form-submit { align-self: flex-start; padding: 9px 18px; border: none; border-radius: 6px; background: #203a5b; color: #ffffff; font-weight: 600; cursor: pointer; }' });
   }
 
-  // 📱 Gaya Responsif untuk Telefon Pintar & Peranti Skrin Kecil (Media Query)
-  // Hanya disuntik jika pengguna mengaktifkan suis "Jana Kod Responsif" (S.responsiveCSS === true)
+  // 📱 Responsive Styles for Mobile Phones & Small Screen Devices (Media Query)
+  // Only injected when "Generate Responsive CSS" toggle is ON (S.responsiveCSS === true)
   if (S.responsiveCSS) {
     L.push({ s: '' });
     L.push({ s: '/* ============================================================ */' });
@@ -446,7 +454,7 @@ function htmlLines() {
     h.push({ s: '  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Lato:wght@400;700&family=Lora:wght@400;600;700&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;600;700&family=Roboto:wght@400;500;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">' });
 
     if (S.sty == 'ext' || S.sty == 'all') {
-      h.push({ s: '  <!-- 1. External CSS: Fail gaya berasingan untuk susun atur grid -->', parentFk: 'head', isCss: true });
+      h.push({ s: '  <!-- 1. External CSS: Stylesheet for grid layout -->', parentFk: 'head', isCss: true });
       h.push({ s: '  <link rel="stylesheet" href="style.css">', parentFk: 'head', isCss: true });
     } else if (S.sty == 'tw') {
       h.push({ s: '  <script src="https://cdn.tailwindcss.com/3.4.17"><\/script>', parentFk: 'head', isCss: true });
@@ -459,7 +467,7 @@ function htmlLines() {
         h.push({ s: '  </style>', fold: 'end', fk: 'style', tag: 'style', parentFk: 'head', isCss: true });
       }
     } else if (S.sty == 'all') {
-      h.push({ s: '  <!-- 2. Internal CSS: Menentukan tema & fon khusus halaman ini -->', parentFk: 'head', isCss: true });
+      h.push({ s: '  <!-- 2. Internal CSS: Page-specific typography and theme styles -->', parentFk: 'head', isCss: true });
       h.push({ s: '  <style>', fold: 'start', fk: 'style', tag: 'style', parentFk: 'head', isCss: true });
       h.push({ s: '    body { font-family: "Inter", system-ui, sans-serif; background-color: #f8fafc; }', parentFk: 'style', isCss: true });
       h.push({ s: '    h1, h2 { letter-spacing: -0.5px; }', parentFk: 'style', isCss: true });
@@ -469,7 +477,7 @@ function htmlLines() {
 
   h.push({ s: '</head>', fold: 'end', fk: 'head', tag: 'head', parentFk: 'html' });
   h.push({ s: '<body>', fold: 'start', fk: 'body', tag: 'body', parentFk: 'html' });
-  const bLines = S.blocks.length ? body(S.sty) : [{ s: '  <!-- Letak kotak di canvas, kod muncul di sini -->', parentFk: 'body' }];
+  const bLines = S.blocks.length ? body(S.sty) : [{ s: '  <!-- Drop blocks on canvas, code appears here -->', parentFk: 'body' }];
   bLines.forEach(l => { if (!l.parentFk) l.parentFk = 'body'; });
 
   const f = [];
@@ -483,65 +491,66 @@ function htmlLines() {
 }
 
 function css() {
+  const isMs = (S.lang === 'ms');
   if (!S.hasCss) {
     return [
       { s: '/* ============================================================ */' },
-      { s: '/* CSS SEDANG DIMATIKAN (MOD ASAS HTML)                         */' },
+      { s: isMs ? '/* CSS SEDANG DIMATIKAN (MOD ASAS HTML)                         */' : '/* CSS DISABLED (PURE HTML MODE)                                 */' },
       { s: '/* ============================================================ */' },
-      { s: '/* Pelajar kini melihat HTML mentah mengikut gaya lalai browser.*/' },
-      { s: '/* Tiada fail style.css atau tag <style> disertakan.           */' },
+      { s: isMs ? '/* Pelajar kini melihat HTML mentah mengikut gaya lalai browser.*/' : '/* Viewing raw HTML rendered with default browser styles.       */' },
+      { s: isMs ? '/* Tiada fail style.css atau tag <style> disertakan.           */' : '/* No style.css file or <style> tags are included.               */' },
       { s: '/* ============================================================ */' }
     ];
   }
   if (!S.blocks || !S.blocks.length) {
     return [
       { s: '/* ============================================================ */' },
-      { s: '/* Belum ada peraturan CSS.                                    */' },
-      { s: '/* Drag or select elements on canvas to generate styling.   */' },
+      { s: isMs ? '/* Belum ada peraturan CSS.                                    */' : '/* No CSS rules generated yet.                                  */' },
+      { s: isMs ? '/* Seret atau pilih elemen pada kanvas untuk reka gaya.        */' : '/* Drag or select elements on canvas to generate styling.        */' },
       { s: '/* ============================================================ */' }
     ];
   }
   if (S.sty == 'tw') {
     return [
       { s: '/* ============================================================ */' },
-      { s: '/* FAIL style.css DIMATIKAN (MOD TAILWIND CSS AKTIF)           */' },
+      { s: isMs ? '/* FAIL style.css DIMATIKAN (MOD TAILWIND CSS AKTIF)           */' : '/* style.css INACTIVE (TAILWIND CSS UTILITY MODE ACTIVE)         */' },
       { s: '/* ============================================================ */' },
-      { s: '/* Gaya ditulis menggunakan class utiliti Tailwind pada tag   */' },
-      { s: '/* di tab "📄 index.html". CDN dimuatkan dalam <head>.         */' },
+      { s: isMs ? '/* Gaya ditulis menggunakan class utiliti Tailwind pada tag   */' : '/* Styles are written as Tailwind utility classes on tags        */' },
+      { s: isMs ? '/* di tab "📄 index.html". CDN dimuatkan dalam <head>.         */' : '/* in the "📄 index.html" tab. Tailwind CDN loaded in <head>.    */' },
       { s: '/* ============================================================ */' }
     ];
   }
   if (S.sty == 'inl') {
     return [
       { s: '/* ============================================================ */' },
-      { s: '/* FAIL style.css DIMATIKAN (MOD INLINE CSS AKTIF)             */' },
+      { s: isMs ? '/* FAIL style.css DIMATIKAN (MOD INLINE CSS AKTIF)             */' : '/* style.css INACTIVE (INLINE CSS MODE ACTIVE)                  */' },
       { s: '/* ============================================================ */' },
-      { s: '/* Semua gaya CSS berada terus pada atribut style="..."        */' },
-      { s: '/* setiap tag di tab "📄 index.html".                          */' },
-      { s: '/* Tiada fail style.css digunakan untuk mod ini.               */' },
+      { s: isMs ? '/* Semua gaya CSS berada terus pada atribut style="..."        */' : '/* All CSS styles reside directly inside style="..." attributes   */' },
+      { s: isMs ? '/* setiap tag di tab "📄 index.html".                          */' : '/* of each tag in the "📄 index.html" tab.                       */' },
+      { s: isMs ? '/* Tiada fail style.css digunakan untuk mod ini.               */' : '/* No style.css file is used for this mode.                      */' },
       { s: '/* ============================================================ */' }
     ];
   }
   if (S.sty == 'int') {
     return [
       { s: '/* ============================================================ */' },
-      { s: '/* FAIL style.css DIMATIKAN (MOD INTERNAL CSS AKTIF)           */' },
+      { s: isMs ? '/* FAIL style.css DIMATIKAN (MOD INTERNAL CSS AKTIF)           */' : '/* style.css INACTIVE (INTERNAL CSS MODE ACTIVE)                */' },
       { s: '/* ============================================================ */' },
-      { s: '/* Semua gaya CSS berada di dalam tag <style> pada tab         */' },
-      { s: '/* "📄 index.html" (bahagian <head>).                          */' },
-      { s: '/* Tiada peraturan CSS disimpan dalam fail berasingan ini.    */' },
+      { s: isMs ? '/* Semua gaya CSS berada di dalam tag <style> pada tab         */' : '/* All CSS styles reside inside <style> tag in the               */' },
+      { s: isMs ? '/* "📄 index.html" (bahagian <head>).                          */' : '/* "📄 index.html" tab (<head> section).                         */' },
+      { s: isMs ? '/* Tiada peraturan CSS disimpan dalam fail berasingan ini.    */' : '/* No CSS rules are stored in this external stylesheet.         */' },
       { s: '/* ============================================================ */' }
     ];
   }
   if (S.sty == 'all') {
     return [
       { s: '/* ============================================================ */' },
-      { s: '/* EXTERNAL CSS (Fail style.css - Sebahagian Mod 3-in-1)        */' },
+      { s: isMs ? '/* EXTERNAL CSS (Fail style.css - Sebahagian Mod 3-in-1)        */' : '/* EXTERNAL CSS (style.css - Part of 3-in-1 Cascading Mode)      */' },
       { s: '/* ============================================================ */' },
-      { s: '/* 1. EXTERNAL CSS (Fail ini): Menyimpan grid utama & susunan. */' },
-      { s: '/* 2. INTERNAL CSS: Ditulis di <head> fail HTML (tema halaman).*/' },
-      { s: '/* 3. INLINE CSS: Atribut style="..." menindih (override) gaya.*/' },
-      { s: '/* Keutamaan: Inline > Internal > External (Cascading Order)  */' },
+      { s: isMs ? '/* 1. EXTERNAL CSS (Fail ini): Menyimpan grid utama & susunan. */' : '/* 1. EXTERNAL CSS (This file): Stores main grid & page layout.  */' },
+      { s: isMs ? '/* 2. INTERNAL CSS: Ditulis di <head> fail HTML (tema halaman).*/' : '/* 2. INTERNAL CSS: Written in <head> of HTML (page theme).     */' },
+      { s: isMs ? '/* 3. INLINE CSS: Atribut style="..." menindih (override) gaya.*/' : '/* 3. INLINE CSS: style="..." attributes override higher rules.  */' },
+      { s: isMs ? '/* Keutamaan: Inline > Internal > External (Cascading Order)  */' : '/* Specificity: Inline > Internal > External (Cascading Order)  */' },
       { s: '/* ============================================================ */' },
       { s: '' }
     ].concat(getCssRules());
@@ -550,11 +559,12 @@ function css() {
 }
 
 function js() {
+  const isMs = (S.lang === 'ms');
   if (!S.hasJs) {
     return [
       { s: '// ============================================================' },
-      { s: '// ⚠️ JavaScript sedang dimatikan (Mod Pembelajaran HTML & CSS).' },
-      { s: '// Tekan butang "+ JS" di bar atas untuk mengaktifkan skrip interaktif.' },
+      { s: isMs ? '// ⚠️ JavaScript sedang dimatikan (Mod Pembelajaran HTML & CSS).' : '// ⚠️ JavaScript is currently disabled (HTML & CSS learning mode).' },
+      { s: isMs ? '// Tekan butang "+ JS" di bar atas untuk mengaktifkan skrip interaktif.' : '// Click "+ JS" on the top toolbar to enable interactive scripting.' },
       { s: '// ============================================================' }
     ];
   }
@@ -562,25 +572,25 @@ function js() {
   const L = [
     { s: '/**' },
     { s: ' * BLUEPRINT CODE STUDIO - Interactive Script (script.js)' },
-    { s: ' * Menguruskan interaksi butang, tatalan lancar, dan kesan dinamik.' },
+    { s: isMs ? ' * Menguruskan interaksi butang, tatalan lancar, dan kesan dinamik.' : ' * Handles button interactions, smooth scrolling, and dynamic features.' },
     { s: ' */' },
     { s: '' },
-    { s: '// 1. Menunggu dokumen HTML siap dimuatkan sepenuhnya (DOM Ready)' },
+    { s: isMs ? '// 1. Menunggu dokumen HTML siap dimuatkan sepenuhnya (DOM Ready)' : '// 1. Wait for HTML document to finish loading (DOM Ready)' },
     { s: 'document.addEventListener("DOMContentLoaded", () => {' },
     { s: '  console.log("🚀 Website successfully loaded!");' },
     { s: '' },
-    { s: '  // 2. Interactivity for CTA buttons and links' },
+    { s: isMs ? '  // 2. Interaktiviti untuk butang CTA dan pautan' : '  // 2. Interactivity for CTA buttons and links' },
     { s: '  document.querySelectorAll("a, button").forEach(elem => {' },
     { s: '    elem.addEventListener("click", e => {' },
     { s: '      const href = elem.getAttribute("href");' },
     { s: '      if (href === "#" || !href) {' },
     { s: '        e.preventDefault();' },
-    { s: '        console.log("Klik dikesan pada butang:", elem.textContent.trim());' },
+    { s: '        console.log("Clicked button/link:", elem.textContent.trim());' },
     { s: '      }' },
     { s: '    });' },
     { s: '  });' },
     { s: '' },
-    { s: '  // 3. Smooth scrolling for anchor navigation links (#)' },
+    { s: isMs ? '  // 3. Tatalan lancar untuk pautan sauh (#)' : '  // 3. Smooth scrolling for anchor navigation links (#)' },
     { s: '  document.querySelectorAll(\'a[href^="#"]\').forEach(anchor => {' },
     { s: '    anchor.addEventListener("click", function(e) {' },
     { s: '      const targetId = this.getAttribute("href").substring(1);' },
@@ -595,7 +605,7 @@ function js() {
 
   if (sd) {
     L.push({ s: '' });
-    L.push({ s: '  // 4. Inisialisasi Carousel Bergilir (Swiper Slider Autoplay)' });
+    L.push({ s: isMs ? '  // 4. Inisialisasi Carousel Bergilir (Swiper Slider Autoplay)' : '  // 4. Initialize Image Carousel (Swiper Slider Autoplay)' });
     L.push({ s: '  if (document.querySelector(".swiper")) {' });
     L.push({ s: '    const swiper = new Swiper(".swiper", {' });
     L.push({ s: '      loop: true,' });
@@ -607,11 +617,11 @@ function js() {
 
   if (S.blocks.some(b => b.type === 'form')) {
     L.push({ s: '' });
-    L.push({ s: '  // 5. Pengendalian Penghantaran Borang (<form>)' });
+    L.push({ s: isMs ? '  // 5. Pengendalian Penghantaran Borang (<form>)' : '  // 5. Form submission handling (<form>)' });
     L.push({ s: '  document.querySelectorAll("form").forEach(form => {' });
     L.push({ s: '    form.addEventListener("submit", e => {' });
     L.push({ s: '      e.preventDefault();' });
-    L.push({ s: '      console.log("📩 Borang berjaya dihantar!");' });
+    L.push({ s: isMs ? '      console.log("📩 Borang berjaya dihantar!");' : '      console.log("📩 Form submitted successfully!");' });
     L.push({ s: '      form.reset();' });
     L.push({ s: '    });' });
     L.push({ s: '  });' });
@@ -838,10 +848,10 @@ function downloadFile(name, content, type) {
 }
 
 /**
- * Pembina arkib .ZIP tulen (pure JS, tanpa pustaka luar).
- * Menyokong pengekodan UTF-8 dan pengiraan CRC32 standard PKZIP.
- * @param {Array<{name: string, content: string}>} files Senarai fail dalam projek
- * @returns {Uint8Array} Data binari arkib ZIP
+ * Pure JS .ZIP archive builder (no external dependencies).
+ * Supports UTF-8 encoding and standard PKZIP CRC32 calculation.
+ * @param {Array<{name: string, content: string}>} files Project file list
+ * @returns {Uint8Array} Binary ZIP archive data
  */
 function createZipArchive(files) {
   const encoder = new TextEncoder();
@@ -953,11 +963,11 @@ function exportProject() {
       const pageCss = Object.prototype.hasOwnProperty.call(pageEdits, 'css')
         ? pageEdits.css
         : getCssRules().map(l => l.s).join('\n');
-      cssSections.push(`/* ========================================== */\n/* Halaman: ${pageKey} */\n/* ========================================== */\n${pageCss}`);
+      cssSections.push(`/* ========================================== */\n/* Page: ${pageKey} */\n/* ========================================== */\n${pageCss}`);
     }
   });
 
-  // Pulihkan halaman aktif
+  // Restore active page
   S.curPage = savedPage;
   S.blocks = S.pages[savedPage] ? S.pages[savedPage].blocks : [];
 

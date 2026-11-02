@@ -1,7 +1,7 @@
 /**
- * NIAN CODE STUDIO - Interaksi Kanvas & Grid (canvas.js)
- * Menguruskan lukisan grid 12-kolum, 8-arah pemegang saiz (resize handles), gerak elemen (drag & drop),
- * dan suntingan teks secara langsung (inline editing).
+ * NIAN CODE STUDIO - Canvas & Grid Interactions (canvas.js)
+ * Manages 12-column grid rendering, 8-directional resize handles, drag-and-drop element repositioning,
+ * and inline text editing.
  */
 
 const cv = $('#cv');
@@ -37,7 +37,7 @@ function renderCanvas() {
     const fs = b.fs || (b.type == 'header' ? 20 : ['hero', 'section', 'card'].includes(b.type) ? 16 : 13);
     const ta = b.ta || 'left';
     const fontFam = b.font || "'Inter', sans-serif";
-    // Kanvas kertas putih menggunakan teks gelap secara lalai; warna pilihan pengguna kekal dihormati.
+    // White paper canvas uses dark text by default; user-customized colors are strictly preserved.
     const colStyle = b.col ? `color:${b.col};` : isDark ? 'color:#ffffff;text-shadow:0 1px 2px rgba(0,0,0,0.55);' : 'color:#12203f;';
     const fwStyle = b.fw === 'bold' ? 'font-weight:700;' : Number.isFinite(Number(b.fw)) && b.fw !== undefined && b.fw !== null && b.fw !== '' ? `font-weight:${Number(b.fw)};` : '';
     const fstStyle = b.fst == 'italic' ? 'font-style:italic;' : '';
@@ -285,7 +285,7 @@ cv.onpointermove = e => {
     n = { c: cl(drag.c + dc, 1, 13 - b.w), r: Math.max(1, drag.r + dr), w: b.w, h: b.h };
   }
 
-  // Auto-expand kanvas ke bawah jika elemen ditarik atau dibesarkan ke bawah
+  // Auto-expand canvas downwards if element is dragged or resized beyond current bounds
   if (n.r + n.h > R - 1) {
     R = Math.max(R, n.r + n.h + 2);
     cv.style.setProperty('--rows', R);

@@ -1,13 +1,13 @@
 /**
  * BLUEPRINT CODE STUDIO - Main Application & Coordinator (app.js)
- * Menguruskan kitaran hidup aplikasi (lifecycle), penyelarasan paparan (render & refresh),
- * tab fail kod, peta sitemap nod, audit Guru AI, pintasan papan kekunci, dan permulaan aplikasi.
+ * Manages application lifecycle, render and refresh coordination,
+ * code tabs, visual sitemap flowchart, AI Tutor audit, keyboard shortcuts, and app initialization.
  */
 
 
 /**
  * =====================================================================
- * PENGESAHAN SINTAKS & EDITOR KOD DUA HALA (LIVE CODE EDITOR)
+ * SYNTAX VALIDATION & TWO-WAY CODE EDITOR (LIVE CODE EDITOR)
  * =====================================================================
  */
 
@@ -155,30 +155,30 @@ function syncCodeCanvasFrame(frame = $('#cv .code-source-frame')) {
 }
 
 /**
- * Mengesahkan sintaks kod HTML secara masa nyata.
- * Memeriksa tag tidak tertutup, tag berlebihan, dan komen terbuka.
- * @param {string} code Kod HTML
+ * Validates HTML code syntax in real-time.
+ * Checks for unclosed tags, stray tags, and open comments.
+ * @param {string} code HTML code
  * @returns {{ valid: boolean, line?: number, msg?: string }}
  */
 function validateHtmlSyntax(code) {
   if (!code || !code.trim()) return { valid: true };
-  // HTML browser biasa membaiki susunan tag secara automatik (contohnya <li>
-  // tanpa penutup). Jangan sekat kod web sah dengan validator tag yang terlalu ketat.
-  // DOMParser digunakan supaya preview ikut parser HTML sebenar browser.
+  // Browser HTML engines automatically repair tag ordering (e.g., unclosed <li>).
+  // Do not block valid web markup with overly restrictive tag validators.
+  // DOMParser is used so preview aligns with native browser parsing.
   try {
     const doc = new DOMParser().parseFromString(code, 'text/html');
     const parserErr = doc.querySelector('parsererror');
-    if (parserErr) return { valid: false, line: 1, msg: 'Browser tidak dapat membaca dokumen HTML ini.' };
+    if (parserErr) return { valid: false, line: 1, msg: 'Browser failed to parse this HTML document.' };
     return { valid: true };
   } catch (error) {
-    return { valid: false, line: 1, msg: 'Dokumen HTML tidak dapat dibaca oleh browser.' };
+    return { valid: false, line: 1, msg: 'HTML document could not be parsed by browser.' };
   }
 }
 
 /**
- * Mengesahkan sintaks kod CSS.
- * Memeriksa imbangan tanda kurung kurawal '{' dan '}' serta blok komen.
- * @param {string} code Kod CSS
+ * Validates CSS code syntax.
+ * Checks brace balancing '{' and '}' and unclosed comment blocks.
+ * @param {string} code CSS code
  * @returns {{ valid: boolean, line?: number, msg?: string }}
  */
 function validateCssSyntax(code) {
@@ -193,7 +193,7 @@ function validateCssSyntax(code) {
     return {
       valid: false,
       line: lastCommentLine,
-      msg: `Komen CSS dibuka '/*' pada baris ${lastCommentLine} tetapi belum ditutup dengan '*/'.`
+      msg: `CSS comment opened with '/*' on line ${lastCommentLine} was not closed with '*/'.`
     };
   }
 
@@ -212,7 +212,7 @@ function validateCssSyntax(code) {
           return {
             valid: false,
             line: i + 1,
-            msg: `Simbol penutup '}' pada baris ${i + 1} berlebihan tanpa simbol pembuka '{'.`
+            msg: `Unexpected closing '}' on line ${i + 1} without matching opening '{'.`
           };
         }
       }
@@ -223,7 +223,7 @@ function validateCssSyntax(code) {
     return {
       valid: false,
       line: lastOpenLine,
-      msg: `Blok pemilih CSS dibuka dengan '{' pada baris ${lastOpenLine} tetapi belum ditutup dengan '}'.`
+      msg: `CSS selector block opened with '{' on line ${lastOpenLine} was not closed with '}'.`
     };
   }
 
@@ -231,9 +231,9 @@ function validateCssSyntax(code) {
 }
 
 /**
- * Mengesahkan sintaks kod JavaScript.
- * Menggunakan konstruktor Function untuk mengesan sebarang SyntaxError.
- * @param {string} code Kod JavaScript
+ * Validates JavaScript code syntax.
+ * Uses Function constructor to detect syntax errors.
+ * @param {string} code JavaScript code
  * @returns {{ valid: boolean, line?: number, msg?: string }}
  */
 function validateJsSyntax(code) {
@@ -245,7 +245,7 @@ function validateJsSyntax(code) {
   } catch (err) {
     let line = 1;
     const lines = code.split('\n');
-    const msg = err.message || 'Ralat sintaks JavaScript.';
+    const msg = err.message || 'JavaScript syntax error.';
     const openParen = (code.match(/\(/g) || []).length;
     const closeParen = (code.match(/\)/g) || []).length;
     if (openParen !== closeParen) {
@@ -254,15 +254,15 @@ function validateJsSyntax(code) {
     return {
       valid: false,
       line,
-      msg: `Ralat JavaScript: ${msg}`
+      msg: `JavaScript Error: ${msg}`
     };
   }
 }
 
 /**
- * Mengesahkan kod mengikut jenis tab semasa.
- * @param {string} code Kod sumber
- * @param {'html'|'css'|'js'} tab Jenis tab
+ * Validates code according to current active tab.
+ * @param {string} code Source code
+ * @param {'html'|'css'|'js'} tab Tab type
  * @returns {{ valid: boolean, line?: number, msg?: string }}
  */
 function validateSyntax(code, tab) {
@@ -273,9 +273,9 @@ function validateSyntax(code, tab) {
 }
 
 /**
- * Mengemaskini nombor baris di dalam gutter kod.
- * @param {number} lineCount Bilangan baris
- * @param {number|null} errLine Nombor baris yang mempunyai ralat
+ * Updates line numbers in code editor gutter.
+ * @param {number} lineCount Line count
+ * @param {number|null} errLine Line number with error
  */
 function updateGutter(lineCount, errLine) {
   const gutter = $('#code-gutter');
@@ -290,9 +290,9 @@ function updateGutter(lineCount, errLine) {
 }
 
 /**
- * Menghurai kod HTML yang disunting dan memetakan kembali ke blok kanvas.
- * @param {string} htmlCode Kod HTML lengkap
- * @returns {Array<object>|null} Senarai blok baharu atau null jika gagal
+ * Parses edited HTML code and maps it back to canvas blocks.
+ * @param {string} htmlCode Full HTML source code
+ * @returns {Array<object>|null} New blocks list or null on failure
  */
 function parseHtmlToBlocks(htmlCode) {
   try {
@@ -932,7 +932,7 @@ function showCodeStatus(message, state = 'success', duration = 1900) {
 }
 
 /**
- * Pengendali input semasa pengguna menaip di dalam textarea editor kod.
+ * Input handler while user types in code editor textarea.
  */
 function onEditorInput(fromUser = false) {
   const textarea = $('#code-textarea');
@@ -957,26 +957,26 @@ function onEditorInput(fromUser = false) {
   const banner = $('#code-error-banner');
   const bannerMsg = $('#code-error-msg');
   if (!res.valid) {
-    // Makluman ralat ringkas akan pudar sendiri supaya ruang editor kekal lapang.
+    // Brief error notification auto-fades so editor area stays clean.
     if (banner) banner.hidden = true;
-    if (bannerMsg) bannerMsg.textContent = res.msg || 'Ralat sintaks dikesan.';
-    showCodeStatus(`Semak sintaks · baris ${res.line}`, 'error', 3000);
+    if (bannerMsg) bannerMsg.textContent = res.msg || 'Syntax error detected.';
+    showCodeStatus(`Check syntax · line ${res.line}`, 'error', 3000);
     updateGutter(lines.length, res.line);
     S.lastErrorCode = res;
 
-    // Batalkan sebarang auto-apply jika ada ralat
+    // Cancel pending auto-apply if error detected
     if (autoApplyTimer) {
       clearTimeout(autoApplyTimer);
       autoApplyTimer = null;
     }
   } else {
-    // Sembunyikan banner ralat
+    // Hide error banner
     if (banner) banner.hidden = true;
-    showCodeStatus('Menyimpan…', 'editing', 1000);
+    showCodeStatus('Saving…', 'editing', 1000);
     updateGutter(lines.length, null);
     S.lastErrorCode = null;
 
-    // Debounce auto-apply ke kanvas selepas 750ms
+    // Debounce auto-apply to canvas after 750ms
     if (autoApplyTimer) clearTimeout(autoApplyTimer);
     autoApplyTimer = setTimeout(() => {
       applyCodeChanges(false);
@@ -985,7 +985,7 @@ function onEditorInput(fromUser = false) {
 }
 
 /**
- * Melompat ke baris yang mengandungi ralat di dalam textarea.
+ * Jumps to line containing syntax error in textarea.
  */
 function gotoErrorLine() {
   if (!S.lastErrorCode || !S.lastErrorCode.line) return;
@@ -1003,7 +1003,7 @@ function gotoErrorLine() {
   textarea.focus();
   textarea.setSelectionRange(charIdx, endIdx);
 
-  // Skrol textarea dan gutter supaya baris kelihatan
+  // Scroll textarea and gutter so line is visible
   const lineHeight = 20.625;
   const targetScroll = Math.max(0, (lineNum - 3) * lineHeight);
   textarea.scrollTop = targetScroll;
@@ -1014,8 +1014,8 @@ function gotoErrorLine() {
 }
 
 /**
- * Menerapkan perubahan kod yang disunting ke dalam keadaan kanvas studio.
- * @param {boolean} showToast Sama ada memaparkan makluman toast
+ * Applies edited code changes into studio canvas state.
+ * @param {boolean} showToast Whether to display toast notification
  */
 function applyCodeChanges(showToast = true) {
   const textarea = $('#code-textarea');
@@ -1071,7 +1071,7 @@ function applyCodeChanges(showToast = true) {
 }
 
 /**
- * Memulihkan kod di dalam editor kepada kod yang dijana oleh kanvas studio.
+ * Restores code in editor to studio canvas generated code.
  */
 function revertCodeChanges() {
   const textarea = $('#code-textarea');
@@ -1082,19 +1082,19 @@ function revertCodeChanges() {
   S.lastErrorCode = null;
   render();
 
-  showCodeStatus('Kod dipulihkan', 'success');
+  showCodeStatus(S.lang === 'en' ? 'Code restored' : 'Kod dipulihkan', 'success');
   toast('↺ Code restored from canvas design.');
 }
 
 /**
- * Menukar mod antara Papar (Syntax Highlighted) dan Sunting (Editable Textarea).
- * @param {'view'|'edit'} mode Mod editor
- * @param {number|null} targetLine Baris sasaran untuk lompat jika ada
+ * Toggles mode between View (Syntax Highlighted) and Edit (Editable Textarea).
+ * @param {'view'|'edit'} mode Editor mode
+ * @param {number|null} targetLine Target line to jump to if any
  */
 function setCodeMode(mode, targetLine = null) {
   S.codeMode = mode;
 
-  // Kemaskini butang suis mod
+  // Update mode toggle buttons
   document.querySelectorAll('[data-cmode]').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.cmode === mode);
   });
@@ -1112,9 +1112,9 @@ function setCodeMode(mode, targetLine = null) {
     if (btnApply) btnApply.hidden = false;
     if (btnRevert) btnRevert.hidden = false;
 
-    // Muatkan kod semasa ke dalam textarea jika belum ada
-    // Apabila kod sedang dipaparkan, gunakan teks yang sama persis dengan paparan.
-    // Ini mengelakkan editor kosong jika keadaan sunting tersimpan sudah tidak sepadan.
+    // Load current code into textarea if not already present.
+    // When code is currently displayed, use the exact text from the view.
+    // This prevents an empty editor if the saved edit state was out of sync.
     const curCode = src && !src.hidden && typeof S.text === 'string' ? S.text : currentCodeText(S.tab);
     if (textarea) {
       textarea.value = curCode;
@@ -1243,7 +1243,7 @@ function renderCode() {
   }
   $('#src').innerHTML = html.join('');
 
-  // Jika sedang dalam mod edit, segerakkan kandungan textarea dan nombor baris
+  // If in edit mode, sync textarea content and gutter line numbers
   if (S.codeMode === 'edit') {
     const textarea = $('#code-textarea');
     if (textarea && textarea.value !== S.text) textarea.value = S.text;
@@ -1261,11 +1261,11 @@ function renderTabsBar() {
       <span>📄 ${esc(k)}</span>
       <button type="button" class="ptab-del" data-del-page="${k}" title="Delete tab ${p.name}">✕</button>
     </div>`;
-  }).join('') + '<button class="btn-new-page" id="btn-add-page" title="Tambah Halaman Baru (Tambah fail HTML baharu)">+</button>';
+  }).join('') + '<button class="btn-new-page" id="btn-add-page" title="Add New Page (Create new HTML file)">+</button>';
 }
 
 /**
- * Mengemaskini pratonton hasil (Live Preview iframe) secara selamat dan responsif.
+ * Updates Live Preview iframe securely and responsively.
  */
 function renderPreview() {
   const paper = $('#paper');
@@ -1278,7 +1278,7 @@ function renderPreview() {
     try {
       pv.srcdoc = content;
     } catch (err) {
-      console.warn('Gagal tetapkan srcdoc secara langsung, menggunakan fallback blob:', err);
+      console.warn('Failed to set srcdoc directly, falling back to blob:', err);
       const blob = new Blob([content], { type: 'text/html' });
       pv.src = URL.createObjectURL(blob);
     }
@@ -1298,12 +1298,12 @@ function refresh() {
 }
 
 function render() {
-  // 1. Kawal paparan bekas utama (Canvas vs Nodes vs Hasil) terlebih dahulu
+  // 1. Control main container visibility (Canvas vs Nodes vs Live Preview)
   $('#cv').hidden = S.view !== 'plan';
   $('#nodes-wrap').hidden = S.view !== 'nodes';
   $('#paper').hidden = S.view !== 'prev';
 
-  // 2. Mode paparan visual / split / kod & viewport responsif
+  // 2. Visual / Split / Code display mode & responsive viewport
   const vpClass = `vp-${S.viewport || 'desktop'}`;
   const stage = $('#stage');
   stage.className = `stage ${S.mode} ${vpClass}`;
@@ -1314,18 +1314,18 @@ function render() {
   if (runPreviewJsButton) {
     runPreviewJsButton.setAttribute('aria-pressed', String(!!S.previewScripts));
     runPreviewJsButton.classList.toggle('active', !!S.previewScripts);
-    runPreviewJsButton.textContent = S.previewScripts ? 'JS berjalan' : 'Jalankan JS';
-    runPreviewJsButton.title = S.previewScripts ? 'Matikan JavaScript pratonton' : 'Jalankan JavaScript dalam pratonton terasing';
+    runPreviewJsButton.textContent = S.previewScripts ? 'JS Running' : 'Run JS';
+    runPreviewJsButton.title = S.previewScripts ? 'Disable preview JavaScript' : 'Run JavaScript inside isolated preview';
   }
 
-  // 3. Kemaskini komponen visual
+  // 3. Update visual components
   refresh();
   renderIns();
   renderLayersPanel();
   renderCanvaBar();
   if (S.view === 'prev') renderPreview();
 
-  // Toggle Panel Kiri: HTML vs CSS Studio
+  // Toggle Left Panel: HTML vs CSS Studio
   const panelHtml = $('#side-panel-html');
   const panelCss = $('#side-panel-css');
   const isCssSide = S.sideTab === 'css';
@@ -1353,7 +1353,7 @@ function render() {
     btn.setAttribute('aria-pressed', String(active));
   });
 
-  // Sync Suis CSS Responsif (@media)
+  // Sync responsive CSS media query switch (@media)
   const respBtn = $('#btn-toggle-resp-css');
   if (respBtn) {
     respBtn.setAttribute('aria-pressed', !!S.responsiveCSS);
@@ -1361,13 +1361,13 @@ function render() {
     if (txt) txt.textContent = S.responsiveCSS ? 'ON' : 'OFF';
   }
 
-  // Sync Butang Mod Tag HTML (Semantik HTML5 vs HTML Biasa div)
+  // Sync HTML tag mode buttons (HTML5 Semantic vs Standard div)
   const isDivMode = S.htmlMode === 'div';
   document.querySelectorAll('[data-html-mode]').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.htmlMode === (S.htmlMode || 'semantic'));
   });
   const subLbl = $('#side-html-mode-sub');
-  if (subLbl) subLbl.textContent = isDivMode ? 'Biasa <div>' : 'HTML5 semantik';
+  if (subLbl) subLbl.textContent = isDivMode ? 'Standard <div>' : 'HTML5 Semantic';
 
   // Sync Gap & Row buttons
   document.querySelectorAll('[data-set-gap]').forEach(btn => {
@@ -1398,16 +1398,17 @@ function render() {
   document.querySelectorAll('[data-sty]').forEach(x => x.setAttribute('aria-pressed', x.dataset.sty === S.sty));
 
   const cssTabBtn = document.querySelector('[data-t="css"]');
+  const isEn = S.lang === 'en';
   if (cssTabBtn) {
     cssTabBtn.disabled = false;
     cssTabBtn.removeAttribute('aria-disabled');
-    cssTabBtn.title = 'Buka style.css; kod CSS boleh ditambah bila-bila masa';
+    cssTabBtn.title = isEn ? 'Open style.css; CSS code can be customized anytime' : 'Buka style.css; kod CSS boleh ditambah bila-bila masa';
   }
 
   $('#layer-css').setAttribute('aria-pressed', S.hasCss);
-  $('#layer-css').textContent = S.hasCss ? 'CSS' : 'Tanpa CSS';
+  $('#layer-css').textContent = S.hasCss ? 'CSS' : (isEn ? 'No CSS' : 'Tanpa CSS');
   $('#layer-js').setAttribute('aria-pressed', S.hasJs);
-  $('#layer-js').textContent = S.hasJs ? 'JS' : 'Tanpa JS';
+  $('#layer-js').textContent = S.hasJs ? 'JS' : (isEn ? 'No JS' : 'Tanpa JS');
 
   // Sinkronisasi Canva Left Rail & Contextual Drawer
   const mainEl = $('main');
@@ -1419,14 +1420,13 @@ function render() {
     btn.classList.toggle('active', btn.dataset.rail === S.railTab);
   });
 
-  const isEn = S.lang === 'en';
   const drawerTitleMap = {
-    elem: { icon: '📦', title: S.htmlMode === 'div' ? (isEn ? '<div> Elements' : 'Elemen <div>') : (isEn ? 'HTML5 Elements' : 'Elemen HTML5') },
-    tpl: { icon: '📐', title: isEn ? 'Layout Templates' : 'Templat susun atur' },
-    ins: { icon: '⚙️', title: isEn ? 'Element Settings' : 'Tetapan elemen' },
-    layers: { icon: '📑', title: isEn ? 'Layers Order' : 'Susunan lapisan' },
-    css: { icon: '🎨', title: isEn ? 'Styles & Viewport' : 'Gaya dan saiz peranti' },
-    ai: { icon: '💡', title: isEn ? 'AI Tutor' : 'Tutor AI' }
+    elem: { icon: '📦', title: S.htmlMode === 'div' ? (isEn ? 'Classic <div> Elements' : 'Elemen <div> Biasa') : (isEn ? 'Semantic HTML5 Elements' : 'Elemen Semantik HTML5') },
+    tpl: { icon: '📐', title: isEn ? 'Layout Templates' : 'Templat Susun Atur' },
+    ins: { icon: '⚙️', title: isEn ? 'Element Settings' : 'Tetapan Elemen' },
+    layers: { icon: '📑', title: isEn ? 'Layers Management' : 'Pengurusan Lapisan' },
+    css: { icon: '🎨', title: isEn ? 'Styles & Canvas Studio' : 'Studio CSS & Kanvas' },
+    ai: { icon: '💡', title: isEn ? 'Smart AI Tutor' : 'Tutor AI Pintar' }
   };
 
   const curDrawerMeta = drawerTitleMap[S.railTab] || drawerTitleMap.elem;
@@ -1464,17 +1464,42 @@ function renderNodes() {
   const wrap = $('#nodes-wrap');
   if (!wrap) return;
 
+  const isEn = S.lang === 'en';
   const pageKeys = Object.keys(S.pages);
   const rootKey = pageKeys.includes('index.html') ? 'index.html' : pageKeys[0];
   const otherKeys = pageKeys.filter(k => k !== rootKey);
 
-  // 1. Kira statistik seni bina navigasi
+  // Auto-detect navigation links from canvas blocks (nav, button, link)
+  pageKeys.forEach(k => {
+    const p = S.pages[k];
+    if (!p) return;
+    p.links = p.links || [];
+    (p.blocks || []).forEach(b => {
+      if (b.type === 'button' || b.type === 'link') {
+        const href = String(b.href || '').trim();
+        if (href && pageKeys.includes(href) && href !== k && !p.links.includes(href)) {
+          p.links.push(href);
+        }
+      } else if (b.type === 'nav') {
+        const items = String(b.t || '').split(/[,\s|]+/);
+        items.forEach(it => {
+          const trimmed = it.trim().toLowerCase();
+          const matched = pageKeys.find(pk => pk.replace('.html', '').toLowerCase() === trimmed || (S.pages[pk].name || '').toLowerCase() === trimmed);
+          if (matched && matched !== k && !p.links.includes(matched)) {
+            p.links.push(matched);
+          }
+        });
+      }
+    });
+  });
+
+  // 1. Calculate navigation architecture statistics
   let totalLinks = 0;
   pageKeys.forEach(k => {
     totalLinks += (S.pages[k].links || []).length;
   });
 
-  // 2. Bina Carta Aliran Navigasi SVG (Interactive Sitemap Flowchart)
+  // 2. Build Interactive SVG Sitemap Flowchart
   const svgW = 860;
   const itemH = 65;
   const gapY = 18;
@@ -1495,21 +1520,21 @@ function renderNodes() {
   const svgConnectors = [];
   const svgNodes = [];
 
-  // Gambar nod Utama (Root Node)
+  // Draw Root Node
   const isRootCur = rootKey === S.curPage;
   svgNodes.push(`
-    <g class="sitemap-node${isRootCur ? ' active' : ''}" data-page="${rootKey}" style="cursor:pointer">
+    <g class="sitemap-node${isRootCur ? ' active' : ''}" data-page="${rootKey}" style="cursor:pointer" title="${isEn ? 'Click to switch page · Double click to open canvas' : 'Klik untuk tukar halaman · Dwi-klik untuk buka di kanvas'}">
       <rect x="${rootX}" y="${rootY}" width="${rootW}" height="${rootH}" rx="10"
             fill="#203a5b" stroke="#c4d7ed" stroke-width="${isRootCur ? '2.5' : '1.5'}"
             filter="drop-shadow(0 4px 12px rgba(0,0,0,0.5))"/>
       <text x="${rootX + 16}" y="${rootY + 28}" fill="#ffffff" font-size="13" font-family="'JetBrains Mono', monospace" font-weight="700">🏠 ${esc(S.pages[rootKey].name)}</text>
-      <text x="${rootX + 16}" y="${rootY + 48}" fill="#c4d7ed" font-size="11" font-family="'Inter', sans-serif">🧭 Root Navigation Hub</text>
-      <text x="${rootX + 16}" y="${rootY + 66}" fill="#c4d7ed" font-size="10" font-family="'JetBrains Mono', monospace">${(S.pages[rootKey].links || []).length} outgoing navigation links</text>
-      ${isRootCur ? `<rect x="${rootX + rootW - 55}" y="${rootY + 12}" width="42" height="18" rx="9" fill="#c4d7ed" stroke="#c4d7ed"/><text x="${rootX + rootW - 34}" y="${rootY + 24}" fill="#203a5b" font-size="9.5" font-family="'JetBrains Mono', monospace" text-anchor="middle" font-weight="700">ACTIVE</text>` : ''}
+      <text x="${rootX + 16}" y="${rootY + 48}" fill="#c4d7ed" font-size="11" font-family="'Inter', sans-serif">🧭 ${isEn ? 'Root Navigation Hub' : 'Pusat Navigasi Utama'}</text>
+      <text x="${rootX + 16}" y="${rootY + 66}" fill="#c4d7ed" font-size="10" font-family="'JetBrains Mono', monospace">${(S.pages[rootKey].links || []).length} ${isEn ? 'outgoing navigation links' : 'pautan navigasi keluar'}</text>
+      ${isRootCur ? `<rect x="${rootX + rootW - 55}" y="${rootY + 12}" width="42" height="18" rx="9" fill="#c4d7ed" stroke="#c4d7ed"/><text x="${rootX + rootW - 34}" y="${rootY + 24}" fill="#203a5b" font-size="9.5" font-family="'JetBrains Mono', monospace" text-anchor="middle" font-weight="700">${isEn ? 'ACTIVE' : 'AKTIF'}</text>` : ''}
     </g>
   `);
 
-  // Gambar nod sasaran dan garisan aliran navigasi
+  // Draw target nodes and navigation flow connectors
   rightItems.forEach((item, idx) => {
     const isExt = typeof item === 'object';
     const itemKey = isExt ? item.id : item;
@@ -1549,14 +1574,15 @@ function renderNodes() {
 
     if (!isExt) {
       const p = S.pages[itemKey];
+      const hasReturn = (p.links || []).includes(rootKey);
       svgNodes.push(`
-        <g class="sitemap-node${isCur ? ' active' : ''}" data-page="${itemKey}" style="cursor:pointer">
+        <g class="sitemap-node${isCur ? ' active' : ''}" data-page="${itemKey}" style="cursor:pointer" title="${isEn ? 'Click to switch page · Double click to open canvas' : 'Klik untuk tukar halaman · Dwi-klik untuk buka di kanvas'}">
           <rect x="${targetX}" y="${targetY}" width="${targetW}" height="${itemH}" rx="8"
                 fill="#203a5b" stroke="#c4d7ed" stroke-width="${isCur ? '2' : '1'}"
                 filter="drop-shadow(0 3px 10px rgba(0,0,0,0.4))"/>
           <text x="${targetX + 14}" y="${targetY + 26}" fill="#ffffff" font-size="12" font-family="'JetBrains Mono', monospace" font-weight="600">📄 ${esc(p.name)}</text>
-          <text x="${targetX + 14}" y="${targetY + 46}" fill="#c4d7ed" font-size="10.5" font-family="'Inter', sans-serif">🧭 Return Link: ${(p.links || []).includes(rootKey) ? 'Connected to Home' : 'No return link'}</text>
-          ${isCur ? `<rect x="${targetX + targetW - 55}" y="${targetY + 12}" width="42" height="18" rx="9" fill="#c4d7ed" stroke="#c4d7ed"/><text x="${targetX + targetW - 34}" y="${targetY + 24}" fill="#203a5b" font-size="9.5" font-family="'JetBrains Mono', monospace" text-anchor="middle" font-weight="700">AKTIF</text>` : ''}
+          <text x="${targetX + 14}" y="${targetY + 46}" fill="#c4d7ed" font-size="10.5" font-family="'Inter', sans-serif">🧭 ${isEn ? (hasReturn ? 'Connected to Home' : 'No return link') : (hasReturn ? 'Bersambung ke Utama' : 'Tiada pautan balik')}</text>
+          ${isCur ? `<rect x="${targetX + targetW - 55}" y="${targetY + 12}" width="42" height="18" rx="9" fill="#c4d7ed" stroke="#c4d7ed"/><text x="${targetX + targetW - 34}" y="${targetY + 24}" fill="#203a5b" font-size="9.5" font-family="'JetBrains Mono', monospace" text-anchor="middle" font-weight="700">${isEn ? 'ACTIVE' : 'AKTIF'}</text>` : ''}
         </g>
       `);
     } else {
@@ -1565,11 +1591,32 @@ function renderNodes() {
           <rect x="${targetX}" y="${targetY}" width="${targetW}" height="${itemH}" rx="8"
                 fill="#203a5b" stroke="#c4d7ed" stroke-width="1.2" stroke-dasharray="3 3"/>
           <text x="${targetX + 14}" y="${targetY + 26}" fill="#ffffff" font-size="12" font-family="'JetBrains Mono', monospace" font-weight="600">🔗 ${esc(item.title)}</text>
-          <text x="${targetX + 14}" y="${targetY + 46}" fill="#c4d7ed" font-size="10" font-family="'JetBrains Mono', monospace">${esc(item.url || 'External Link')}</text>
+          <text x="${targetX + 14}" y="${targetY + 46}" fill="#c4d7ed" font-size="10" font-family="'JetBrains Mono', monospace">${esc(item.url || (isEn ? 'External Link' : 'Pautan Luar'))}</text>
         </g>
       `);
     }
   });
+
+  // Cross-links between secondary pages
+  for (let i = 0; i < rightItems.length; i++) {
+    for (let j = 0; j < rightItems.length; j++) {
+      if (i === j) continue;
+      const srcItem = rightItems[i];
+      const dstItem = rightItems[j];
+      const srcKey = typeof srcItem === 'object' ? srcItem.id : srcItem;
+      const dstKey = typeof dstItem === 'object' ? dstItem.id : dstItem;
+      const srcPage = S.pages[srcKey];
+      if (srcPage && (srcPage.links || []).includes(dstKey)) {
+        const y1 = 20 + i * (itemH + gapY) + itemH / 2;
+        const y2 = 20 + j * (itemH + gapY) + itemH / 2;
+        const curveX = targetX + targetW + 28 + Math.abs(i - j) * 12;
+        svgConnectors.push(`
+          <path d="M ${targetX + targetW} ${y1} C ${curveX} ${y1}, ${curveX} ${y2}, ${targetX + targetW + 4} ${y2}"
+                fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-dasharray="3 3" marker-end="url(#arrow-cyan)"/>
+        `);
+      }
+    }
+  }
 
   const flowchartHtml = `
     <div class="nodes-flowchart-card">
@@ -1577,13 +1624,13 @@ function renderNodes() {
         <div class="flowchart-title-wrap">
           <span class="flowchart-ic">🧭</span>
           <div>
-            <b class="flowchart-title">Website Navigation Flowchart (Visual Sitemap & Navigation Mesh)</b>
-            <span class="flowchart-sub">Menunjukkan aliran pelawat merentasi halaman melalui bar navigasi &lt;nav&gt; dan butang &lt;a&gt;. Klik mana-mana kotak untuk terus membukanya di kanvas!</span>
+            <b class="flowchart-title">${isEn ? 'Website Navigation Flowchart (Visual Sitemap & Navigation Mesh)' : 'Carta Aliran Navigasi Laman (Peta Tapak Visual & Jalinan Navigasi)'}</b>
+            <span class="flowchart-sub">${isEn ? 'Shows visitor flow across pages via navigation bars <nav> and action buttons <a>. Click any page card or "Open on Canvas" to edit it directly!' : 'Menunjukkan aliran pelawat merentasi halaman melalui bar navigasi <nav> dan butang <a>. Klik mana-mana kad atau "Buka pada Kanvas" untuk terus menyuntingnya!'}</span>
           </div>
         </div>
         <div class="flowchart-legend">
-          <span class="legend-item"><span class="legend-line line-primary"></span> &lt;nav&gt; Navigation Path</span>
-          <span class="legend-item"><span class="legend-line line-primary"></span> Return Link to Home</span>
+          <span class="legend-item"><span class="legend-line line-primary"></span> ${isEn ? '<nav> Navigation Path' : 'Laluan Navigasi <nav>'}</span>
+          <span class="legend-item"><span class="legend-line line-primary"></span> ${isEn ? 'Return Link to Home' : 'Pautan Balik ke Utama'}</span>
         </div>
       </div>
       <div class="flowchart-svg-wrap">
@@ -1606,13 +1653,13 @@ function renderNodes() {
     </div>
   `;
 
-  // 3. Bina Grid Pengurusan Navigasi Mengikut Halaman
+  // 3. Build page navigation management grid
   const cardsHtml = pageKeys.map(k => {
     const p = S.pages[k];
     const isCur = k === S.curPage;
     const links = p.links || [];
 
-    // Imbas elemen navigasi dalam halaman
+    // Scan navigation components in page
     const navBlock = p.blocks.find(b => b.type === 'nav');
     const buttonBlocks = p.blocks.filter(b => b.type === 'button');
     const footerBlock = p.blocks.find(b => b.type === 'footer');
@@ -1627,27 +1674,27 @@ function renderNodes() {
             <span class="node-icon">📄</span>
             <div>
               <b class="node-name">${esc(p.name)}</b>
-              <span class="node-meta">${p.blocks.length} elements on canvas</span>
+              <span class="node-meta">${p.blocks.length} ${isEn ? 'elements on canvas' : 'elemen pada kanvas'}</span>
             </div>
           </div>
-          <button type="button" class="node-open-btn${isCur ? ' is-active' : ''}" data-page="${k}" title="Open and edit this page on canvas">
-            ${isCur ? '● Currently Editing' : '👁️ Open on Canvas'}
+          <button type="button" class="node-open-btn${isCur ? ' is-active' : ''}" data-page="${k}" title="${isEn ? 'Open and edit this page on canvas' : 'Buka dan sunting halaman ini di kanvas'}">
+            ${isCur ? (isEn ? '● Currently Editing' : '● Sedang Disunting') : (isEn ? '👁️ Open on Canvas' : '👁️ Buka di Kanvas')}
           </button>
         </div>
 
         <div class="node-nav-components">
-          <div class="nav-comp-title">🧭 Detected Navigation Components:</div>
+          <div class="nav-comp-title">🧭 ${isEn ? 'Detected Navigation Components:' : 'Komponen Navigasi Dikesan:'}</div>
           <div class="nav-comp-list">
-            ${navBlock ? `<div class="nav-comp-item"><span class="badge-tag">&lt;nav&gt;</span> <span class="nav-comp-txt">${esc(navBlock.t || 'Site Menu')}</span></div>` : '<div class="nav-comp-item none"><span class="badge-tag dim">&lt;nav&gt;</span> <span class="dim">No nav menu bar</span></div>'}
-            ${buttonBlocks.length ? buttonBlocks.map(btn => `<div class="nav-comp-item"><span class="badge-tag btn">&lt;a.btn&gt;</span> <span class="nav-comp-txt">${esc(btn.t || 'Action Button')}</span></div>`).join('') : ''}
-            ${footerBlock ? `<div class="nav-comp-item"><span class="badge-tag foot">&lt;footer&gt;</span> <span class="nav-comp-txt">${esc(footerBlock.t || 'Footer Links')}</span></div>` : ''}
+            ${navBlock ? `<div class="nav-comp-item"><span class="badge-tag">&lt;nav&gt;</span> <span class="nav-comp-txt">${esc(navBlock.t || (isEn ? 'Site Menu' : 'Menu Laman'))}</span></div>` : `<div class="nav-comp-item none"><span class="badge-tag dim">&lt;nav&gt;</span> <span class="dim">${isEn ? 'No nav menu bar' : 'Tiada bar menu nav'}</span></div>`}
+            ${buttonBlocks.length ? buttonBlocks.map(btn => `<div class="nav-comp-item"><span class="badge-tag btn">&lt;a.btn&gt;</span> <span class="nav-comp-txt">${esc(btn.t || (isEn ? 'Action Button' : 'Butang Tindakan'))}</span></div>`).join('') : ''}
+            ${footerBlock ? `<div class="nav-comp-item"><span class="badge-tag foot">&lt;footer&gt;</span> <span class="nav-comp-txt">${esc(footerBlock.t || (isEn ? 'Footer Links' : 'Pautan Pengaki'))}</span></div>` : ''}
           </div>
         </div>
 
         <div class="node-links">
           <div class="node-links-head">
-            <b>Outgoing Links (${links.length}):</b>
-            <span class="node-links-badge">${links.length ? 'Active' : 'Isolated'}</span>
+            <b>${isEn ? 'Outgoing Links' : 'Pautan Keluar'} (${links.length}):</b>
+            <span class="node-links-badge">${links.length ? (isEn ? 'Active' : 'Aktif') : (isEn ? 'Isolated' : 'Terasing')}</span>
           </div>
           <div class="node-links-list">
             ${links.length ? links.map((linkTarget, idx) => {
@@ -1658,17 +1705,17 @@ function renderNodes() {
                   <span class="node-link-dest">
                     ${isExternal ? '🌐' : '➡'} ${esc(targetName)}
                   </span>
-                  <button type="button" class="node-link-del" data-del-link="${k}:${idx}" title="Disconnect this navigation link">✕</button>
+                  <button type="button" class="node-link-del" data-del-link="${k}:${idx}" title="${isEn ? 'Disconnect this navigation link' : 'Putuskan sambungan pautan ini'}">✕</button>
                 </div>
               `;
-            }).join('') : '<div class="node-empty-links">⚠️ This page is not connected to any other page yet. Please add a link below.</div>'}
+            }).join('') : `<div class="node-empty-links">${isEn ? '⚠️ This page is not connected to any other page yet. Please add a link below.' : '⚠️ Halaman ini belum bersambung ke mana-mana halaman lain. Sila tambah pautan di bawah.'}</div>`}
           </div>
 
           <div class="node-add-link-box">
-            <label class="add-link-lbl">Connect to:</label>
+            <label class="add-link-lbl">${isEn ? 'Connect to:' : 'Sambung ke:'}</label>
             <div class="node-add-link-row">
               <select id="sel-link-${k.replace(/\./g, '_')}" class="node-select">${targetOpts}</select>
-              <button type="button" class="btn-node-add" data-add-link="${k}">+ Connect</button>
+              <button type="button" class="btn-node-add" data-add-link="${k}">${isEn ? '+ Connect' : '+ Sambung'}</button>
             </div>
           </div>
         </div>
@@ -1676,20 +1723,20 @@ function renderNodes() {
     `;
   }).join('');
 
-  // 4. Kad Pautan Luar
+  // 4. External links card
   const extCardHtml = `
     <div class="node-card ext-card">
       <div class="node-head">
         <div class="node-title-group">
           <span class="node-icon">🌐</span>
           <div>
-            <b class="node-name" style="color:var(--am)">External Web Links</b>
-            <span class="node-meta">${S.extLinks.length} external third-party links</span>
+            <b class="node-name" style="color:var(--am)">${isEn ? 'External Web Links' : 'Pautan Web Luar'}</b>
+            <span class="node-meta">${S.extLinks.length} ${isEn ? 'external third-party links' : 'pautan pihak ketiga luar'}</span>
           </div>
         </div>
-        <button type="button" class="btn-node-add ext-add-btn" id="btn-add-ext">+ Add External</button>
+        <button type="button" class="btn-node-add ext-add-btn" id="btn-add-ext">${isEn ? '+ Add External' : '+ Tambah Luar'}</button>
       </div>
-      <div class="node-desc">External destinations such as official WhatsApp, Google Maps, or social media links.</div>
+      <div class="node-desc">${isEn ? 'External destinations such as official WhatsApp, Google Maps, or social media links.' : 'Destinasi luar seperti WhatsApp rasmi, Google Maps, atau pautan media sosial.'}</div>
       <div class="node-links-list">
         ${S.extLinks.map((ext, i) => `
           <div class="node-link-item ext">
@@ -1697,28 +1744,28 @@ function renderNodes() {
               <b>${esc(ext.title)}</b><br>
               <small style="color:var(--mute)">${esc(ext.url)}</small>
             </span>
-            <button type="button" class="node-link-del" data-del-ext="${i}" title="Delete external link">✕</button>
+            <button type="button" class="node-link-del" data-del-ext="${i}" title="${isEn ? 'Delete external link' : 'Padam pautan luar'}">✕</button>
           </div>
         `).join('')}
       </div>
     </div>
   `;
 
-  // Cantumkan keseluruhan paparan Peta Sambungan
+  // Assemble full Navigation Map / Sitemap view
   wrap.innerHTML = `
     <div class="nodes-top-bar">
       <div class="nodes-title-main">
-        <span>🗺️ Website Navigation Map (Sitemap Architecture)</span>
+        <span>🗺️ ${isEn ? 'Website Navigation Map (Sitemap Architecture)' : 'Peta Navigasi Laman (Seni Bina Sitemap)'}</span>
         <div class="nodes-stat-pills">
-          <span class="stat-pill">📄 ${pageKeys.length} Halaman</span>
-          <span class="stat-pill">🧭 ${totalLinks} Navigation Links</span>
-          <span class="stat-pill active">⚡ Active Navigation Flow</span>
+          <span class="stat-pill">📄 ${pageKeys.length} ${isEn ? 'Pages' : 'Halaman'}</span>
+          <span class="stat-pill">🧭 ${totalLinks} ${isEn ? 'Navigation Links' : 'Pautan Navigasi'}</span>
+          <span class="stat-pill active">⚡ ${isEn ? 'Active Navigation Flow' : 'Aliran Navigasi Aktif'}</span>
         </div>
       </div>
     </div>
     ${flowchartHtml}
     <div class="nodes-sub-title">
-      <span>🗂️ Manage Navigation Links by Page File:</span>
+      <span>🗂️ ${isEn ? 'Manage Navigation Links by Page File:' : 'Urus Pautan Navigasi Mengikut Fail Halaman:'}</span>
     </div>
     <div class="nodes-grid" id="nodes-grid">
       ${cardsHtml}
@@ -1770,7 +1817,7 @@ function runAiAudit() {
   if ($('#drawer-ai-audit-text')) $('#drawer-ai-audit-text').innerHTML = auditHtml;
 }
 
-// Pasang Senarai Elemen Mengikut Kumpulan Anatomi (Atas, Tengah, Komponen/Media, Bawah)
+// Build element palette grouped by anatomical structure (Top, Content, Links & Components, Media, Bottom)
 const PAL_GROUPS = [
   {
     title: '🔝 Bahagian atas',
@@ -1830,9 +1877,9 @@ function renderPalette() {
 renderPalette();
 
 /**
- * Menghasilkan pratonton lakaran kenit (thumbnail SVG) bagi susun atur templat.
- * @param {Array} t Data templat daripada TP
- * @returns {string} String SVG
+ * Generates thumbnail preview (SVG) for template layout.
+ * @param {Array} t Template data from TP
+ * @returns {string} SVG string
  */
 const thumb = t => {
   const b = t[1];
@@ -1840,8 +1887,17 @@ const thumb = t => {
   return `<svg viewBox="0 0 120 100" width="100%" aria-hidden="true"><rect x=".5" y=".5" width="119" height="99" rx="4" fill="none" stroke="#fff" opacity=".7"/>${[8, 14, 20].map(x => `<circle cx="${x}" cy="6" r="1.8" fill="#fff"/>`).join('')}${b.map((a, i) => `<rect x="${(a[1] - 1) * 9.2 + 4}" y="${(a[2] - 1) * 6.6 + 14}" width="${a[3] * 9.2 - 2}" height="${a[4] * 6.6 - 2}" fill="${i === big ? '#00d4ff' : '#fff'}" opacity="${i === big ? '.85' : '.3'}"/>`).join('')}</svg>`;
 };
 
-$('#tpl').innerHTML = TP.map((t, i) => `<button type="button" data-tpl="${i}" title="${esc(t[0])}"><div class="tpl-thumb">${thumb(t)}</div><span class="tpl-title">${esc(t[0])}</span></button>`).join('');
-$('#dt').textContent = (S.lang === 'en' ? 'Date: ' : 'Tarikh: ') + new Date().toLocaleDateString('ms-MY');
+function renderTemplates() {
+  const tplEl = $('#tpl');
+  if (!tplEl) return;
+  const isEn = S.lang === 'en';
+  tplEl.innerHTML = TP.map((t, i) => {
+    const title = isEn ? t[0] : (t[2] || t[0]);
+    return `<button type="button" data-tpl="${i}" title="${esc(title)}"><div class="tpl-thumb">${thumb(t)}</div><span class="tpl-title">${esc(title)}</span></button>`;
+  }).join('');
+}
+renderTemplates();
+$('#dt').textContent = (S.lang === 'en' ? 'Date: ' : 'Tarikh: ') + new Date().toLocaleDateString('en-US');
 
 function applyLanguage() {
   const isEn = S.lang === 'en';
@@ -1853,6 +1909,18 @@ function applyLanguage() {
   }
   const dlLbl = $('#btn-dl-lbl');
   if (dlLbl) dlLbl.textContent = isEn ? 'Download ZIP' : 'Muat turun ZIP';
+  const dlBtn = $('#btn-dl-all');
+  if (dlBtn) dlBtn.title = isEn ? 'Download all project files in .zip archive (index.html, about.html, contact.html, style.css, script.js)' : 'Muat turun semua fail projek dalam arkib .zip (index.html, about.html, contact.html, style.css, script.js)';
+
+  // Canvas Tools & History tooltips
+  const vTool = document.querySelector('[data-tool="v"]');
+  if (vTool) vTool.title = isEn ? 'Select and resize elements (V)' : 'Pilih dan ubah saiz elemen (V)';
+  const rTool = document.querySelector('[data-tool="r"]');
+  if (rTool) rTool.title = isEn ? 'Draw new box on canvas (R)' : 'Lukis kotak baharu pada kanvas (R)';
+  const undoBtn = $('#undo');
+  if (undoBtn) undoBtn.title = isEn ? 'Undo (Ctrl+Z)' : 'Buat asal (Ctrl+Z)';
+  const redoBtn = $('#redo');
+  if (redoBtn) redoBtn.title = isEn ? 'Redo (Ctrl+Shift+Z)' : 'Buat semula (Ctrl+Shift+Z)';
 
   // Top mode buttons
   const modeMap = {
@@ -1862,12 +1930,38 @@ function applyLanguage() {
     prev: isEn ? 'Preview' : 'Pratonton',
     nodes: isEn ? 'Flow' : 'Aliran'
   };
+  const modeTitles = {
+    c: isEn ? 'Open code editor' : 'Buka editor kod',
+    s: isEn ? 'Show canvas and code side-by-side' : 'Papar kanvas dan kod bersebelahan',
+    plan: isEn ? 'Design webpage on grid canvas' : 'Reka laman pada kanvas grid',
+    prev: isEn ? 'View live page preview' : 'Lihat pratonton laman',
+    nodes: isEn ? 'View page flow and connections (Sitemap)' : 'Lihat aliran halaman dan pautan'
+  };
   document.querySelectorAll('#mode button').forEach(btn => {
     const key = btn.dataset.m === 'c' ? 'c' : btn.dataset.m === 's' ? 's' : btn.dataset.dwView;
-    if (key && modeMap[key]) btn.textContent = modeMap[key];
+    if (key && modeMap[key]) {
+      btn.textContent = modeMap[key];
+      btn.title = modeTitles[key] || '';
+    }
   });
 
-  // Rail labels
+  // Viewport buttons
+  const vpMap = {
+    desktop: isEn ? 'Fit' : 'Muat',
+    tablet: 'Tablet',
+    mobile: isEn ? 'Mobile' : 'Telefon'
+  };
+  document.querySelectorAll('#live-viewport-tools .vp-btn[data-vp]').forEach(btn => {
+    const vp = btn.dataset.vp;
+    if (vp && vpMap[vp]) btn.textContent = vpMap[vp];
+  });
+  const runJsBtn = $('#run-preview-js');
+  if (runJsBtn) {
+    runJsBtn.textContent = isEn ? 'Run JS' : 'Jalankan JS';
+    runJsBtn.title = isEn ? 'Toggle preview JavaScript in isolated sandbox' : 'JavaScript pratonton dimatikan secara lalai';
+  }
+
+  // Rail labels & tooltips
   const railMap = {
     elem: isEn ? 'Elements' : 'Elemen',
     tpl: isEn ? 'Templates' : 'Templat',
@@ -1876,27 +1970,111 @@ function applyLanguage() {
     css: isEn ? 'Styles' : 'Gaya',
     ai: isEn ? 'AI Tutor' : 'Tutor AI'
   };
+  const railTitles = {
+    elem: isEn ? 'Elements & components (Press [)' : 'Elemen dan komponen (Tekan [)',
+    tpl: isEn ? 'Ready-to-use templates' : 'Templat siap guna',
+    ins: isEn ? 'Element settings (active on select)' : 'Tetapan elemen (terbuka apabila elemen dipilih)',
+    layers: isEn ? 'Element layer hierarchy' : 'Susunan lapisan elemen',
+    css: isEn ? 'Styles and device size' : 'Gaya dan saiz peranti',
+    ai: isEn ? 'AI Tutor guidance' : 'Panduan tutor AI'
+  };
   document.querySelectorAll('.rail-item[data-rail]').forEach(btn => {
+    const rKey = btn.dataset.rail;
     const lbl = btn.querySelector('.rail-lbl');
-    if (lbl && railMap[btn.dataset.rail]) lbl.textContent = railMap[btn.dataset.rail];
+    if (lbl && railMap[rKey]) lbl.textContent = railMap[rKey];
+    if (railTitles[rKey]) btn.title = railTitles[rKey];
   });
 
-  // CSS drawer labels
+  // Drawer Title & icons
+  const drawerTitleMap = {
+    elem: { icon: '📦', title: S.htmlMode === 'div' ? (isEn ? 'Classic <div> Elements' : 'Elemen <div> Biasa') : (isEn ? 'Semantic HTML5 Elements' : 'Elemen Semantik HTML5') },
+    tpl: { icon: '📐', title: isEn ? 'Layout Templates' : 'Templat Susun Atur' },
+    ins: { icon: '⚙️', title: isEn ? 'Element Settings' : 'Tetapan Elemen' },
+    layers: { icon: '📑', title: isEn ? 'Layers Management' : 'Pengurusan Lapisan' },
+    css: { icon: '🎨', title: isEn ? 'Styles & Canvas Studio' : 'Studio CSS & Kanvas' },
+    ai: { icon: '💡', title: isEn ? 'Smart AI Tutor' : 'Tutor AI Pintar' }
+  };
+  const curDrawer = drawerTitleMap[S.railTab] || drawerTitleMap.elem;
+  const dIcon = $('#drawer-icon');
+  const dTitle = $('#drawer-title');
+  if (dIcon) dIcon.textContent = curDrawer.icon;
+  if (dTitle) dTitle.textContent = curDrawer.title;
+
   const setTxt = (sel, txt) => { const el = $(sel); if (el) el.textContent = txt; };
+  const setHtml = (sel, html) => { const el = $(sel); if (el) el.innerHTML = html; };
+
+  // Drawer Header buttons
+  const drwClose = $('#drawer-close-btn');
+  if (drwClose) drwClose.title = isEn ? 'Hide Drawer (Press [)' : 'Sembunyikan Panel (Tekan [)';
+  const sideOpen = $('#side-open-btn');
+  if (sideOpen) sideOpen.title = isEn ? 'Open Drawer Panel (Press [)' : 'Buka Panel Tepi (Tekan [)';
+
+  // Drawer HTML Tag Mode card
+  setTxt('.side-html-mode-title', isEn ? 'Tag Mode:' : 'Jenis tag:');
+  setTxt('#side-html-mode-sub', S.htmlMode === 'div' ? (isEn ? 'Classic <div>' : 'Div biasa') : (isEn ? 'Semantic HTML5' : 'HTML5 semantik'));
+  const btnSem = document.querySelector('.side-html-mode-card [data-html-mode="semantic"]');
+  if (btnSem) {
+    btnSem.textContent = isEn ? 'Semantic' : 'Semantik';
+    btnSem.title = isEn ? 'W3C semantic tags that describe the structure of the page.' : 'Tag HTML5 yang menerangkan fungsi bahagian halaman.';
+  }
+  const btnDiv = document.querySelector('.side-html-mode-card [data-html-mode="div"]');
+  if (btnDiv) {
+    btnDiv.textContent = isEn ? 'Classic <div>' : 'Biasa <div>';
+    btnDiv.title = isEn ? 'Use classic <div> tags for all sections.' : 'Gunakan tag <div> biasa untuk semua bahagian.';
+  }
+  setTxt('#drawer-panel-elem .hint', isEn ? 'Click or drag elements onto the canvas.' : 'Klik atau seret elemen ke kanvas.');
+  setTxt('#drawer-panel-tpl .hint', isEn ? 'Choose a ready-to-use page layout.' : 'Pilih susun atur halaman siap guna.');
+
+  // CSS drawer labels
+  setHtml('#css-sec-resp-title', `<img src="assets/icons/view-mobile.png" class="img-ic-sm" alt=""> ${isEn ? 'Responsive Preview' : 'Pratonton Responsif'}`);
   setTxt('#css-resp-lbl', isEn ? 'Generate Responsive Code (@media)' : 'Jana Kod Responsif (@media)');
   setTxt('#css-resp-sub', isEn ? 'Inject media query rules into CSS output' : 'Suntik peraturan media query ke dalam CSS');
+  const toggleRespBtn = $('#btn-toggle-resp-css');
+  if (toggleRespBtn) toggleRespBtn.title = isEn ? 'Toggle responsive CSS code (@media)' : 'Hidup/matikan kod CSS responsif (@media)';
+
+  setHtml('#css-sec-grid-title', `<img src="assets/icons/tool-dimension.png" class="img-ic-sm" alt=""> ${isEn ? 'CSS Grid Spacing & Rows' : 'Jarak & Saiz Grid CSS'}`);
   setTxt('#css-gap-lbl', isEn ? 'Grid Gap (gap):' : 'Jarak Grid (gap):');
   setTxt('#css-rowh-lbl', isEn ? 'Row Height (grid-auto-rows):' : 'Tinggi Baris (grid-auto-rows):');
+
+  setHtml('#css-sec-token-title', `<img src="assets/icons/tool-theme.png" class="img-ic-sm" alt=""> ${isEn ? 'Global Theme (:root Tokens)' : 'Tema Sejagat (Token :root)'}`);
   setTxt('#tok-lbl-pri', isEn ? 'Primary Accent:' : 'Warna Utama:');
   setTxt('#tok-lbl-bg', isEn ? 'Canvas Background:' : 'Latar Belakang:');
   setTxt('#tok-lbl-txt', isEn ? 'Primary Text:' : 'Teks Utama:');
+
+  setHtml('#css-sec-preset-title', `<img src="assets/icons/tool-theme.png" class="img-ic-sm" alt=""> ${isEn ? 'Canvas Theme Presets' : 'Tema Pantas Kanvas'}`);
+  const lightPreset = document.querySelector('[data-theme-preset="light"]');
+  if (lightPreset) lightPreset.innerHTML = `<img src="assets/icons/theme-light.png" class="img-ic-sm" alt=""> ${isEn ? 'Clean Light' : 'Cerah Bersih'}`;
+  const darkPreset = document.querySelector('[data-theme-preset="dark"]');
+  if (darkPreset) darkPreset.innerHTML = `<img src="assets/icons/theme-dark.png" class="img-ic-sm" alt=""> ${isEn ? 'Modern Dark' : 'Gelap Moden'}`;
+  const mintPreset = document.querySelector('[data-theme-preset="mint"]');
+  if (mintPreset) mintPreset.innerHTML = `<img src="assets/icons/theme-mint.png" class="img-ic-sm" alt=""> ${isEn ? 'Fresh Mint' : 'Hijau Segar'}`;
+
+  // Status Bar labels
   setTxt('#dw-author-lbl', isEn ? 'Author:' : 'Pereka:');
   if ($('#nm')) $('#nm').placeholder = isEn ? 'Your name' : 'Nama anda';
   setTxt('#dw-sync-pill', isEn ? '⚡ Live Sync' : '⚡ Segerak Langsung');
+  const syncPill = $('#dw-sync-pill');
+  if (syncPill) syncPill.title = isEn ? 'Live bidirectional sync between code and visual design' : 'Penyegerakan langsung dua hala antara kod dan reka bentuk';
   setTxt('#btn-apply-lbl', isEn ? 'Apply' : 'Terapkan');
   setTxt('#btn-revert-lbl', isEn ? 'Revert' : 'Pulihkan');
   setTxt('#btn-copy-lbl', isEn ? 'Copy' : 'Salin');
+  const applyBtn = $('#btn-apply-code');
+  if (applyBtn) applyBtn.title = isEn ? 'Apply code changes to canvas (Ctrl+S)' : 'Terapkan perubahan kod ke kanvas (Ctrl+S)';
+  const revertBtn = $('#btn-revert-code');
+  if (revertBtn) revertBtn.title = isEn ? 'Revert to canvas generated code' : 'Pulihkan kod asal daripada rekaan kanvas';
+  const copyBtn = $('#copy');
+  if (copyBtn) copyBtn.title = isEn ? 'Copy code in this tab' : 'Salin kod dalam tab ini';
+
   setTxt('#dt', (isEn ? 'Date: ' : 'Tarikh: ') + new Date().toLocaleDateString(isEn ? 'en-US' : 'ms-MY'));
+
+  // Code editor sub-bar
+  const codeModeDiv = document.querySelector('#seg-html-mode [data-html-mode="div"]');
+  if (codeModeDiv) codeModeDiv.textContent = isEn ? '📦 Classic <div>' : '📦 Biasa <div>';
+  const codeModeSem = document.querySelector('#seg-html-mode [data-html-mode="semantic"]');
+  if (codeModeSem) codeModeSem.textContent = isEn ? '🏷️ Semantic HTML5' : '🏷️ Semantik HTML5';
+  setTxt('.sub-label', isEn ? 'CSS Method:' : 'Kaedah CSS:');
+  setTxt('#code-error-title', isEn ? 'Syntax Error Detected' : 'Ralat Sintaks Dikesan');
+  setTxt('#btn-goto-error', isEn ? 'Go to Line' : 'Pergi ke Baris');
 
   // Code mode tabs
   const viewBtn = document.querySelector('[data-cmode="view"]');
@@ -1904,23 +2082,38 @@ function applyLanguage() {
   if (viewBtn) viewBtn.textContent = isEn ? 'View' : 'Papar';
   if (editBtn) editBtn.textContent = isEn ? 'Edit · Auto' : 'Sunting · Auto';
 
-  // AI Tutor FAQs
+  // AI Tutor FAQs in both Drawer and Modal
   setTxt('#drawer-ai-audit-head', isEn ? '🔍 Live Structure Audit' : '🔍 Audit Struktur Semasa');
   setTxt('#drawer-ai-faq-head', isEn ? 'Student FAQs:' : 'Soalan Lazim Pelajar:');
+  setHtml('#ai-modal-head-title', `<img src="assets/icons/ai-guru.png" class="img-ic-sm" alt="AI"> ${isEn ? 'Smart AI Tutor' : 'Tutor AI Pintar'}`);
+  setTxt('#ai-modal-audit-head', isEn ? '🔍 Current Layout Audit' : '🔍 Audit Struktur Semasa');
+  setTxt('#ai-faq-head', isEn ? 'Frequently Asked Questions:' : 'Soalan Lazim Pelajar:');
+
   const faqLabels = {
     order: isEn ? '1. What should I structure first?' : '1. Apakah yang perlu saya susun dahulu?',
     nav: isEn ? '2. Why use <nav> instead of <div>?' : '2. Mengapa guna <nav> bukannya <div>?',
     hero: isEn ? '3. How do I put text next to an image in Hero?' : '3. Bagaimana letak teks di sebelah gambar dalam Hero?',
-    box: isEn ? '4. What is the difference between Padding and Margin?' : '4. Apakah beza antara Padding dan Margin?',
-    semantic: isEn ? '5. Why is Semantic HTML5 preferred over <div>?' : '5. Mengapa HTML5 Semantik lebih baik daripada <div>?',
-    form: isEn ? '6. How does the <form> element work?' : '6. Bagaimana borang <form> berfungsi?'
+    css: isEn ? '4. When should I use External vs Internal CSS?' : '4. Bila perlu guna External vs Internal CSS?',
+    box: isEn ? '5. What is the difference between Padding and Margin?' : '5. Apakah beza antara Padding dan Margin?',
+    semantic: isEn ? '6. Why is Semantic HTML5 preferred over <div>?' : '6. Mengapa HTML5 Semantik lebih baik daripada <div>?',
+    links: isEn ? '7. How do I connect pages in the Sitemap?' : '7. Bagaimana menghubungkan halaman dalam Peta Tapak?',
+    form: isEn ? '8. How does the <form> element work?' : '8. Bagaimana borang <form> berfungsi?'
   };
-  document.querySelectorAll('#drawer-ai-q-list [data-q]').forEach(btn => {
+  document.querySelectorAll('[data-q]').forEach(btn => {
     const qk = btn.dataset.q;
     if (faqLabels[qk]) btn.textContent = faqLabels[qk];
   });
 
+  // Sitemap & Nodes Flow
+  setTxt('.nodes-title span', isEn ? 'Page Sitemap & Connection Flow' : 'Peta Tapak & Aliran Sambungan Halaman');
+  setTxt('#btn-add-ext', isEn ? '+ Add External Link' : '+ Tambah Pautan Luar');
+
+  // Footer
+  setHtml('.app-footer-copy', isEn ? '© Copyright Reserved • Designed by <b>Muhammad Syafiq Haron</b> for Web Design Class' : '© Hak Cipta Terpelihara • Direka oleh <b>Muhammad Syafiq Haron</b> untuk Kelas Rekaan Web');
+
   renderPalette();
+  renderTemplates();
+  renderTabsBar();
 }
 
 $('#pal').addEventListener('dragstart', e => {
@@ -1939,7 +2132,7 @@ document.addEventListener('mouseover', e => {
   hov((x && x.dataset.id) || null);
 });
 
-// Buka/Tutup Panel Tepi
+// Toggle Side Panel Drawer
 function tp(id) {
   if (id === 'tl') {
     S.drawerOpen = !S.drawerOpen;
@@ -1951,7 +2144,7 @@ function tp(id) {
   }
 }
 
-// Pengendali Klik Dokumen
+// Document Click Handler
 document.addEventListener('click', e => {
   const q = s => e.target.closest(s);
   let x;
@@ -1994,6 +2187,12 @@ document.addEventListener('click', e => {
     render();
   } else if (x = q('[data-layer-move]')) {
     moveLayer(x.dataset.layerId, x.dataset.layerMove);
+  } else if (x = q('[data-layer-sort]')) {
+    S.layerSortMode = x.dataset.layerSort;
+    renderLayersPanel();
+    toast(S.layerSortMode === 'flow'
+      ? (S.lang === 'en' ? 'Layers Mode: 📄 Page Flow (Header ➡ Footer)' : 'Susunan Lapisan: 📄 Aliran Laman (Pengepala ➡ Pengaki)')
+      : (S.lang === 'en' ? 'Layers Mode: 📑 Z-Index Stack (Front ➡ Back)' : 'Susunan Lapisan: 📑 Tindihan Z-Index (Hadapan ➡ Belakang)'));
   }
   else if (x = q('#tl,#side-close-btn,#side-open-btn')) tp('tl');
   else if (x = q('#ti')) tp('ti');
@@ -2001,29 +2200,49 @@ document.addEventListener('click', e => {
   else if (x = q('#layer-css')) {
     S.hasCss = !S.hasCss;
     render();
-    toast(S.hasCss ? 'CSS Dihidupkan (+ CSS)' : 'CSS Dimatikan (Tanpa CSS)');
+    toast(S.lang === 'en' ? (S.hasCss ? 'CSS Enabled (+ CSS)' : 'CSS Disabled (Raw HTML)') : (S.hasCss ? 'CSS Dihidupkan (+ CSS)' : 'CSS Dimatikan (Tanpa CSS)'));
   } else if (x = q('#layer-js')) {
     S.hasJs = !S.hasJs;
     render();
-    toast(S.hasJs ? 'JS Dihidupkan (+ JS)' : 'JS Dimatikan (Tanpa JS)');
+    toast(S.lang === 'en' ? (S.hasJs ? 'JS Enabled (+ JS)' : 'JS Disabled (No JS)') : (S.hasJs ? 'JS Dihidupkan (+ JS)' : 'JS Dimatikan (Tanpa JS)'));
   } else if (x = q('#ai-btn')) {
     $('#ai-modal').hidden = false;
     runAiAudit();
   } else if (x = q('#ai-close-btn')) {
     $('#ai-modal').hidden = true;
   } else if (x = q('[data-q]')) {
-    const dict = S.lang === 'en' ? (typeof AI_KNOWLEDGE_EN !== 'undefined' ? AI_KNOWLEDGE_EN : AI_KNOWLEDGE) : (typeof AI_KNOWLEDGE_BM !== 'undefined' ? AI_KNOWLEDGE_BM : AI_KNOWLEDGE);
+    const isEn = S.lang === 'en';
+    const dict = isEn ? (typeof AI_KNOWLEDGE_EN !== 'undefined' ? AI_KNOWLEDGE_EN : AI_KNOWLEDGE) : (typeof AI_KNOWLEDGE_BM !== 'undefined' ? AI_KNOWLEDGE_BM : AI_KNOWLEDGE);
     const htmlAns = dict[x.dataset.q] || '';
+    const answerContent = htmlAns ? `
+      <div style="background:rgba(0,212,255,0.06);border:1.5px solid var(--cy);border-radius:8px;padding:12px;line-height:1.55">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid rgba(0,212,255,0.25)">
+          <span style="font-weight:700;font-size:12px;color:var(--cy);display:flex;align-items:center;gap:6px">
+            🤖 ${isEn ? 'AI Tutor Answer' : 'Jawapan Guru AI'}
+          </span>
+          <button type="button" class="ai-ans-dismiss" style="background:none;border:none;color:var(--mute);cursor:pointer;font-size:14px;padding:0 4px" title="${isEn ? 'Close Answer' : 'Tutup Jawapan'}">✕</button>
+        </div>
+        <div style="font-size:12px;line-height:1.6;color:var(--ink)">${htmlAns}</div>
+      </div>
+    ` : '';
     const ansBox = $('#ai-ans');
     if (ansBox) {
-      ansBox.innerHTML = htmlAns;
-      ansBox.classList.add('show');
+      ansBox.innerHTML = answerContent;
+      if (answerContent) ansBox.classList.add('show');
+      else ansBox.classList.remove('show');
     }
     const drawerAns = $('#drawer-ai-ans');
     if (drawerAns) {
-      drawerAns.innerHTML = htmlAns;
-      drawerAns.hidden = !htmlAns;
+      drawerAns.innerHTML = answerContent;
+      drawerAns.hidden = !answerContent;
     }
+    document.querySelectorAll('[data-q]').forEach(btn => btn.classList.toggle('active', btn.dataset.q === x.dataset.q));
+  } else if (x = q('.ai-ans-dismiss')) {
+    const ansBox = $('#ai-ans');
+    if (ansBox) { ansBox.innerHTML = ''; ansBox.classList.remove('show'); }
+    const drawerAns = $('#drawer-ai-ans');
+    if (drawerAns) { drawerAns.innerHTML = ''; drawerAns.hidden = true; }
+    document.querySelectorAll('[data-q]').forEach(btn => btn.classList.remove('active'));
   } else if (x = q('[data-cmode]')) {
     setCodeMode(x.dataset.cmode);
   } else if (q('#btn-apply-code')) {
@@ -2068,20 +2287,29 @@ document.addEventListener('click', e => {
   } else if (x = q('[data-page]')) {
     const pg = x.dataset.page;
     if (pg && S.pages[pg]) {
+      const isEn = S.lang === 'en';
+      const shouldOpenCanvas = x.matches('.node-open-btn, .node-open-btn *') || x.closest('.node-open-btn');
       if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
       S.curPage = pg;
       syncCurPage();
       S.sel = null;
+      if (shouldOpenCanvas) {
+        S.view = 'plan';
+        S.mode = 'v';
+      }
       render();
-      toast('Switched to page: ' + S.pages[pg].name);
+      toast(shouldOpenCanvas
+        ? (isEn ? `Opening ${S.pages[pg].name} on canvas` : `Membuka ${S.pages[pg].name} di kanvas`)
+        : (isEn ? `Switched to page: ${S.pages[pg].name}` : `Tukar ke halaman: ${S.pages[pg].name}`));
     }
   } else if (x = q('#btn-add-page')) {
+    const isEn = S.lang === 'en';
     appPrompt(
-      'Masukkan nama fail halaman baru (cth: services.html atau galeri.html):',
+      isEn ? 'Enter new page filename (e.g. services.html or gallery.html):' : 'Masukkan nama fail halaman baru (cth: services.html atau galeri.html):',
       'services.html',
-      'Tambah Halaman Baru',
+      isEn ? 'Add New Page' : 'Tambah Halaman Baru',
       '📄',
-      'nama-fail.html'
+      isEn ? 'filename.html' : 'nama-fail.html'
     ).then(newName => {
       if (!newName || !newName.trim()) return;
       let cleanName = newName.trim();
@@ -2092,19 +2320,20 @@ document.addEventListener('click', e => {
           name: safeId,
           blocks: [
             { id: '1', type: 'header', c: 1, r: 1, w: 12, h: 1, t: safeId, f: 0 },
-            { id: '2', type: 'footer', c: 1, r: 12, w: 12, h: 1, t: 'Hak cipta 2026', f: 0 }
+            { id: '2', type: 'footer', c: 1, r: 12, w: 12, h: 1, t: isEn ? '© 2026 All rights reserved' : 'Hak cipta 2026', f: 0 }
           ],
           links: ['index.html']
         };
         S.curPage = safeId;
         syncCurPage();
         render();
-        toast('New page "' + safeId + '" added!');
+        toast(isEn ? `New page "${safeId}" added!` : `Halaman baru "${safeId}" berjaya ditambah!`);
       } else {
-        appAlert('Invalid name or page already exists! Please use a different name.', 'Page Error', '⚠️');
+        appAlert(isEn ? 'Invalid name or page already exists! Please use a different name.' : 'Nama tidak sah atau halaman sudah wujud! Sila gunakan nama lain.', isEn ? 'Page Error' : 'Ralat Halaman', '⚠️');
       }
     });
   } else if (x = q('[data-add-link]')) {
+    const isEn = S.lang === 'en';
     const fromP = x.dataset.addLink;
     const selEl = $('#sel-link-' + fromP.replace(/\./g, '_'));
     if (selEl && S.pages[fromP]) {
@@ -2113,42 +2342,45 @@ document.addEventListener('click', e => {
       if (!S.pages[fromP].links.includes(target)) {
         S.pages[fromP].links.push(target);
         render();
-        toast('Link successfully connected!');
-      } else toast('Link to this destination already exists.');
+        toast(isEn ? 'Link successfully connected!' : 'Pautan berjaya disambungkan!');
+      } else toast(isEn ? 'Link to this destination already exists.' : 'Pautan ke destinasi ini sudah wujud.');
     }
   } else if (x = q('[data-del-link]')) {
+    const isEn = S.lang === 'en';
     const [fromP, idx] = x.dataset.delLink.split(':');
     if (S.pages[fromP] && S.pages[fromP].links) {
       S.pages[fromP].links.splice(+idx, 1);
       render();
-      toast('Link disconnected.');
+      toast(isEn ? 'Link disconnected.' : 'Pautan diputuskan.');
     }
   } else if (x = q('#btn-add-ext')) {
+    const isEn = S.lang === 'en';
     appPrompt(
-      'Masukkan nama pautan luar (cth: Instagram Kami / Facebook):',
-      'Media Sosial',
-      'Add External Link',
+      isEn ? 'Enter external link title (e.g., Social Media / WhatsApp):' : 'Masukkan nama pautan luar (cth: Instagram Kami / Facebook):',
+      isEn ? 'Social Media' : 'Media Sosial',
+      isEn ? 'Add External Link' : 'Tambah Pautan Luar',
       '🌐',
-      'cth: Instagram Kami'
+      isEn ? 'e.g. Social Media' : 'cth: Instagram Kami'
     ).then(t => {
       if (!t || !t.trim()) return;
       appPrompt(
-        'Enter full web URL address:',
+        isEn ? 'Enter full web URL address:' : 'Masukkan alamat URL web penuh:',
         'https://',
-        'External Link URL',
+        isEn ? 'External Link URL' : 'Alamat URL Pautan Luar',
         '🔗',
         'https://...'
       ).then(u => {
         if (!u || !u.trim()) return;
         S.extLinks.push({ id: 'ext-' + Date.now(), title: t.trim(), url: u.trim() });
         render();
-        toast('External link added!');
+        toast(isEn ? 'External link added!' : 'Pautan luar berjaya ditambah!');
       });
     });
   } else if (x = q('[data-del-ext]')) {
+    const isEn = S.lang === 'en';
     S.extLinks.splice(+x.dataset.delExt, 1);
     render();
-    toast('External link deleted.');
+    toast(isEn ? 'External link deleted.' : 'Pautan luar dipadam.');
   } else if (x = q('#btn-dl-all')) {
     exportProject();
   } else if (x = q('[data-del]')) {
@@ -2515,7 +2747,7 @@ document.addEventListener('click', e => {
     document.querySelectorAll('#src .ln').forEach(row => {
       row.classList.toggle('code-selected', row.dataset.id === block.id);
     });
-    // Jangan bina semula #src di sini; double-click perlu kekal pada baris DOM yang sama.
+    // Do not rebuild #src here; double-click needs to remain on the same DOM element.
     renderCanvas();
     renderIns();
     renderCanvaBar();
@@ -2529,7 +2761,7 @@ $('#nm').addEventListener('input', e => {
   save();
 });
 
-// Pintasan Papan Kekunci
+// Keyboard Shortcuts
 document.addEventListener('keydown', e => {
   const t = e.target.tagName;
   if (t == 'INPUT' || t == 'SELECT' || t == 'TEXTAREA') return;
@@ -2564,7 +2796,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// Peristiwa Bar Canva (Google Fonts & Saiz Fon Input)
+// Canva Bar Events (Google Fonts & Font Size Input)
 const canvaBarEl = $('#canva-bar');
 if (canvaBarEl) {
   canvaBarEl.addEventListener('change', e => {
@@ -2601,7 +2833,7 @@ if (canvaBarEl) {
       b.fw = Number(e.target.value);
       if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
       render();
-      toast(`Ketebalan teks: ${e.target.selectedOptions[0].textContent}`);
+      toast(S.lang === 'en' ? `Font weight: ${e.target.selectedOptions[0].textContent}` : `Ketebalan teks: ${e.target.selectedOptions[0].textContent}`);
     }
   });
 
@@ -2616,13 +2848,13 @@ if (canvaBarEl) {
   });
 }
 
-// Mulakan Aplikasi
+// App Boot & Initialization
 load();
 $('#nm').value = S.name;
 render();
 
 
-// Utiliti HSV untuk medan pemilih warna 2D.
+// 2D HSV color picker field utilities
 function hexToHsv(hex) {
   const raw = String(hex || '#203a5b').replace('#', '');
   const n = parseInt(raw.length === 3 ? raw.split('').map(ch => ch + ch).join('') : raw, 16);
@@ -2671,7 +2903,7 @@ async function pickScreenColor() {
   }
 }
 
-// Pengurusan Popover Jadual Warna Pintar Canva
+// Smart Canva Color Popover Palette Management
 let curPopType = null;
 let colorPopoverUndoCaptured = false;
 function toggleColorPopover(type, btn) {
@@ -2791,7 +3023,7 @@ function applyPopoverNone() {
   document.querySelectorAll('[data-set-fill]').forEach(swatch => swatch.classList.toggle('active', swatch.dataset.setFill === 'none'));
 }
 
-// Tutup popover jika klik di luar
+// Close popover when clicking outside
 document.addEventListener('pointerdown', e => {
   const pop = $('#color-popover');
   if (pop && !pop.hidden) {
@@ -2802,7 +3034,7 @@ document.addEventListener('pointerdown', e => {
   }
 });
 
-// Input warna khas dinamik: HEX dan pemilih warna kekal segerak.
+// Dynamic custom color input: HEX and color picker stay in sync
 function applyPopoverColor(value) {
   const normalized = String(value || '').trim().replace(/^#?([\da-f]{6})$/i, '#$1');
   if (!/^#[\da-f]{6}$/i.test(normalized)) return false;
@@ -2956,8 +3188,8 @@ document.addEventListener('change', e => {
 });
 
 // ==========================================
-// SISTEM DIALOG TERBINA DALAM (BUILT-IN APP DIALOG)
-// Menggantikan sebarang window.alert, window.confirm, window.prompt
+// BUILT-IN APP DIALOG SYSTEM
+// Replaces window.alert, window.confirm, window.prompt
 // ==========================================
 let appDialogResolve = null;
 
@@ -3060,7 +3292,7 @@ function appPrompt(msg, defaultValue = '', title = 'Enter Information', icon = '
   });
 }
 
-// Override sebarang panggilan dialog browser secara global
+// Globally override browser dialog calls
 window.alert = (msg) => { appAlert(msg); };
 window.confirm = (msg) => { console.warn('Use appConfirm() for async dialogs.'); return false; };
 window.prompt = (msg, def) => { console.warn('Use appPrompt() for async dialogs.'); return null; };
@@ -3100,7 +3332,7 @@ document.addEventListener('keydown', e => {
 });
 
 
-// Pengendali Editor Kod Langsung (Live Code Editor)
+// Live Code Editor Handlers
 const codeTextarea = $('#code-textarea');
 const codeGutter = $('#code-gutter');
 
@@ -3114,7 +3346,7 @@ if (codeTextarea) {
   });
 
   codeTextarea.addEventListener('keydown', e => {
-    // Sokongan Tab & Shift+Tab untuk indentasi
+    // Tab & Shift+Tab indentation support
     if (e.key === 'Tab') {
       e.preventDefault();
       const start = codeTextarea.selectionStart;
@@ -3122,7 +3354,7 @@ if (codeTextarea) {
       const val = codeTextarea.value;
 
       if (e.shiftKey) {
-        // Outdent (buang 2 ruang)
+        // Outdent (remove 2 spaces)
         const lineStart = val.lastIndexOf('\n', start - 1) + 1;
         if (val.substring(lineStart, lineStart + 2) === '  ') {
           codeTextarea.value = val.substring(0, lineStart) + val.substring(lineStart + 2);
@@ -3131,7 +3363,7 @@ if (codeTextarea) {
           onEditorInput(true);
         }
       } else {
-        // Indent (tambah 2 ruang)
+        // Indent (add 2 spaces)
         codeTextarea.value = val.substring(0, start) + '  ' + val.substring(end);
         codeTextarea.selectionStart = codeTextarea.selectionEnd = start + 2;
         onEditorInput(true);
@@ -3143,7 +3375,7 @@ if (codeTextarea) {
   });
 }
 
-// Dwi-klik pada baris kod dalam mod Papar untuk terus sunting baris tersebut
+// Double-click code line in View mode to jump directly into editing that line
 document.addEventListener('dblclick', e => {
   const ln = e.target.closest('.ln');
   if (ln && S.codeMode === 'view') {
@@ -3197,7 +3429,7 @@ function initSplitResizer() {
   if (gutter.dataset.resizerBound) return;
   gutter.dataset.resizerBound = 'true';
 
-  // Restore saved ratio
+  // Restore saved ratio for horizontal (desktop) and vertical (mobile)
   const savedRatio = parseFloat(localStorage.getItem('dw_split_ratio') || '50');
   if (savedRatio >= 20 && savedRatio <= 80) {
     stage.style.setProperty('--split-left', `${savedRatio}%`);
@@ -3205,37 +3437,65 @@ function initSplitResizer() {
     stage.style.setProperty('--split-left', '50%');
   }
 
+  const savedTopRatio = parseFloat(localStorage.getItem('dw_split_top_ratio') || '50');
+  if (savedTopRatio >= 20 && savedTopRatio <= 80) {
+    stage.style.setProperty('--split-top', `${savedTopRatio}%`);
+  } else {
+    stage.style.setProperty('--split-top', '50%');
+  }
+
   let isDragging = false;
+  let isVertical = false;
   let startX = 0;
+  let startY = 0;
   let startLeftWidth = 0;
+  let startTopHeight = 0;
   let stageWidth = 0;
+  let stageHeight = 0;
 
   gutter.addEventListener('pointerdown', e => {
     if (!stage.classList.contains('s')) return;
     isDragging = true;
+    isVertical = window.innerWidth <= 768;
     gutter.classList.add('is-dragging');
     document.body.classList.add('is-resizing');
+    if (isVertical) {
+      document.body.classList.add('is-resizing-v');
+    }
     try { gutter.setPointerCapture(e.pointerId); } catch (_) {}
 
     const stageRect = stage.getBoundingClientRect();
     const visRect = vis.getBoundingClientRect();
     startX = e.clientX;
+    startY = e.clientY;
     startLeftWidth = visRect.width;
+    startTopHeight = visRect.height;
     stageWidth = stageRect.width;
+    stageHeight = stageRect.height;
     e.preventDefault();
   });
 
   gutter.addEventListener('pointermove', e => {
     if (!isDragging) return;
-    const dx = e.clientX - startX;
-    const newLeftWidth = startLeftWidth + dx;
-    const minLeft = 260;
-    const maxLeft = stageWidth - 280;
-    const clamped = Math.max(minLeft, Math.min(maxLeft, newLeftWidth));
-    const pct = ((clamped / stageWidth) * 100).toFixed(2);
-
-    stage.style.setProperty('--split-left', `${pct}%`);
-    localStorage.setItem('dw_split_ratio', pct);
+    if (isVertical) {
+      const dy = e.clientY - startY;
+      const newHeight = startTopHeight + dy;
+      const minTop = 150;
+      const maxTop = Math.max(minTop + 40, stageHeight - 130);
+      const clamped = Math.max(minTop, Math.min(maxTop, newHeight));
+      const pct = ((clamped / stageHeight) * 100).toFixed(2);
+      stage.style.setProperty('--split-top', `${pct}%`);
+      localStorage.setItem('dw_split_top_ratio', pct);
+    } else {
+      const dx = e.clientX - startX;
+      const newLeftWidth = startLeftWidth + dx;
+      const minLeft = 260;
+      const maxLeft = Math.max(minLeft + 40, stageWidth - 280);
+      const clamped = Math.max(minLeft, Math.min(maxLeft, newLeftWidth));
+      const pct = ((clamped / stageWidth) * 100).toFixed(2);
+      stage.style.setProperty('--split-left', `${pct}%`);
+      localStorage.setItem('dw_split_ratio', pct);
+    }
   });
 
   const stopDrag = e => {
@@ -3243,6 +3503,7 @@ function initSplitResizer() {
     isDragging = false;
     gutter.classList.remove('is-dragging');
     document.body.classList.remove('is-resizing');
+    document.body.classList.remove('is-resizing-v');
     try { gutter.releasePointerCapture(e.pointerId); } catch (_) {}
   };
 
@@ -3250,9 +3511,15 @@ function initSplitResizer() {
   gutter.addEventListener('pointercancel', stopDrag);
 
   gutter.addEventListener('dblclick', () => {
-    stage.style.setProperty('--split-left', '50%');
-    localStorage.setItem('dw_split_ratio', '50');
-    toast('Split view reset to 50:50 balance');
+    if (window.innerWidth <= 768) {
+      stage.style.setProperty('--split-top', '50%');
+      localStorage.setItem('dw_split_top_ratio', '50');
+      toast('Paparan split mobile ditetapkan semula ke 50:50');
+    } else {
+      stage.style.setProperty('--split-left', '50%');
+      localStorage.setItem('dw_split_ratio', '50');
+      toast('Split view reset to 50:50 balance');
+    }
   });
 }
 

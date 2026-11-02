@@ -4603,3 +4603,166 @@ body.is-resizing iframe {
   font-weight: 600;
 }
 
+/* ==========================================================================
+   MOBILE VIEW OPTIMIZATION (<= 768px): VERTICAL SPLIT (DESIGN TOP / CODE BOTTOM)
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* Header navigation bar */
+  header.bar {
+    padding: 6px 8px !important;
+    gap: 6px !important;
+    min-height: 48px !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  header.bar::-webkit-scrollbar { display: none; }
+  .brand { gap: 6px !important; }
+  .brand > span:not(.brand-badge) {
+    display: none !important;
+  }
+  .bar-divider {
+    height: 18px !important;
+    margin: 0 2px !important;
+  }
+  .seg-dw-modes {
+    padding: 2px !important;
+    gap: 2px !important;
+  }
+  .seg-dw-modes button {
+    height: 26px !important;
+    min-height: 26px !important;
+    padding: 0 7px !important;
+    font-size: 11px !important;
+  }
+  .btn-dl {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+  }
+  .btn-dl span {
+    display: none !important;
+  }
+  .btn-lang {
+    padding: 4px 7px !important;
+    font-size: 11px !important;
+    min-height: 28px !important;
+  }
+
+  /* Main & Rail layout on Mobile */
+  main {
+    position: relative !important;
+    overflow: hidden !important;
+  }
+  .canva-rail {
+    width: 50px !important;
+    min-width: 50px !important;
+    padding: 6px 2px 10px !important;
+    gap: 3px !important;
+  }
+  .rail-item {
+    width: 44px !important;
+    min-height: 44px !important;
+    padding: 4px 1px !important;
+  }
+  .rail-ic, .rail-img-ic {
+    width: 17px !important;
+    height: 17px !important;
+  }
+  .rail-lbl {
+    font-size: 8.5px !important;
+  }
+
+  /* Slide-out Drawer on Mobile floats as modal overlay so it doesn't compress stage */
+  .canva-drawer {
+    position: absolute !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 50px !important;
+    width: min(300px, calc(100vw - 50px)) !important;
+    max-width: calc(100vw - 50px) !important;
+    z-index: 80 !important;
+    box-shadow: 6px 0 24px rgba(0, 0, 0, 0.45) !important;
+    margin-left: 0 !important;
+    transition: transform 0.22s ease-out, opacity 0.2s ease !important;
+  }
+  main.drawer-collapsed .canva-drawer {
+    transform: translateX(-360px) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* --- VERTICAL SPLIT MODE ON MOBILE: DESIGN TOP & CODE BOTTOM --- */
+  .stage.s {
+    flex-direction: column !important;
+  }
+  .stage.s .vis {
+    flex: 0 0 var(--split-top, 50%) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: var(--split-top, 50%) !important;
+    min-height: 160px !important;
+    max-height: calc(100% - 130px) !important;
+    overflow: hidden !important;
+    padding: 8px 8px 4px !important;
+  }
+  .stage.s .split-gutter {
+    display: flex !important;
+    width: 100% !important;
+    height: 12px !important;
+    min-height: 12px !important;
+    flex: 0 0 12px !important;
+    cursor: row-resize !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.5) !important;
+  }
+  .stage.s .split-gutter-handle {
+    width: 44px !important;
+    height: 3.5px !important;
+  }
+  .stage.s .code {
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 130px !important;
+    border-left: none !important;
+    border-top: 1px solid var(--line) !important;
+  }
+
+  /* Stage.v on mobile */
+  .stage.v .vis {
+    padding: 8px 8px 4px !important;
+  }
+
+  /* Visual Canvas wrapper scrollable on mobile */
+  .cvw {
+    padding: 6px !important;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  #cv {
+    min-width: 320px !important;
+  }
+
+  /* Body resize cursor on mobile */
+  body.is-resizing.is-resizing-v,
+  body.is-resizing.is-resizing-v * {
+    cursor: row-resize !important;
+  }
+
+  /* Bottom status bar on mobile */
+  .dw-status-bar {
+    height: 24px !important;
+    padding: 0 6px !important;
+    font-size: 10px !important;
+  }
+  .dw-stat-pill:not(.dw-sync-pill) {
+    display: none !important;
+  }
+}
+
+
