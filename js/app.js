@@ -41,7 +41,7 @@ function hasCodeHtmlOverride(page = S.curPage) {
 }
 
 function hasCodePreviewOverride(page = S.curPage) {
-  return Object.keys(pageCodeEdits(page)).some(tab => ['html', 'css', 'js'].includes(tab));
+  return false;
 }
 
 function injectPreviewPart(source, kind, text) {
@@ -149,6 +149,7 @@ function syncCodeCanvasFrame(frame = $('#cv .code-source-frame')) {
   }
   const doctype = doc.doctype ? `<!DOCTYPE ${doc.doctype.name}>\n` : '<!DOCTYPE html>\n';
   pageCodeEdits().html = doctype + clone.outerHTML;
+  if (frame) frame._lastSrcDoc = codePreviewDocument();
   save();
   renderCode();
   if (S.view === 'prev') renderPreview();
@@ -298,11 +299,15 @@ function parseHtmlToBlocks(htmlCode) {
   try {
     const doc = new DOMParser().parseFromString(htmlCode, 'text/html');
     if (doc.querySelector('parsererror')) return null;
-    // Accept both semantic <main> and the studio's classic #main/.main-container export.
+    const titleEl = doc.querySelector('title');
+    if (titleEl && S.pages && S.pages[S.curPage]) {
+      S.pages[S.curPage].title = titleEl.textContent || ' Your Page Title';
+    }
+    // Accept both semantic <main> and the studio's classic #main/.main-container export, or direct <body> children.
     const main = doc.querySelector('main, #main.main-container, #main, .main-container') || doc.body;
-    if (!main) return null;
+    if (!main) return [];
     const children = Array.from(main.children).filter(el => !['SCRIPT', 'STYLE', 'LINK'].includes(el.tagName));
-    if (!children.length) return null;
+    if (!children.length) return [];
 
     const cssSource = Object.prototype.hasOwnProperty.call(pageCodeEdits(), 'css')
       ? pageCodeEdits().css : css().map(line => line.s).join('\n');
@@ -311,27 +316,32 @@ function parseHtmlToBlocks(htmlCode) {
     let rule;
     while ((rule = ruleRegex.exec(cssSource)) !== null) gridRules.set(rule[1], rule[2]);
     let currentR = 1;
+    const usedBlockIds = new Set();
+    const usedClassNames = new Set();
 
     return children.map((el, idx) => {
       const tag = el.tagName.toLowerCase();
       const classes = Array.from(el.classList || []);
-      const studioClass = classes.find(name => /^(?:nav|header|hero|section|card(?:-\d+)?|footer|aside|button|logo|image|text|form|box)(?:-\d+)?$/.test(name));
-      let type = 'box';
+      const studioClass = classes.find(name => /^(?:nav|header|hero|section|card(?:-\d+)?|footer|aside|button|logo|image|text|form|dropdown|box)(?:-\d+)?$/.test(name));
+      let type = 'text';
       if (tag === 'header' || classes.includes('header')) type = 'header';
       else if (tag === 'nav' || classes.includes('nav')) type = 'nav';
       else if (tag === 'footer' || classes.includes('footer')) type = 'footer';
-      else if (tag === 'form' || classes.includes('form')) type = 'form';
+      else if (tag === 'form' || classes.includes('form') || classes.includes('contact-form')) type = 'form';
       else if (tag === 'article' || classes.some(name => /^card(?:-\d+)?$/.test(name))) type = 'card';
-      else if (tag === 'figure' || classes.includes('image')) type = 'image';
-      else if (tag === 'section' || classes.includes('section')) type = classes.includes('hero') ? 'hero' : 'section';
+      else if (tag === 'figure' || tag === 'img' || classes.includes('image')) type = 'image';
+      else if (tag === 'section' || classes.includes('section') || /^h[1-3]$/.test(tag)) type = classes.includes('hero') || tag === 'h1' ? 'hero' : 'section';
+      else if (tag === 'p' || /^h[4-6]$/.test(tag) || classes.includes('text')) type = 'text';
       else if (tag === 'aside' || classes.includes('aside')) type = 'aside';
-      else if (tag === 'details') type = 'dropdown';
-      else if (tag === 'a' || classes.includes('btn-cta') || classes.includes('button')) type = 'button';
+      else if (tag === 'details' || classes.includes('dropdown')) type = 'dropdown';
+      else if (tag === 'a' || tag === 'button' || classes.includes('btn-cta') || classes.includes('button')) type = 'button';
 
       let textValue = '';
       let dropdowns = null;
       let fields = null;
       let submitText = null;
+      let imgUrl = null;
+      const isEn = S.lang === 'en';
       if (type === 'nav') {
         const links = Array.from(el.querySelectorAll(':scope > a, :scope > .nav-dropdown > .nav-drop-btn'));
         const titles = links.map(link => (link.textContent || '').replace(/\s*▾\s*$/, '').trim()).filter(Boolean);
@@ -343,33 +353,65 @@ function parseHtmlToBlocks(htmlCode) {
         });
       } else if (type === 'form') {
         const labels = Array.from(el.querySelectorAll('label')).map(l => (l.textContent || '').trim()).filter(Boolean);
-        fields = labels.length ? labels : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
+        fields = labels.length ? labels : (isEn ? ['Full Name', 'Email Address', 'Your Message'] : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda']);
         textValue = fields.join(', ');
         const subBtn = el.querySelector('button[type="submit"], button, input[type="submit"]');
-        submitText = subBtn ? (subBtn.textContent || subBtn.value || '').trim() : 'Hantar Mesej';
+        submitText = subBtn ? (subBtn.textContent || subBtn.value || '').trim() : (isEn ? 'Send Message' : 'Hantar Mesej');
+      } else if (type === 'image') {
+        const imgEl = tag === 'img' ? el : el.querySelector('img');
+        if (imgEl && imgEl.getAttribute('src')) imgUrl = imgEl.getAttribute('src');
+        const capEl = el.querySelector('figcaption, .caption');
+        textValue = capEl ? (capEl.textContent || '').trim() : (imgEl && imgEl.getAttribute('alt')) || (isEn ? 'Image description' : 'Penerangan imej');
       } else {
         const content = el.querySelector('h1, h2, h3, h4, h5, h6, p');
         textValue = content ? content.innerHTML.trim() : (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 240);
       }
 
-      const existing = (studioClass && S.blocks.find(block => block.cls === studioClass)) || S.blocks[idx];
+      const existing = studioClass
+        ? S.blocks.find(block => block.cls === studioClass && !usedBlockIds.has(block.id))
+        : null;
       let imported;
-      if (existing) imported = { ...existing, type, cls: studioClass || existing.cls, t: textValue || existing.t };
-      else {
+      if (existing) {
+        usedBlockIds.add(existing.id);
+        usedClassNames.add(existing.cls);
+        const adjustedR = (existing.type === 'footer' && (existing.r || 1) < currentR)
+          ? currentR
+          : (existing.r || 1);
+        imported = { ...existing, type, cls: existing.cls, r: adjustedR, t: textValue || existing.t };
+        currentR = Math.max(currentR, adjustedR + (imported.h || 2));
+      } else {
         let w = type === 'button' ? 3 : 12;
-        let h = ['card', 'section'].includes(type) ? 3 : ['hero', 'form'].includes(type) ? 4 : 2;
+        let h = ['card', 'section', 'image'].includes(type) ? 3 : ['hero', 'form'].includes(type) ? 4 : 2;
         let c = 1;
         let r = currentR;
-        if (studioClass && gridRules.has(studioClass)) {
+        if (studioClass && !usedClassNames.has(studioClass) && gridRules.has(studioClass)) {
           const ruleText = gridRules.get(studioClass);
           const col = ruleText.match(/grid-column\s*:\s*(\d+)\s*\/\s*span\s*(\d+)/i);
           const row = ruleText.match(/grid-row\s*:\s*(\d+)\s*\/\s*span\s*(\d+)/i);
           if (col) { c = +col[1]; w = +col[2]; }
           if (row) { r = +row[1]; h = +row[2]; }
         }
-        imported = { id: String(Date.now() + idx), type, cls: studioClass || `${type}-${idx + 1}`, c, r, w, h, t: textValue || (TY[type] ? TY[type].t : 'Blok Baharu'), f: 0 };
+        let nextCls = studioClass && !usedClassNames.has(studioClass) ? studioClass : type;
+        let suffix = 1;
+        while (usedClassNames.has(nextCls)) {
+          suffix++;
+          nextCls = `${type}-${suffix}`;
+        }
+        usedClassNames.add(nextCls);
+        imported = {
+          id: 'b' + String(Date.now() + idx),
+          type,
+          cls: nextCls,
+          c,
+          r,
+          w,
+          h,
+          t: textValue || (TY[type] ? TY[type].t : (isEn ? 'New Block' : 'Blok Baharu')),
+          f: 0
+        };
         currentR = Math.max(currentR, r + h);
       }
+      if (imgUrl) imported.imgUrl = imgUrl;
       if (dropdowns && Object.keys(dropdowns).length) imported.dropdowns = { ...(imported.dropdowns || {}), ...dropdowns };
       if (fields && fields.length) imported.fields = fields;
       if (submitText) imported.submitText = submitText;
@@ -381,25 +423,53 @@ function parseHtmlToBlocks(htmlCode) {
       if (color) imported.col = color[1].trim();
       const fontSize = inlineStyle.match(/font-size\s*:\s*([\d.]+)px/i);
       if (fontSize) imported.fs = +fontSize[1];
-      return imported;
-    });
+
+      // Preserve nested studio child blocks inside existing container blocks (e.g. logo/nav inside header, text/image/button inside hero)
+      const nestedBlocks = [];
+      if (existing) {
+        const directKids = S.blocks.filter(k => k.id !== existing.id && !usedBlockIds.has(k.id) && par(k) === existing);
+        directKids.forEach(kid => {
+          const kidEl = kid.cls ? el.querySelector(`.${CSS.escape(kid.cls)}`) : null;
+          if (kidEl || el.children.length > 0) {
+            usedBlockIds.add(kid.id);
+            if (kid.cls) usedClassNames.add(kid.cls);
+            const updatedKid = { ...kid };
+            if (kidEl && kid.type !== 'nav' && kid.type !== 'image' && kid.type !== 'form') {
+              const kidTxt = (kidEl.textContent || '').trim();
+              if (kidTxt) updatedKid.t = kidTxt;
+            }
+            nestedBlocks.push(updatedKid);
+          }
+        });
+      }
+
+      return [imported, ...nestedBlocks];
+    }).flat();
   } catch (err) {
-    console.warn('Ralat menghurai HTML ke blok:', err);
+    console.warn('Error parsing HTML to blocks:', err);
     return null;
   }
 }
 
 function isStudioExportHtml(htmlCode) {
   try {
+    if (!/<!doctype\s+html>/i.test(htmlCode) || !/<html\b/i.test(htmlCode) || !/<head\b/i.test(htmlCode) || !/<body\b/i.test(htmlCode)) {
+      return false;
+    }
     const doc = new DOMParser().parseFromString(htmlCode, 'text/html');
-    const main = doc.querySelector('#main.main-container, #main, .main-container');
+    if (doc.querySelector('parsererror')) return false;
+    const main = doc.querySelector('main, #main.main-container, #main, .main-container') || doc.body;
     if (!main) return false;
-    const children = Array.from(main.children);
-    if (!children.length) return false;
-    const classes = children.map(el => Array.from(el.classList || []).find(name => /^(?:nav|header|hero|section|card(?:-\d+)?|footer|aside|button|logo|image|text|box)(?:-\d+)?$/.test(name)));
-    const marked = /HTML Biasa|Semantik/.test(htmlCode) && classes.every(Boolean);
-    const known = classes.every(Boolean) && classes.some(name => name === 'nav') && classes.some(name => /^(?:card|footer)/.test(name || ''));
-    return marked || known;
+    const children = Array.from(main.children).filter(el => !['SCRIPT', 'STYLE', 'LINK'].includes(el.tagName));
+    if (!children.length) return true;
+    const validChild = el => {
+      const tag = el.tagName.toLowerCase();
+      if (['header', 'nav', 'section', 'article', 'aside', 'form', 'figure', 'details', 'footer', 'button', 'a', 'img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div'].includes(tag)) {
+        return true;
+      }
+      return Array.from(el.classList || []).some(name => /^(?:nav|header|hero|section|card(?:-\d+)?|footer|aside|button|btn-cta|logo|image|text|form|contact-form|dropdown|box)(?:-\d+)?$/.test(name));
+    };
+    return children.every(validChild);
   } catch (_) { return false; }
 }
 
@@ -941,13 +1011,18 @@ function onEditorInput(fromUser = false) {
   const code = textarea.value;
   if (fromUser) {
     const edits = pageCodeEdits();
-    edits[S.tab] = code;
     if (S.tab === 'html') {
       const detectedMode = detectSourceCssMode(code);
       if (detectedMode) {
         S.sty = detectedMode;
         if (detectedMode !== 'ext') delete edits.css;
       }
+      // Keep visual 12-column grid active when HTML matches studio structure; only lock override for custom non-studio HTML
+      if (!isStudioExportHtml(code)) {
+        edits.html = code;
+      }
+    } else {
+      edits[S.tab] = code;
     }
     save();
   }
@@ -1031,13 +1106,18 @@ function applyCodeChanges(showToast = true) {
 
   if (S.tab === 'html') {
     const studioExport = isStudioExportHtml(code);
-    const parsed = studioExport ? parseHtmlToBlocks(code) : null;
-    if (studioExport && parsed && parsed.length) {
+    const parsed = parseHtmlToBlocks(code);
+    if (Array.isArray(parsed)) {
       snap();
       S.blocks = parsed;
       if (S.pages[S.curPage]) S.pages[S.curPage].blocks = parsed;
-      delete pageCodeEdits()[S.tab];
+      if (studioExport) {
+        delete pageCodeEdits()[S.tab];
+      } else {
+        pageCodeEdits().html = code;
+      }
     } else {
+      pageCodeEdits().html = code;
       const detectedMode = detectSourceCssMode(code);
       if (detectedMode) {
         S.sty = detectedMode;
@@ -1050,7 +1130,7 @@ function applyCodeChanges(showToast = true) {
     renderPreview();
     renderIns();
     renderCanvaBar();
-    if (studioExport) toast('Studio export recognized: grid canvas and visual controls are active.');
+    if (showToast) toast(S.lang === 'en' ? 'Studio HTML synced to 12-column visual canvas.' : 'HTML Studio disegerakkan ke kanvas visual 12-lajur.');
   } else if (S.tab === 'css') {
     S.customCss = code;
     renderCanvas();
@@ -1275,12 +1355,15 @@ function renderPreview() {
   if (S.view === 'prev') {
     paper.hidden = false;
     const content = codePreviewDocument();
-    try {
-      pv.srcdoc = content;
-    } catch (err) {
-      console.warn('Failed to set srcdoc directly, falling back to blob:', err);
-      const blob = new Blob([content], { type: 'text/html' });
-      pv.src = URL.createObjectURL(blob);
+    if (pv._lastSrcDoc !== content) {
+      pv._lastSrcDoc = content;
+      try {
+        pv.srcdoc = content;
+      } catch (err) {
+        console.warn('Failed to set srcdoc directly, falling back to blob:', err);
+        const blob = new Blob([content], { type: 'text/html' });
+        pv.src = URL.createObjectURL(blob);
+      }
     }
   } else {
     paper.hidden = true;
@@ -1426,6 +1509,7 @@ function render() {
     ins: { icon: '⚙️', title: isEn ? 'Element Settings' : 'Tetapan Elemen' },
     layers: { icon: '📑', title: isEn ? 'Layers Management' : 'Pengurusan Lapisan' },
     css: { icon: '🎨', title: isEn ? 'Styles & Canvas Studio' : 'Studio CSS & Kanvas' },
+    quick: { icon: '⚡', title: isEn ? 'Quick Insert & Code Engine' : 'Sisip Pantas & Enjin Kod' },
     ai: { icon: '💡', title: isEn ? 'Smart AI Tutor' : 'Tutor AI Pintar' }
   };
 
@@ -1441,6 +1525,7 @@ function render() {
     ins: $('#drawer-panel-ins'),
     layers: $('#drawer-panel-layers'),
     css: $('#drawer-panel-css'),
+    quick: $('#drawer-panel-quick'),
     ai: $('#drawer-panel-ai')
   };
   Object.keys(panels).forEach(k => {
@@ -1891,7 +1976,10 @@ function renderTemplates() {
   const tplEl = $('#tpl');
   if (!tplEl) return;
   const isEn = S.lang === 'en';
-  tplEl.innerHTML = TP.map((t, i) => {
+  const blankTitle = isEn ? 'Blank Canvas (Basic HTML)' : 'Kanvas Kosong (Asas HTML)';
+  const blankSvg = `<svg viewBox="0 0 120 100" width="100%" aria-hidden="true"><rect x=".5" y=".5" width="119" height="99" rx="4" fill="none" stroke="#fff" stroke-dasharray="4 3" opacity=".8"/><text x="60" y="54" fill="#00d4ff" font-size="11" font-family="monospace" text-anchor="middle">&lt;body&gt;&lt;/body&gt;</text></svg>`;
+  const blankBtn = `<button type="button" data-clear-canvas="1" title="${esc(blankTitle)}"><div class="tpl-thumb">${blankSvg}</div><span class="tpl-title">${esc(blankTitle)}</span></button>`;
+  tplEl.innerHTML = blankBtn + TP.map((t, i) => {
     const title = isEn ? t[0] : (t[2] || t[0]);
     return `<button type="button" data-tpl="${i}" title="${esc(title)}"><div class="tpl-thumb">${thumb(t)}</div><span class="tpl-title">${esc(title)}</span></button>`;
   }).join('');
@@ -1921,6 +2009,8 @@ function applyLanguage() {
   if (undoBtn) undoBtn.title = isEn ? 'Undo (Ctrl+Z)' : 'Buat asal (Ctrl+Z)';
   const redoBtn = $('#redo');
   if (redoBtn) redoBtn.title = isEn ? 'Redo (Ctrl+Shift+Z)' : 'Buat semula (Ctrl+Shift+Z)';
+  const clearBtn = $('#btn-clear-canvas');
+  if (clearBtn) clearBtn.title = isEn ? 'Clear canvas to basic HTML structure' : 'Kosongkan kanvas ke struktur asas HTML';
 
   // Top mode buttons
   const modeMap = {
@@ -1968,6 +2058,7 @@ function applyLanguage() {
     ins: isEn ? 'Settings' : 'Tetapan',
     layers: isEn ? 'Layers' : 'Lapisan',
     css: isEn ? 'Styles' : 'Gaya',
+    quick: isEn ? 'Insert' : 'Sisip',
     ai: isEn ? 'AI Tutor' : 'Tutor AI'
   };
   const railTitles = {
@@ -1976,6 +2067,7 @@ function applyLanguage() {
     ins: isEn ? 'Element settings (active on select)' : 'Tetapan elemen (terbuka apabila elemen dipilih)',
     layers: isEn ? 'Element layer hierarchy' : 'Susunan lapisan elemen',
     css: isEn ? 'Styles and device size' : 'Gaya dan saiz peranti',
+    quick: isEn ? 'Quick Insert & Dreamweaver Code Intelligence' : 'Sisip Pantas & Enjin Ramalan Kod Dreamweaver',
     ai: isEn ? 'AI Tutor guidance' : 'Panduan tutor AI'
   };
   document.querySelectorAll('.rail-item[data-rail]').forEach(btn => {
@@ -1992,6 +2084,7 @@ function applyLanguage() {
     ins: { icon: '⚙️', title: isEn ? 'Element Settings' : 'Tetapan Elemen' },
     layers: { icon: '📑', title: isEn ? 'Layers Management' : 'Pengurusan Lapisan' },
     css: { icon: '🎨', title: isEn ? 'Styles & Canvas Studio' : 'Studio CSS & Kanvas' },
+    quick: { icon: '⚡', title: isEn ? 'Quick Insert & Code Engine' : 'Sisip Pantas & Enjin Kod' },
     ai: { icon: '💡', title: isEn ? 'Smart AI Tutor' : 'Tutor AI Pintar' }
   };
   const curDrawer = drawerTitleMap[S.railTab] || drawerTitleMap.elem;
@@ -2081,6 +2174,55 @@ function applyLanguage() {
   const editBtn = document.querySelector('[data-cmode="edit"]');
   if (viewBtn) viewBtn.textContent = isEn ? 'View' : 'Papar';
   if (editBtn) editBtn.textContent = isEn ? 'Edit · Auto' : 'Sunting · Auto';
+
+  // Dreamweaver Quick Insert Drawer & Predictive Engine labels
+  setTxt('#quick-sec-engine-title', isEn ? '🧠 Predictive Code Engine' : '🧠 Enjin Ramalan Kod');
+  setTxt('#quick-engine-desc', isEn
+    ? 'Anticipates HTML5 tags, closing tags, CSS Grid rules, and Emmet shorthands while typing in Edit mode.'
+    : 'Meramal tag HTML5, tag penutup, peraturan Grid CSS, dan singkatan Emmet semasa menaip dalam mod Sunting.');
+  setTxt('#quick-sec-html-title', isEn ? '⚡ Quick Insert HTML5' : '⚡ Sisip Pantas HTML5');
+  setTxt('#quick-html-hint', isEn
+    ? 'Click any tag to insert onto the 12-column grid (View mode) or inside <main> (Edit mode).'
+    : 'Klik mana-mana tag untuk sisip ke grid 12-lajur (mod Papar) atau di dalam <main> (mod Sunting).');
+  setTxt('#quick-sec-css-title', isEn ? '📐 CSS Grid & JS Snippets' : '📐 Keratan Kod Grid CSS & JS');
+  const quickSubMap = {
+    header: isEn ? 'Page Header' : 'Kepala Halaman',
+    nav: isEn ? 'Navigation' : 'Bar Navigasi',
+    hero: isEn ? 'Hero Banner' : 'Sepanduk Hero',
+    section: isEn ? 'Content Section' : 'Bahagian Kandungan',
+    article: isEn ? 'Article Card' : 'Kad Artikel',
+    aside: isEn ? 'Sidebar Aside' : 'Bar Sisi',
+    form: isEn ? 'Contact Form' : 'Borang Hubungan',
+    figure: isEn ? 'Figure & Image' : 'Imej & Kapsyen',
+    button: isEn ? 'Action Button' : 'Butang Tindakan',
+    a: isEn ? 'Hyperlink' : 'Pautan Hiper',
+    details: isEn ? 'Dropdown FAQ' : 'Menu Buka-Tutup',
+    footer: isEn ? 'Page Footer' : 'Kaki Halaman',
+    'css-grid': isEn ? '12-Col Layout' : 'Susun Atur 12-Lajur',
+    'css-flex': isEn ? 'Flex Container' : 'Bekas Flexbox',
+    'css-media': isEn ? 'Responsive CSS' : 'CSS Responsif',
+    'js-event': isEn ? 'Click Listener' : 'Pendengar Klik'
+  };
+  document.querySelectorAll('[data-dw-lbl]').forEach(el => {
+    const k = el.dataset.dwLbl;
+    if (k && quickSubMap[k]) el.textContent = quickSubMap[k];
+  });
+  setTxt('#btn-dw-format', isEn ? '✨ Format' : '✨ Kemas Kod');
+  const predBtn = $('#btn-dw-predict-toggle');
+  if (predBtn) {
+    const predOn = S.codePredictEnabled !== false;
+    predBtn.textContent = isEn ? `🧠 Predict: ${predOn ? 'ON' : 'OFF'}` : `🧠 Ramal Kod: ${predOn ? 'ON' : 'OFF'}`;
+    predBtn.setAttribute('aria-pressed', String(predOn));
+    predBtn.classList.toggle('active', predOn);
+  }
+  setTxt('#dw-ghost-lbl', isEn ? 'Anticipated:' : 'Diramal:');
+  setTxt('#dw-hints-title', isEn ? '🧠 Dreamweaver Code Intelligence' : '🧠 Enjin Pintar Kod Dreamweaver');
+  const ta = $('#code-textarea');
+  if (ta) {
+    ta.placeholder = isEn
+      ? 'Write or edit your code here... (Type <, section.hero, !, or press Ctrl+Space for Dreamweaver Code Hints)'
+      : 'Tulis atau sunting kod di sini... (Taip <, section.hero, !, atau tekan Ctrl+Space untuk Cadangan Kod Dreamweaver)';
+  }
 
   // AI Tutor FAQs in both Drawer and Modal
   setTxt('#drawer-ai-audit-head', isEn ? '🔍 Live Structure Audit' : '🔍 Audit Struktur Semasa');
@@ -2323,16 +2465,17 @@ document.addEventListener('click', e => {
       if (safeId && !S.pages[safeId]) {
         S.pages[safeId] = {
           name: safeId,
-          blocks: [
-            { id: '1', type: 'header', c: 1, r: 1, w: 12, h: 1, t: safeId, f: 0 },
-            { id: '2', type: 'footer', c: 1, r: 12, w: 12, h: 1, t: isEn ? '© 2026 All rights reserved' : 'Hak cipta 2026', f: 0 }
-          ],
+          title: ' Your Page Title',
+          blocks: [],
           links: ['index.html']
         };
         S.curPage = safeId;
+        S.tool = 'r';
         syncCurPage();
         render();
-        toast(isEn ? `New page "${safeId}" added!` : `Halaman baru "${safeId}" berjaya ditambah!`);
+        toast(isEn
+          ? `New page "${safeId}" created with basic HTML skeleton. Draw on the canvas to build!`
+          : `Halaman baru "${safeId}" dicipta dengan rangka asas HTML. Lukis pada kanvas untuk membina!`);
       } else {
         appAlert(isEn ? 'Invalid name or page already exists! Please use a different name.' : 'Nama tidak sah atau halaman sudah wujud! Sila gunakan nama lain.', isEn ? 'Page Error' : 'Ralat Halaman', '⚠️');
       }
@@ -2395,6 +2538,7 @@ document.addEventListener('click', e => {
     const k = x.dataset.pk;
     if (k && pend) {
       snap();
+      clearPageCodeOverrides();
       const b = mk(k, pend.c, pend.r, pend.w, pend.h);
       S.blocks.push(b);
       if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
@@ -2465,7 +2609,6 @@ document.addEventListener('click', e => {
       const cssWasOff = !S.hasCss || !['ext', 'all'].includes(S.sty);
       S.hasCss = true;
       if (hasCodeHtmlOverride()) convertSourceCssMode('ext');
-      else if (!Object.prototype.hasOwnProperty.call(pageCodeEdits(), 'css')) pageCodeEdits().css = '';
       S.sty = 'ext';
       S.sideTab = 'css';
       if (cssWasOff) toast(isEn ? 'style.css opened; CSS enabled in External mode.' : 'style.css dibuka; CSS dihidupkan dalam mod External.');
@@ -2539,6 +2682,9 @@ document.addEventListener('click', e => {
     render();
   } else if (q('#del') || q('#del-top')) {
     deleteSelected();
+  } else if (q('#btn-clear-canvas') || q('[data-clear-canvas]')) {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) S.drawerOpen = false;
+    clearCanvas();
   } else if (q('#undo')) {
     undo();
   } else if (q('#redo')) {
@@ -2619,15 +2765,102 @@ document.addEventListener('click', e => {
       b.rad = radCycle[nextIdx];
       toast(`Corner Radius: ${b.rad === 999 ? 'Pill (Fully Rounded)' : b.rad + 'px'}`);
     } else if (act === 'bold') {
+      if (typeof applyInlineTextFormat === 'function' && applyInlineTextFormat('bold')) {
+        toast(isEn ? 'Selected text bolded (<b>)' : 'Teks pilihan ditebalkan (<b>)');
+        return;
+      }
+      if (!['image', 'form', 'dropdown', 'nav'].includes(b.type) && typeof parseBlockInlineItems === 'function') {
+        const items = parseBlockInlineItems(b);
+        if (items.length > 1 || items.some(it => it.isLink || it.isBtn)) {
+          const idx = (typeof S.selInlineIdx === 'number' && S.selInlineIdx < items.length) ? S.selInlineIdx : 0;
+          items[idx].bold = !items[idx].bold;
+          b.t = serializeBlockInlineItems(items);
+          b._lastInlineHtml = b.t;
+          if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+          if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+          render();
+          toast(isEn ? `"${items[idx].text}" Bold: ${items[idx].bold ? 'ON' : 'OFF'}` : `"${items[idx].text}" Tebal: ${items[idx].bold ? 'ON' : 'OFF'}`);
+          return;
+        }
+      }
       const current = b.fw === 'bold' ? 700 : Number(b.fw) || 400;
       b.fw = current >= 700 ? 400 : 700;
       toast(isEn ? `Font weight: ${b.fw >= 700 ? 'Bold' : 'Regular'}` : `Ketebalan teks: ${b.fw >= 700 ? 'Tebal' : 'Biasa'}`);
     } else if (act === 'italic') {
+      if (typeof applyInlineTextFormat === 'function' && applyInlineTextFormat('italic')) {
+        toast(isEn ? 'Selected text italicized (<i>)' : 'Teks pilihan dicondongkan (<i>)');
+        return;
+      }
+      if (!['image', 'form', 'dropdown', 'nav'].includes(b.type) && typeof parseBlockInlineItems === 'function') {
+        const items = parseBlockInlineItems(b);
+        if (items.length > 1 || items.some(it => it.isLink || it.isBtn)) {
+          const idx = (typeof S.selInlineIdx === 'number' && S.selInlineIdx < items.length) ? S.selInlineIdx : 0;
+          items[idx].italic = !items[idx].italic;
+          b.t = serializeBlockInlineItems(items);
+          b._lastInlineHtml = b.t;
+          if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+          if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+          render();
+          toast(isEn ? `"${items[idx].text}" Italic: ${items[idx].italic ? 'ON' : 'OFF'}` : `"${items[idx].text}" Condong: ${items[idx].italic ? 'ON' : 'OFF'}`);
+          return;
+        }
+      }
       b.fst = b.fst === 'italic' ? 'normal' : 'italic';
       toast(`Italic: ${b.fst === 'italic' ? 'ON' : 'OFF'}`);
     } else if (act === 'underline') {
+      if (typeof applyInlineTextFormat === 'function' && applyInlineTextFormat('underline')) {
+        toast(isEn ? 'Selected text underlined (<u>)' : 'Teks pilihan digaris bawah (<u>)');
+        return;
+      }
+      if (!['image', 'form', 'dropdown', 'nav'].includes(b.type) && typeof parseBlockInlineItems === 'function') {
+        const items = parseBlockInlineItems(b);
+        if (items.length > 1 || items.some(it => it.isLink || it.isBtn)) {
+          const idx = (typeof S.selInlineIdx === 'number' && S.selInlineIdx < items.length) ? S.selInlineIdx : 0;
+          items[idx].underline = !items[idx].underline;
+          b.t = serializeBlockInlineItems(items);
+          b._lastInlineHtml = b.t;
+          if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+          if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+          render();
+          toast(isEn ? `"${items[idx].text}" Underline: ${items[idx].underline ? 'ON' : 'OFF'}` : `"${items[idx].text}" Garis Bawah: ${items[idx].underline ? 'ON' : 'OFF'}`);
+          return;
+        }
+      }
       b.td = b.td === 'underline' ? 'none' : 'underline';
       toast(`Underline: ${b.td === 'underline' ? 'ON' : 'OFF'}`);
+    } else if (act === 'inline-btn') {
+      if (typeof parseBlockInlineItems === 'function') {
+        const items = parseBlockInlineItems(b);
+        const idx = parseInt(x.dataset.inlineIdx ?? S.selInlineIdx ?? 0, 10) || 0;
+        if (items[idx]) {
+          items[idx].isBtn = !items[idx].isBtn;
+          if (items[idx].isBtn) {
+            items[idx].isLink = true;
+            if (!items[idx].href) items[idx].href = 'index.html';
+          }
+          b.t = serializeBlockInlineItems(items);
+          b._lastInlineHtml = b.t;
+          if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+          if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+          render();
+          toast(items[idx].isBtn
+            ? (isEn ? `"${items[idx].text}" styled as Button` : `"${items[idx].text}" dijadikan Butang`)
+            : (isEn ? `"${items[idx].text}" button style removed` : `Gaya butang "${items[idx].text}" dibuang`));
+          return;
+        }
+      }
+    } else if (act === 'nav-cta') {
+      const navTitle = x.dataset.navTitle || S.selNavTitle;
+      if (navTitle) {
+        b.navCtas = b.navCtas || {};
+        b.navCtas[navTitle] = !b.navCtas[navTitle];
+        if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+        render();
+        toast(b.navCtas[navTitle]
+          ? (isEn ? `"${navTitle}" styled as CTA Button` : `"${navTitle}" dijadikan Butang CTA`)
+          : (isEn ? `"${navTitle}" set to regular link` : `"${navTitle}" ditukar ke pautan biasa`));
+        return;
+      }
     } else if (act === 'align') {
       const aligns = ['left', 'center', 'right'];
       const curIdx = aligns.indexOf(b.ta || 'left');
@@ -2662,9 +2895,9 @@ document.addEventListener('click', e => {
     } else if (act === 'to-nav') {
       b.type = 'nav';
       if (!b.t.includes(',')) {
-        b.t = b.t.trim().split(/\s+/).join(', ');
+        b.t = (typeof splitNavItems === 'function' ? splitNavItems(b.t) : b.t.trim().split(/\s+/)).join(', ');
       }
-      toast('Element converted to Navigation <nav> (Separate links)');
+      toast(isEn ? 'Element converted to Navigation <nav> (Separate links)' : 'Elemen ditukar kepada Navigasi <nav> (Pautan berasingan)');
     } else if (act === 'to-link') {
       b.type = 'button';
       b.href = b.href || 'index.html';
@@ -2738,16 +2971,17 @@ document.addEventListener('click', e => {
     const b = get(S.sel);
     if (!b) return;
     snap();
-    b.type = x.dataset.convertType;
+    b.type = typeof normalizeBlockType === 'function' ? normalizeBlockType(x.dataset.convertType) : x.dataset.convertType;
     if (b.type === 'nav' && !b.t.includes(',')) {
-      b.t = b.t.trim().split(/\s+/).join(', ');
+      b.t = (typeof splitNavItems === 'function' ? splitNavItems(b.t) : b.t.trim().split(/\s+/)).join(', ');
     }
     if (b.type === 'button' && !b.href) {
       b.href = 'index.html';
     }
     if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
     render();
-    toast(`Element successfully converted to <${TY[b.type].tag}> (${TY[b.type].n})`);
+    const T = TY[b.type] || TY.text;
+    toast(`Element successfully converted to <${T.tag}> (${T.n})`);
   } else if (q('#copy')) {
     const t = S.text || '';
     const ok = () => toast('Code copied to clipboard!');
@@ -2788,7 +3022,7 @@ $('#nm').addEventListener('input', e => {
 // Keyboard Shortcuts
 document.addEventListener('keydown', e => {
   const t = e.target.tagName;
-  if (t == 'INPUT' || t == 'SELECT' || t == 'TEXTAREA') return;
+  if (t == 'INPUT' || t == 'SELECT' || t == 'TEXTAREA' || e.target.isContentEditable) return;
   if (e.key == '[') return tp('tl');
   if (e.key == ']') return tp('ti');
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() == 'z') {
@@ -2823,15 +3057,20 @@ document.addEventListener('keydown', e => {
 // Canva Bar Events (Google Fonts & Font Size Input)
 const canvaBarEl = $('#canva-bar');
 if (canvaBarEl) {
+  canvaBarEl.addEventListener('mousedown', e => {
+    if (e.target.tagName !== 'SELECT' && e.target.tagName !== 'INPUT') {
+      e.preventDefault();
+    }
+  });
   canvaBarEl.addEventListener('change', e => {
     const b = get(S.sel);
     if (!b) return;
     if (e.target.id === 'canva-tag-sel') {
       snap();
       const isEn = S.lang === 'en';
-      b.type = e.target.value;
+      b.type = typeof normalizeBlockType === 'function' ? normalizeBlockType(e.target.value) : e.target.value;
       if (b.type === 'nav' && !b.t.includes(',')) {
-        b.t = b.t.trim().split(/\s+/).join(', ');
+        b.t = (typeof splitNavItems === 'function' ? splitNavItems(b.t) : b.t.trim().split(/\s+/)).join(', ');
       }
       if (b.type === 'button' && !b.href) {
         b.href = 'index.html';
@@ -2840,7 +3079,8 @@ if (canvaBarEl) {
       if (b.type === 'dropdown' && !b.items) b.items = isEn ? ['Option 1', 'Option 2', 'Option 3'] : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
       if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
       render();
-      toast(`Element converted to <${TY[b.type].tag}> (${isEn ? (TY[b.type].en || TY[b.type].n) : TY[b.type].n})`);
+      const T = TY[b.type] || TY.text;
+      toast(`Element converted to <${T.tag}> (${isEn ? (T.en || T.n) : T.n})`);
     } else if (e.target.id === 'canva-font-sel') {
       snap();
       b.font = e.target.value;
@@ -2859,6 +3099,43 @@ if (canvaBarEl) {
       if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
       render();
       toast(S.lang === 'en' ? `Font weight: ${e.target.selectedOptions[0].textContent}` : `Ketebalan teks: ${e.target.selectedOptions[0].textContent}`);
+    } else if (e.target.id === 'canva-inline-pick') {
+      S.selInlineIdx = parseInt(e.target.value, 10) || 0;
+      render();
+    } else if (e.target.id === 'canva-href-sel') {
+      snap();
+      const mode = e.target.dataset.hrefMode;
+      const val = e.target.value;
+      if (mode === 'nav') {
+        const navTitle = e.target.dataset.navTitle || S.selNavTitle;
+        if (navTitle) {
+          b.navHrefs = b.navHrefs || {};
+          b.navHrefs[navTitle] = val || '#';
+          if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+          render();
+          toast(S.lang === 'en' ? `Linked "${navTitle}" → ${b.navHrefs[navTitle]}` : `"${navTitle}" dipautkan ke ${b.navHrefs[navTitle]}`);
+        }
+      } else if (typeof parseBlockInlineItems === 'function') {
+        const idx = parseInt(e.target.dataset.inlineIdx ?? S.selInlineIdx ?? 0, 10) || 0;
+        const items = parseBlockInlineItems(b);
+        if (items[idx]) {
+          if (!val) {
+            items[idx].isLink = false;
+            items[idx].isBtn = false;
+          } else {
+            items[idx].isLink = true;
+            items[idx].href = val;
+          }
+          b.t = serializeBlockInlineItems(items);
+          b._lastInlineHtml = b.t;
+          if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+          if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+          render();
+          toast(val
+            ? (S.lang === 'en' ? `Linked "${items[idx].text}" → ${val}` : `"${items[idx].text}" dijadikan pautan ke ${val}`)
+            : (S.lang === 'en' ? `"${items[idx].text}" set to plain text` : `"${items[idx].text}" ditukar ke teks biasa`));
+        }
+      }
     }
   });
 
@@ -2869,6 +3146,36 @@ if (canvaBarEl) {
       b.fs = Math.max(8, Math.min(72, parseInt(e.target.value, 10) || 14));
       if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
       refresh();
+    } else if (e.target.id === 'canva-href-input') {
+      const mode = e.target.dataset.hrefMode;
+      const val = e.target.value.trim();
+      if (mode === 'nav') {
+        const navTitle = e.target.dataset.navTitle || S.selNavTitle;
+        if (navTitle) {
+          b.navHrefs = b.navHrefs || {};
+          b.navHrefs[navTitle] = val || '#';
+          if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+          refresh();
+        }
+      } else if (typeof parseBlockInlineItems === 'function') {
+        const idx = parseInt(e.target.dataset.inlineIdx ?? S.selInlineIdx ?? 0, 10) || 0;
+        const items = parseBlockInlineItems(b);
+        if (items[idx]) {
+          if (val) {
+            items[idx].isLink = true;
+            items[idx].href = val;
+          } else {
+            items[idx].isLink = false;
+            items[idx].isBtn = false;
+          }
+          b.t = serializeBlockInlineItems(items);
+          b._lastInlineHtml = b.t;
+          if ($('#tx')) $('#tx').value = b.t;
+          if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+          if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+          refresh();
+        }
+      }
     }
   });
 }
@@ -3071,6 +3378,32 @@ function applyPopoverColor(value) {
   if (!b) return false;
   const key = curPopType === 'col' ? 'col' : 'f';
   const next = normalized.toLowerCase();
+
+  // If changing Text Color (col) on a multi-phrase block, apply color directly to the clicked phrase!
+  if (key === 'col' && !['image', 'form', 'dropdown', 'nav'].includes(b.type) && typeof parseBlockInlineItems === 'function') {
+    const items = parseBlockInlineItems(b);
+    if (items.length > 1 || items.some(it => it.isLink || it.isBtn)) {
+      const idx = (typeof S.selInlineIdx === 'number' && S.selInlineIdx < items.length) ? S.selInlineIdx : 0;
+      if (items[idx] && String(items[idx].color || '').toLowerCase() !== next) {
+        if (!colorPopoverUndoCaptured) {
+          snap();
+          colorPopoverUndoCaptured = true;
+        }
+        items[idx].color = next;
+        b.t = serializeBlockInlineItems(items);
+        b._lastInlineHtml = b.t;
+        if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+        if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+        refresh();
+        renderCanvaBar();
+      }
+      const hexInput = $('#cpop-hex-input');
+      if (hexInput && document.activeElement !== hexInput) hexInput.value = next;
+      syncColorSelector(next);
+      return true;
+    }
+  }
+
   const current = key === 'f' && typeof b.f === 'number' ? FILLS[b.f] : b[key];
   if (String(current || '').toLowerCase() !== next) {
     if (!colorPopoverUndoCaptured) {
@@ -3364,13 +3697,294 @@ document.addEventListener('keydown', e => {
 });
 
 
-// Live Code Editor Handlers
+// ============================================================================
+// ADOBE DREAMWEAVER PREDICTIVE CODE INTELLIGENCE & LIVE EDITOR HANDLERS
+// ============================================================================
 const codeTextarea = $('#code-textarea');
 const codeGutter = $('#code-gutter');
+if (typeof S.codePredictEnabled === 'undefined') S.codePredictEnabled = true;
+
+let dwActivePredictions = { token: '', replaceStart: 0, replaceEnd: 0, items: [] };
+let dwSelectedIndex = 0;
+
+function hideDwCodeHints() {
+  const popup = $('#dw-code-hints');
+  const ghost = $('#dw-ghost-bar');
+  if (popup) popup.hidden = true;
+  if (ghost) ghost.hidden = true;
+  dwActivePredictions = { token: '', replaceStart: 0, replaceEnd: 0, items: [] };
+  dwSelectedIndex = 0;
+}
+
+function updateEditorCursorTelemetry() {
+  if (!codeTextarea) return;
+  const caret = codeTextarea.selectionStart || 0;
+  const before = codeTextarea.value.slice(0, caret);
+  const lines = before.split('\n');
+  const ln = lines.length;
+  const col = lines[lines.length - 1].length + 1;
+  const stat = document.getElementById('dw-cursor-stat');
+  if (stat) stat.textContent = `Ln ${ln}, Col ${col}`;
+
+  // Update Dreamweaver DOM tag path from cursor when actively editing HTML
+  if (S.codeMode === 'edit' && S.tab === 'html' && typeof getHtmlCursorTagChain === 'function') {
+    const chain = getHtmlCursorTagChain(codeTextarea.value, caret);
+    const bc = document.getElementById('dw-breadcrumbs');
+    if (bc && chain.length) {
+      bc.innerHTML = chain
+        .slice(-5)
+        .map((tagLbl, idx, arr) => {
+          const isLast = idx === arr.length - 1;
+          return `<span class="dw-breadcrumb-tag${isLast ? ' active' : ''}">&lt;${esc(tagLbl)}&gt;</span>`;
+        })
+        .join('<span class="dw-breadcrumb-sep">&gt;</span>');
+    }
+  }
+}
+
+function renderDwCodeHints(forceOpen = false) {
+  if (!codeTextarea || S.codeMode !== 'edit' || (S.codePredictEnabled === false && !forceOpen)) {
+    hideDwCodeHints();
+    return;
+  }
+  if (typeof getCodePredictions !== 'function') return;
+
+  const caret = codeTextarea.selectionStart || 0;
+  const pageList = Object.keys(S.pages || {});
+  const pred = getCodePredictions(codeTextarea.value, caret, S.tab, S.lang, pageList);
+
+  if (!pred.items || !pred.items.length || (!forceOpen && !pred.token && S.tab !== 'html')) {
+    hideDwCodeHints();
+    return;
+  }
+
+  dwActivePredictions = pred;
+  if (dwSelectedIndex >= pred.items.length) dwSelectedIndex = 0;
+
+  const popup = $('#dw-code-hints');
+  const listEl = $('#dw-hints-list');
+  const ghost = $('#dw-ghost-bar');
+  const ghostCode = $('#dw-ghost-code');
+
+  const topItem = pred.items[dwSelectedIndex] || pred.items[0];
+  if (ghost && ghostCode && topItem) {
+    const previewOneLine = topItem.snippet.replace('$0', '').replace(/\s*\n\s*/g, ' ').slice(0, 64);
+    ghostCode.textContent = previewOneLine;
+    ghost.hidden = false;
+  }
+
+  if (popup && listEl) {
+    listEl.innerHTML = pred.items.map((item, idx) => `
+      <button type="button" class="dw-hint-item${idx === dwSelectedIndex ? ' active' : ''}" role="option" aria-selected="${idx === dwSelectedIndex}" data-dw-hint-idx="${idx}">
+        <div class="dw-hint-main">
+          <span class="dw-hint-badge">${esc(item.category || 'Code')}</span>
+          <code class="dw-hint-label">${esc(item.label)}</code>
+        </div>
+        <span class="dw-hint-desc">${esc(item.desc || '')}</span>
+      </button>
+    `).join('');
+
+    // Position popup smartly relative to current cursor line
+    const before = codeTextarea.value.slice(0, caret);
+    const lineIdx = before.split('\n').length - 1;
+    const lineHeight = 20.625;
+    const rawTop = (lineIdx + 1) * lineHeight - codeTextarea.scrollTop + 14;
+    const clampedTop = Math.max(12, Math.min((codeTextarea.clientHeight || 260) - 185, rawTop));
+    popup.style.top = `${clampedTop}px`;
+    popup.hidden = false;
+  }
+}
+
+function acceptDwPrediction(index = dwSelectedIndex) {
+  if (!codeTextarea || !dwActivePredictions.items.length) return false;
+  const item = dwActivePredictions.items[index] || dwActivePredictions.items[0];
+  if (!item || typeof applyCodeCompletion !== 'function') return false;
+
+  const result = applyCodeCompletion(
+    codeTextarea.value,
+    dwActivePredictions.replaceStart,
+    dwActivePredictions.replaceEnd,
+    item.snippet
+  );
+  codeTextarea.value = result.text;
+  codeTextarea.focus();
+  codeTextarea.setSelectionRange(result.cursor, result.cursor);
+  hideDwCodeHints();
+  onEditorInput(true);
+  updateEditorCursorTelemetry();
+  return true;
+}
+
+function insertQuickDwSnippet(snipKey) {
+  const meta = (typeof DW_QUICK_INSERT_MAP !== 'undefined' && DW_QUICK_INSERT_MAP[snipKey])
+    ? DW_QUICK_INSERT_MAP[snipKey]
+    : { tab: 'html', trigger: snipKey, snippetTrigger: snipKey, canvasType: 'section', label: `<${snipKey}>` };
+  const trig = meta.trigger || meta.snippetTrigger || snipKey;
+
+  if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+    S.drawerOpen = false;
+  }
+
+  // For HTML tags when using the 12-column studio layout (in either View or Edit mode),
+  // add the semantic block cleanly to the 12-column grid (above <footer>) and sync both Canvas & Code!
+  if (meta.tab === 'html' && !hasCodePreviewOverride() && meta.canvasType && TY[meta.canvasType]) {
+    if (S.view !== 'plan') S.view = 'plan';
+    if (S.tab !== 'html') S.tab = 'html';
+    add(meta.canvasType);
+    const addedId = S.sel;
+    const addedBlk = get(addedId);
+
+    if (S.codeMode === 'edit' && codeTextarea) {
+      const freshHtml = generatedCodeText('html');
+      codeTextarea.value = freshHtml;
+      onEditorInput(false);
+      requestAnimationFrame(() => {
+        const searchToken = addedBlk && addedBlk.cls ? `class="${addedBlk.cls}"` : `<${snipKey}`;
+        const idx = freshHtml.indexOf(searchToken);
+        if (idx !== -1) {
+          codeTextarea.focus();
+          codeTextarea.setSelectionRange(idx, idx);
+          const lineBefore = freshHtml.slice(0, idx).split('\n').length;
+          const targetScroll = Math.max(0, (lineBefore - 6) * 20.625);
+          codeTextarea.scrollTop = targetScroll;
+          const gutter = $('#code-gutter');
+          if (gutter) gutter.scrollTop = targetScroll;
+        }
+      });
+    }
+
+    requestAnimationFrame(() => {
+      const blkEl = document.querySelector(`#cv .blk[data-id="${addedId}"]`);
+      if (blkEl && typeof blkEl.scrollIntoView === 'function') {
+        blkEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      const srcEl = $('#src');
+      const targetRow = srcEl ? srcEl.querySelector(`.ln[data-id="${addedId}"]`) : null;
+      if (targetRow && typeof targetRow.scrollIntoView === 'function') {
+        targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+    toast(S.lang === 'en'
+      ? `⚡ Quick Inserted ${meta.label || `<${snipKey}>`} onto 12-Column Grid & Code`
+      : `⚡ Disisip Pantas ${meta.label || `<${snipKey}>`} ke Grid 12-Lajur & Kod`);
+    return;
+  }
+
+  if (!codeTextarea) return;
+
+  // If user is in Design-only mode (code panel hidden), switch to Split mode so they see the inserted code
+  if (S.mode === 'v') {
+    S.mode = 's';
+    S.view = 'plan';
+  }
+
+  if (meta.tab === 'css') {
+    S.hasCss = true;
+    S.sty = 'ext';
+    S.tab = 'css';
+    render();
+  } else if (meta.tab === 'js') {
+    S.hasJs = true;
+    S.tab = 'js';
+    render();
+  } else if (meta.tab === 'html' && S.tab !== 'html') {
+    S.tab = 'html';
+    render();
+  } else {
+    render();
+  }
+
+  if (S.codeMode !== 'edit') {
+    setCodeMode('edit');
+  }
+
+  let snippetObj = null;
+  if (meta.tab === 'css') {
+    snippetObj = DW_CSS_SNIPPETS.find(s => s.trigger === trig);
+  } else if (meta.tab === 'js') {
+    snippetObj = DW_JS_SNIPPETS.find(s => s.trigger === trig);
+  } else {
+    snippetObj = DW_HTML_SNIPPETS.find(s => s.trigger === trig);
+  }
+  if (!snippetObj) return;
+
+  const rawCaret = codeTextarea.selectionStart ?? 0;
+  const rawEnd = codeTextarea.selectionEnd ?? rawCaret;
+  const target = typeof findSmartInsertTarget === 'function'
+    ? findSmartInsertTarget(codeTextarea.value, rawCaret, rawEnd, S.tab)
+    : { start: rawCaret, end: rawEnd, prefix: '', suffix: '' };
+
+  let snippetText = snippetObj.snippet;
+  // If inserting CSS declarations at top level of style.css (outside `{ ... }`), wrap in a selector block
+  if (S.tab === 'css' && meta.ruleSelector && !snippetText.includes('{')) {
+    const beforeTarget = codeTextarea.value.slice(0, target.start);
+    const openBraces = (beforeTarget.match(/\{/g) || []).length;
+    const closeBraces = (beforeTarget.match(/\}/g) || []).length;
+    if (openBraces <= closeBraces) {
+      const indentedBody = snippetText.split('\n').map(l => '  ' + l).join('\n');
+      snippetText = `${meta.ruleSelector} {\n${indentedBody}\n}`;
+    }
+  }
+
+  if (target.prefix) {
+    snippetText = target.prefix + snippetText;
+  }
+  if (target.suffix) {
+    snippetText = snippetText + target.suffix;
+  }
+
+  const res = applyCodeCompletion(codeTextarea.value, target.start, target.end, snippetText);
+  codeTextarea.value = res.text;
+  codeTextarea.focus();
+  codeTextarea.setSelectionRange(res.cursor, res.cursor);
+  hideDwCodeHints();
+  onEditorInput(true);
+  applyCodeChanges(false);
+  updateEditorCursorTelemetry();
+
+  requestAnimationFrame(() => {
+    const lineBefore = res.text.slice(0, res.cursor).split('\n').length;
+    const targetScroll = Math.max(0, (lineBefore - 6) * 20.625);
+    codeTextarea.scrollTop = targetScroll;
+    const gutter = $('#code-gutter');
+    if (gutter) gutter.scrollTop = targetScroll;
+  });
+
+  toast(S.lang === 'en' ? `⚡ Inserted ${snippetObj.label}` : `⚡ Disisipkan ${snippetObj.label}`);
+}
 
 if (codeTextarea) {
-  codeTextarea.addEventListener('input', () => {
+  codeTextarea.addEventListener('input', e => {
     onEditorInput(true);
+    updateEditorCursorTelemetry();
+    // Auto-close HTML tag when user types '>'
+    if (S.codePredictEnabled !== false && S.tab === 'html' && e.data === '>') {
+      const caret = codeTextarea.selectionStart;
+      const before = codeTextarea.value.slice(0, caret);
+      const after = codeTextarea.value.slice(caret);
+      const openTagMatch = before.match(/<([a-zA-Z][a-zA-Z0-9-]*)(?:\s+[^<>]*)?>$/);
+      if (openTagMatch && !before.endsWith('/>')) {
+        const tag = openTagMatch[1].toLowerCase();
+        if (!VOID_HTML_TAGS.has(tag) && !after.trimStart().startsWith(`</${tag}>`)) {
+          const closeStr = `</${tag}>`;
+          codeTextarea.value = before + closeStr + after;
+          codeTextarea.setSelectionRange(caret, caret);
+          onEditorInput(true);
+        }
+      }
+    }
+    renderDwCodeHints(false);
+  });
+
+  codeTextarea.addEventListener('click', () => {
+    updateEditorCursorTelemetry();
+    hideDwCodeHints();
+  });
+
+  codeTextarea.addEventListener('keyup', e => {
+    if (['ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) {
+      updateEditorCursorTelemetry();
+    }
   });
 
   codeTextarea.addEventListener('scroll', () => {
@@ -3378,15 +3992,102 @@ if (codeTextarea) {
   });
 
   codeTextarea.addEventListener('keydown', e => {
-    // Tab & Shift+Tab indentation support
+    const hintsVisible = !($('#dw-code-hints')?.hidden) && dwActivePredictions.items.length > 0;
+
+    // Manual trigger Ctrl+Space
+    if (e.ctrlKey && e.code === 'Space') {
+      e.preventDefault();
+      renderDwCodeHints(true);
+      return;
+    }
+
+    // Format shortcut Alt+Shift+F
+    if (e.altKey && e.shiftKey && e.key.toLowerCase() === 'f') {
+      e.preventDefault();
+      if (typeof formatStudioCode === 'function') {
+        codeTextarea.value = formatStudioCode(codeTextarea.value, S.tab);
+        onEditorInput(true);
+        toast(S.lang === 'en' ? '✨ Code formatted cleanly!' : '✨ Kod telah dikemaskan!');
+      }
+      return;
+    }
+
+    // Navigate active Dreamweaver Code Hints popup
+    if (hintsVisible) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        dwSelectedIndex = (dwSelectedIndex + 1) % dwActivePredictions.items.length;
+        renderDwCodeHints(true);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        dwSelectedIndex = (dwSelectedIndex - 1 + dwActivePredictions.items.length) % dwActivePredictions.items.length;
+        renderDwCodeHints(true);
+        return;
+      }
+      if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
+        e.preventDefault();
+        acceptDwPrediction(dwSelectedIndex);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        hideDwCodeHints();
+        return;
+      }
+    }
+
+    // Auto-pair brackets and quotes when Predict is enabled
+    const pairs = { '{': '}', '(': ')', '[': ']', '"': '"', "'": "'" };
+    if (S.codePredictEnabled !== false && pairs[e.key] && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const start = codeTextarea.selectionStart;
+      const end = codeTextarea.selectionEnd;
+      if (start === end) {
+        const nextChar = codeTextarea.value[start] || '';
+        // Skip over closing quote/bracket if already there
+        if ((e.key === '"' || e.key === "'") && nextChar === e.key) {
+          e.preventDefault();
+          codeTextarea.setSelectionRange(start + 1, start + 1);
+          return;
+        }
+        if (!/[a-zA-Z0-9]/.test(nextChar)) {
+          e.preventDefault();
+          const closeChar = pairs[e.key];
+          codeTextarea.value = codeTextarea.value.slice(0, start) + e.key + closeChar + codeTextarea.value.slice(end);
+          codeTextarea.setSelectionRange(start + 1, start + 1);
+          onEditorInput(true);
+          renderDwCodeHints(false);
+          return;
+        }
+      }
+    }
+
+    // Tab & Shift+Tab indentation or Emmet expansion support
     if (e.key === 'Tab') {
       e.preventDefault();
       const start = codeTextarea.selectionStart;
       const end = codeTextarea.selectionEnd;
       const val = codeTextarea.value;
 
+      if (!e.shiftKey && start === end && typeof expandEmmetAbbreviation === 'function') {
+        const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+        const lineBefore = val.slice(lineStart, start);
+        const tokenMatch = lineBefore.match(/([a-zA-Z!.][a-zA-Z0-9._>*:-]*)$/);
+        if (tokenMatch) {
+          const emmet = expandEmmetAbbreviation(tokenMatch[1], S.tab);
+          if (emmet) {
+            const res = applyCodeCompletion(val, start - tokenMatch[1].length, start, emmet.snippet);
+            codeTextarea.value = res.text;
+            codeTextarea.setSelectionRange(res.cursor, res.cursor);
+            onEditorInput(true);
+            updateEditorCursorTelemetry();
+            return;
+          }
+        }
+      }
+
       if (e.shiftKey) {
-        // Outdent (remove 2 spaces)
         const lineStart = val.lastIndexOf('\n', start - 1) + 1;
         if (val.substring(lineStart, lineStart + 2) === '  ') {
           codeTextarea.value = val.substring(0, lineStart) + val.substring(lineStart + 2);
@@ -3395,7 +4096,6 @@ if (codeTextarea) {
           onEditorInput(true);
         }
       } else {
-        // Indent (add 2 spaces)
         codeTextarea.value = val.substring(0, start) + '  ' + val.substring(end);
         codeTextarea.selectionStart = codeTextarea.selectionEnd = start + 2;
         onEditorInput(true);
@@ -3406,6 +4106,46 @@ if (codeTextarea) {
     }
   });
 }
+
+// Click handlers for Dreamweaver Code Hints popup & Quick Insert Bar
+document.addEventListener('click', e => {
+  const hintBtn = e.target.closest('[data-dw-hint-idx]');
+  if (hintBtn) {
+    e.preventDefault();
+    acceptDwPrediction(Number(hintBtn.dataset.dwHintIdx));
+    return;
+  }
+  const snipBtn = e.target.closest('[data-dw-snip]');
+  if (snipBtn) {
+    e.preventDefault();
+    insertQuickDwSnippet(snipBtn.dataset.dwSnip);
+    return;
+  }
+  if (e.target.closest('#btn-dw-format')) {
+    e.preventDefault();
+    if (S.codeMode !== 'edit') setCodeMode('edit');
+    if (codeTextarea && typeof formatStudioCode === 'function') {
+      codeTextarea.value = formatStudioCode(codeTextarea.value, S.tab);
+      onEditorInput(true);
+      toast(S.lang === 'en' ? '✨ Code formatted cleanly!' : '✨ Kod telah dikemaskan!');
+    }
+    return;
+  }
+  if (e.target.closest('#btn-dw-predict-toggle')) {
+    e.preventDefault();
+    S.codePredictEnabled = S.codePredictEnabled === false;
+    if (!S.codePredictEnabled) hideDwCodeHints();
+    applyLanguage();
+    toast(S.lang === 'en'
+      ? `🧠 Dreamweaver Predictive Engine: ${S.codePredictEnabled ? 'ENABLED' : 'DISABLED'}`
+      : `🧠 Enjin Ramalan Kod Dreamweaver: ${S.codePredictEnabled ? 'DIHIDUPKAN' : 'DIMATIKAN'}`);
+    return;
+  }
+  if (e.target.closest('#dw-ghost-bar')) {
+    e.preventDefault();
+    acceptDwPrediction(dwSelectedIndex);
+  }
+});
 
 // Double-click code line in View mode to jump directly into editing that line
 document.addEventListener('dblclick', e => {

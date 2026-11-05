@@ -47,6 +47,9 @@
     <button id="redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">
       <img src="assets/icons/redo.png" class="img-ic" alt="Redo">
     </button>
+    <button id="btn-clear-canvas" type="button" title="Clear canvas to basic HTML structure" aria-label="Clear canvas">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+    </button>
   </div>
 
   <div class="bar-divider"></div>
@@ -132,6 +135,12 @@
         <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
       </svg>
       <span class="rail-lbl">Styles</span>
+    </button>
+    <button type="button" class="rail-item" data-rail="quick" title="Quick Insert & Dreamweaver Code Intelligence">
+      <svg class="rail-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+      </svg>
+      <span class="rail-lbl">Insert</span>
     </button>
     <button type="button" class="rail-item" data-rail="ai" title="AI Tutor guidance">
       <img src="assets/icons/ai-guru.png" class="rail-img-ic" alt="AI">
@@ -270,7 +279,96 @@
         </div>
       </div>
 
-      <!-- 6. AI Tutor Drawer Panel -->
+      <!-- 6. Quick Insert & Dreamweaver Code Intelligence Drawer Panel -->
+      <div class="drawer-panel" id="drawer-panel-quick" hidden>
+        <div class="side-css-section">
+          <div class="side-css-title" id="quick-sec-engine-title">🧠 Predictive Code Engine</div>
+          <p class="hint" id="quick-engine-desc" style="margin:4px 0 8px">Anticipates HTML5 tags, closing tags, CSS Grid rules, and Emmet shorthands while typing in Edit mode.</p>
+          <div class="dw-drawer-engine-actions">
+            <button type="button" class="dw-tool-btn active" id="btn-dw-predict-toggle" aria-pressed="true" title="Toggle Dreamweaver Predictive Code Intelligence & Auto-Close (Ctrl+Space)">🧠 Predict: ON</button>
+            <button type="button" class="dw-tool-btn" id="btn-dw-format" title="Auto-indent and format code (Alt+Shift+F)">✨ Format</button>
+          </div>
+        </div>
+
+        <div class="side-css-section">
+          <div class="side-css-title" id="quick-sec-html-title">⚡ Quick Insert HTML5</div>
+          <p class="hint" id="quick-html-hint" style="margin:4px 0 8px">Click any tag to insert onto the 12-column grid (View mode) or inside &lt;main&gt; (Edit mode).</p>
+          <div class="dw-drawer-grid" id="dw-insert-chips">
+            <button type="button" class="dw-chip" data-dw-snip="header" title="Insert semantic <header> block">
+              <span class="dw-chip-tag">&lt;header&gt;</span>
+              <span class="dw-chip-sub" data-dw-lbl="header">Page Header</span>
+            </button>
+            <button type="button" class="dw-chip" data-dw-snip="nav" title="Insert <nav> navigation bar">
+              <span class="dw-chip-tag">&lt;nav&gt;</span>
+              <span class="dw-chip-sub" data-dw-lbl="nav">Navigation</span>
+            </button>
+            <button type="button" class="dw-chip" data-dw-snip="hero" title="Insert Hero spotlight section">
+              <span class="dw-chip-tag">&lt;section.hero&gt;</span>
+              <span class="dw-chip-sub" data-dw-lbl="hero">Hero Banner</span>
+            </button>
+            <button type="button" class="dw-chip" data-dw-snip="section" title="Insert thematic <section> block">
+              <span class="dw-chip-tag">&lt;section&gt;</span>
+              <span class="dw-chip-sub" data-dw-lbl="section">Content Section</span>
+            </button>
+            <button type="button" class="dw-chip" data-dw-snip="article" title="Insert <article.card> component">
+              <span class="dw-chip-tag">&lt;article.card&gt;</span>
+              <span class="dw-chip-sub" data-dw-lbl="article">Article Card</span>
+            </button>
+            <button type="button" class="dw-chip" data-dw-snip="aside" title="Insert <aside> sidebar callout">
+              <span class="dw-chip-tag">&lt;aside&gt;</span>
+              <span class="dw-chip-sub" data-dw-lbl="aside">Sidebar Aside</span>
+            </button>
+            <button type="button" class="dw-chip" data-dw-snip="form" title="Insert W3C <form> element">
+              <span class="dw-chip-tag">&lt;form&gt;</span>
+              <span class="dw-chip-sub" data-dw-lbl="form">Contact Form</span>
+            </button>
+            <button type="button" class="dw-chip" data-dw-snip="figure" title="Insert <figure> image with caption">
+              <span class="dw-chip-tag">&lt;figure&gt;</span>
+              <span class="dw-chip-sub" data-dw-lbl="figure">Figure &amp; Image</span>
+            </button>
+            <button type="button" class="dw-chip" data-dw-snip="button" title="Insert action <button>">
+              <span class="dw-chip-tag">&lt;button&gt;</span>
+              <span class="dw-chip-sub" data-dw-lbl="button">Action Button</span>
+            </button>
+            <button type="button" class="dw-chip" data-dw-snip="a" title="Insert hyperlink <a href>">
+              <span class="dw-chip-tag">&lt;a href&gt;</span>
+              <span class="dw-chip-sub" data-dw-lbl="a">Hyperlink</span>
+            </button>
+            <button type="button" class="dw-chip" data-dw-snip="details" title="Insert <details> dropdown menu">
+              <span class="dw-chip-tag">&lt;details&gt;</span>
+              <span class="dw-chip-sub" data-dw-lbl="details">Dropdown FAQ</span>
+            </button>
+            <button type="button" class="dw-chip" data-dw-snip="footer" title="Insert <footer> block">
+              <span class="dw-chip-tag">&lt;footer&gt;</span>
+              <span class="dw-chip-sub" data-dw-lbl="footer">Page Footer</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="side-css-section">
+          <div class="side-css-title" id="quick-sec-css-title">📐 CSS Grid &amp; JS Snippets</div>
+          <div class="dw-drawer-grid">
+            <button type="button" class="dw-chip dw-chip-css" data-dw-snip="css-grid" title="Insert 12-column CSS Grid rule">
+              <span class="dw-chip-tag">📐 Grid 12</span>
+              <span class="dw-chip-sub" data-dw-lbl="css-grid">12-Col Layout</span>
+            </button>
+            <button type="button" class="dw-chip dw-chip-css" data-dw-snip="css-flex" title="Insert Flexbox row rule">
+              <span class="dw-chip-tag">📦 Flexbox</span>
+              <span class="dw-chip-sub" data-dw-lbl="css-flex">Flex Container</span>
+            </button>
+            <button type="button" class="dw-chip dw-chip-css" data-dw-snip="css-media" title="Insert @media responsive breakpoint">
+              <span class="dw-chip-tag">📱 @media</span>
+              <span class="dw-chip-sub" data-dw-lbl="css-media">Responsive CSS</span>
+            </button>
+            <button type="button" class="dw-chip dw-chip-js" data-dw-snip="js-event" title="Insert JavaScript click event listener">
+              <span class="dw-chip-tag">🖱️ JS Event</span>
+              <span class="dw-chip-sub" data-dw-lbl="js-event">Click Listener</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. AI Tutor Drawer Panel -->
       <div class="drawer-panel" id="drawer-panel-ai" hidden>
         <div class="ai-audit-box" style="margin-bottom:12px">
           <b id="drawer-ai-audit-head">🔍 Live Structure Audit</b>
@@ -420,7 +518,22 @@
         <div class="src" id="src"></div>
         <div class="code-editor-wrap" id="code-editor-wrap" hidden>
           <div class="code-gutter" id="code-gutter"></div>
-          <textarea id="code-textarea" class="code-textarea" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="Write or edit your code here..."></textarea>
+          <textarea id="code-textarea" class="code-textarea" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="Write or edit your code here... (Type <, section.hero, !, or press Ctrl+Space for Dreamweaver Code Hints)"></textarea>
+          <!-- Dreamweaver Live Ghost Anticipation Pill -->
+          <div class="dw-ghost-bar" id="dw-ghost-bar" hidden>
+            <span class="dw-ghost-ic">⚡</span>
+            <span class="dw-ghost-lbl" id="dw-ghost-lbl">Anticipated:</span>
+            <code class="dw-ghost-code" id="dw-ghost-code"></code>
+            <kbd class="dw-ghost-kbd">Tab ↹</kbd>
+          </div>
+          <!-- Dreamweaver Floating Code Hints IntelliSense Popup -->
+          <div class="dw-code-hints" id="dw-code-hints" role="listbox" aria-label="Dreamweaver Code Hints" hidden>
+            <div class="dw-hints-head">
+              <span id="dw-hints-title">🧠 Dreamweaver Code Intelligence</span>
+              <span class="dw-hints-keys"><kbd>↑↓</kbd> Navigate · <kbd>Tab</kbd>/<kbd>Enter</kbd> Complete · <kbd>Esc</kbd> Close</span>
+            </div>
+            <div class="dw-hints-list" id="dw-hints-list"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -469,6 +582,7 @@
 <script src="js/generator.js"></script>
 <script src="js/canvas.js"></script>
 <script src="js/inspector.js"></script>
+<script src="js/code-intel.js"></script>
 <script src="js/app.js"></script>
 
 <!-- Built-in Custom App Dialog (Replaces browser alert, confirm, prompt) -->

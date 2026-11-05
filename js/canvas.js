@@ -20,18 +20,33 @@ function renderCanvas() {
   }
   if (typeof hasCodePreviewOverride === 'function' && hasCodePreviewOverride()) {
     cv.classList.add('code-source-preview');
-    cv.innerHTML = `<iframe class="code-source-frame" sandbox="allow-same-origin" title="${isEn ? 'Editable visual canvas' : 'Kanvas visual boleh sunting'}"></iframe><span class="code-source-label">${isEn ? 'Dashed lines = &lt;div&gt; boxes · click to edit' : 'Garis putus-putus = kotak &lt;div&gt; · klik untuk sunting'}</span>`;
-    const frame = cv.querySelector('.code-source-frame');
-    if (frame) { attachCodeCanvasEditing(frame); frame.srcdoc = codePreviewDocument(); }
+    let frame = cv.querySelector('.code-source-frame');
+    let label = cv.querySelector('.code-source-label');
+    if (!frame) {
+      cv.innerHTML = `<iframe class="code-source-frame" sandbox="allow-same-origin" title="${isEn ? 'Editable visual canvas' : 'Kanvas visual boleh sunting'}"></iframe><span class="code-source-label">${isEn ? 'Dashed lines = &lt;div&gt; boxes · click to edit' : 'Garis putus-putus = kotak &lt;div&gt; · klik untuk sunting'}</span>`;
+      frame = cv.querySelector('.code-source-frame');
+      label = cv.querySelector('.code-source-label');
+    } else {
+      frame.title = isEn ? 'Editable visual canvas' : 'Kanvas visual boleh sunting';
+      if (label) label.innerHTML = isEn ? 'Dashed lines = &lt;div&gt; boxes · click to edit' : 'Garis putus-putus = kotak &lt;div&gt; · klik untuk sunting';
+    }
+    if (frame) {
+      attachCodeCanvasEditing(frame);
+      const nextDoc = codePreviewDocument();
+      if (frame._lastSrcDoc !== nextDoc) {
+        frame._lastSrcDoc = nextDoc;
+        frame.srcdoc = nextDoc;
+      }
+    }
     if ($('#grid-dim')) $('#grid-dim').textContent = isEn ? 'Click any element to edit · changes sync directly to code' : 'Klik elemen untuk sunting · perubahan disegerakkan ke kod';
     return;
   }
   cv.classList.remove('code-source-preview');
   sorted();
 
-  cv.innerHTML = S.blocks.map(b => {
+  cv.innerHTML = S.blocks.filter(Boolean).map(b => {
     const on = b.id == S.sel;
-    const T = TY[b.type];
+    const T = TY[b.type] || TY.text || { tag: 'div', n: 'Elemen', en: 'Element' };
     const bColor = b.f === 'none' ? 'transparent' : (typeof b.f === 'number' ? (FILLS[b.f] || '#ffffff') : (b.f || '#ffffff'));
     const dotColor = b.f === 'none' ? '#00d4ff' : bColor;
     const gradientColor = typeof bColor === 'string' && /^(?:linear|radial|conic)-gradient\(/i.test(bColor);
@@ -57,18 +72,19 @@ function renderCanvas() {
         const p = getPatternCss(b.bgImg);
         bgImgStyle = `background-image:${p.image};background-size:${p.size || 'auto'};background-repeat:${p.repeat || 'repeat'};`;
       } else {
-        bgImgStyle = `background-image:url('${b.bgImg}');background-size:${b.bgSize || 'cover'};background-repeat:${b.bgRepeat || 'no-repeat'};background-position:${b.bgPos || 'center'};`;
+        bgImgStyle = `background-image:url('${qa(safeCssUrl(b.bgImg))}');background-size:${b.bgSize || 'cover'};background-repeat:${b.bgRepeat || 'no-repeat'};background-position:${b.bgPos || 'center'};`;
       }
     }
 
     const singleRowStyle = (b.h === 1 && !kids(b).length) ? 'justify-content:center;' : '';
     const fillStyle = gradientColor ? `background:${bColor};` : '';
-    const styleAttr = S.hasCss ? `style="grid-column:${b.c}/span ${b.w};grid-row:${b.r}/span ${b.h};--f:${bColor};${fillStyle}z-index:${dep(b) + 1};font-family:${fontFam};font-size:${fs}px;text-align:${ta};${colStyle}${fwStyle}${fstStyle}${tdStyle}${ttStyle}${padStyle}${radStyle}${bwStyle}${shdStyle}${bgImgStyle}${singleRowStyle}"` : '';
+    const zBase = (dep(b) + 1) * 20;
+    const styleAttr = S.hasCss ? `style="grid-column:${b.c}/span ${b.w};grid-row:${b.r}/span ${b.h};--f:${bColor};--z:${zBase};${fillStyle}z-index:${zBase + (on ? 5 : 0)};font-family:${fontFam};font-size:${fs}px;text-align:${ta};${colStyle}${fwStyle}${fstStyle}${tdStyle}${ttStyle}${padStyle}${radStyle}${bwStyle}${shdStyle}${bgImgStyle}${singleRowStyle}"` : '';
 
     let contentHtml = kids(b).length ? '' : renderWysiwyg(b.t);
     if (b.type === 'image' && !kids(b).length) {
       const defImg = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=80';
-      contentHtml = `<div class="canvas-img-box"><img src="${b.imgUrl || defImg}" alt="Mockup" style="object-fit:${b.objFit || 'cover'};"><span class="canvas-img-cap">${renderWysiwyg(b.t)}</span></div>`;
+      contentHtml = `<div class="canvas-img-box"><img src="${qa(b.imgUrl || defImg)}" alt="Mockup" style="object-fit:${qa(b.objFit || 'cover')};"><span class="canvas-img-cap">${renderWysiwyg(b.t)}</span></div>`;
     } else if (b.type === 'dropdown' && !kids(b).length) {
       const dropItems = (b.items && b.items.length) ? b.items : (isEn ? ['Option 1', 'Option 2', 'Option 3'] : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3']);
       contentHtml = `<div class="canvas-dropdown-box"><div class="canvas-dropdown-summary">${renderWysiwyg(b.t)} ▾</div><div class="canvas-dropdown-items">${dropItems.slice(0, 4).map(it => `<span>• ${esc(it)}</span>`).join(' ')}${dropItems.length > 4 ? ` <small>(+${dropItems.length - 4})</small>` : ''}</div></div>`;
@@ -80,26 +96,49 @@ function renderCanvas() {
         return `<div class="canvas-form-row"><span class="canvas-form-lbl">${esc(f)}</span><span class="canvas-form-input${isArea ? ' is-area' : ''}">${isArea ? '✎ ...' : ''}</span></div>`;
       }).join('')}<span class="canvas-form-btn">${esc(subTxt)}</span></div>`;
     } else if (b.type === 'nav' && !kids(b).length) {
-      let items = [];
-      if (b.t.includes(',')) items = b.t.split(',');
-      else if (b.t.includes('|')) items = b.t.split('|');
-      else if (b.t.includes('\n')) items = b.t.split('\n');
-      else items = b.t.trim().split(/\s+/);
+      const items = typeof splitNavItems === 'function' ? splitNavItems(b.t) : b.t.split(',');
       const drops = b.dropdowns || {};
+      const navCtas = b.navCtas || {};
       const linksHtml = items.map((item, idx) => {
         const s = item.trim();
         if (!s) return '';
         const isDrop = !!(drops[s] || drops[idx] || drops[s.toLowerCase()]);
         const isSelItem = (b.id == S.sel) && (S.selNavIdx === idx || S.selNavTitle === s);
-        const isCta = !isDrop && /mula|daftar|beli|start|sign|hubungi|contact/i.test(s);
+        const isCta = !isDrop && (navCtas[s] !== undefined ? !!navCtas[s] : /mula|daftar|beli|start|sign|hubungi|contact/i.test(s));
         const dropBadge = isDrop ? '<small class="nav-drop-tag">▾ Dropdown</small>' : '';
         const iconPrefix = isDrop ? '▾' : '🔗';
         const navTitleAttr = isDrop
           ? (isEn ? 'Dropdown Menu (Click to select & manage)' : 'Menu Dropdown (Klik untuk pilih & urus)')
-          : (isEn ? 'Navigation Link (Click to select & convert to dropdown)' : 'Pautan Navigasi (Klik untuk pilih & tukar ke dropdown)');
+          : (isEn ? 'Navigation Link (Click to select & customize link/style)' : 'Pautan Navigasi (Klik untuk pilih & ubah pautan/gaya)');
         return `<span class="canvas-nav-item${isDrop ? ' is-dropdown' : ''}${isCta ? ' cta' : ''}${isSelItem ? ' sel' : ''}" data-nav-blk="${b.id}" data-nav-idx="${idx}" data-nav-title="${esc(s)}" title="${navTitleAttr}">${iconPrefix} ${esc(s)} ${dropBadge}</span>`;
       }).filter(Boolean).join(' ');
       contentHtml = `<div class="canvas-nav-links">${linksHtml}</div>`;
+    } else if (!kids(b).length && typeof parseBlockInlineItems === 'function') {
+      const inlineItems = parseBlockInlineItems(b);
+      const hasMultiOrStyled = inlineItems.length > 1 || inlineItems.some(it => it.isLink || it.isBtn || it.color || it.bg || it.bold || it.italic || it.underline);
+      if (hasMultiOrStyled) {
+        const curInlineIdx = (b.id == S.sel && typeof S.selInlineIdx === 'number' && S.selInlineIdx < inlineItems.length) ? S.selInlineIdx : 0;
+        const phrasesHtml = inlineItems.map((it, idx) => {
+          const isSelPhrase = (b.id == S.sel) && (curInlineIdx === idx);
+          const styles = [];
+          if (it.color) styles.push(`color:${it.color}`);
+          else if (it.isLink && !it.isBtn) styles.push('color:#2563eb');
+          if (it.bg) styles.push(`background:${it.bg}`);
+          if (it.bold) styles.push('font-weight:700');
+          if (it.italic) styles.push('font-style:italic');
+          if (it.underline || (it.isLink && !it.isBtn)) styles.push('text-decoration:underline');
+          if (it.isBtn) {
+            if (!it.bg) styles.push('background:#2563eb');
+            if (!it.color) styles.push('color:#ffffff');
+            styles.push('padding:4px 12px', 'border-radius:999px', 'text-decoration:none', 'font-weight:600');
+          }
+          const tip = isEn
+            ? `Click to edit "${it.text}" (${it.isLink ? 'href: ' + (it.href || '#') : 'Plain text'})`
+            : `Klik untuk ubah "${it.text}" (${it.isLink ? 'href: ' + (it.href || '#') : 'Teks biasa'})`;
+          return `<span class="cv-phrase-item${isSelPhrase ? ' sel' : ''}" data-phrase-blk="${b.id}" data-phrase-idx="${idx}" style="${qa(styles.join(';'))}" title="${qa(tip)}">${it.isLink ? '<small style="opacity:0.75;font-size:0.85em">🔗</small>' : ''}${esc(it.text)}</span>`;
+        }).join(' ');
+        contentHtml = `<div class="cv-phrase-wrap">${phrasesHtml}</div>`;
+      }
     }
 
     let labelText = '';
@@ -164,11 +203,25 @@ function pop(g) {
 }
 
 cv.onpointerdown = e => {
+  if (e.target.closest('.tx[contenteditable="true"]')) {
+    return;
+  }
   const delBtn = e.target.closest('.blk-del');
   if (delBtn) {
     e.stopPropagation();
     e.preventDefault();
     deleteBox(delBtn.dataset.del);
+    return;
+  }
+
+  const phraseItem = e.target.closest('.cv-phrase-item');
+  if (phraseItem) {
+    e.stopPropagation();
+    const blkId = phraseItem.dataset.phraseBlk;
+    const idx = parseInt(phraseItem.dataset.phraseIdx, 10);
+    S.sel = blkId;
+    S.selInlineIdx = idx;
+    render();
     return;
   }
 
@@ -185,31 +238,47 @@ cv.onpointerdown = e => {
     return;
   }
 
-  const el = e.target.closest('.blk');
+  const rc = cv.getBoundingClientRect();
+  const clickC = cl(Math.ceil((e.clientX - rc.left) / (rc.width / 12)), 1, 12);
+  const clickR = cl(Math.ceil((e.clientY - rc.top) / (rc.height / R)), 1, R);
+  const rsEl = e.target.closest('.rs-h');
+  let el = e.target.closest('.blk');
+
+  // If not clicking a resize handle, prefer the deepest/smallest block at the clicked grid cell
+  // so nested or overlapped child blocks (like a 12x1 bar inside a 12x2 section) are always selectable.
+  if (!rsEl && S.blocks && S.blocks.length) {
+    const hitsAtCell = S.blocks
+      .filter(o => o && clickC >= o.c && clickC < o.c + o.w && clickR >= o.r && clickR < o.r + o.h)
+      .sort((a, b) => (a.w * a.h) - (b.w * b.h) || dep(b) - dep(a));
+    if (hitsAtCell.length) {
+      const bestEl = cv.querySelector(`.blk[data-id="${CSS.escape(String(hitsAtCell[0].id))}"]`);
+      if (bestEl) el = bestEl;
+    }
+  }
+
   if (el && el.dataset.id !== S.sel) {
     S.selNavIdx = null;
     S.selNavTitle = null;
+    S.selInlineIdx = 0;
   }
   pop(null);
 
-  if (!S.hasCss && (e.target.closest('.rs-h') || S.tool == 'r')) {
+  if (!S.hasCss && (rsEl || S.tool == 'r')) {
     toast('💡 HTML Base Mode (CSS Disabled): Enable "+ CSS" in the top toolbar to draw grid blocks or resize.');
     return;
   }
 
   if (!el || S.tool == 'r') {
-    const rc = cv.getBoundingClientRect();
-    const c = cl(Math.ceil((e.clientX - rc.left) / (rc.width / 12)), 1, 12);
-    const r = cl(Math.ceil((e.clientY - rc.top) / (rc.height / R)), 1, R);
+    const c = clickC;
+    const r = clickR;
     drag = { hit: el ? el.dataset.id : null, draw: true, c0: c, r0: r, x: e.clientX, y: e.clientY, g: { c, r, w: 1, h: 1 }, moved: false };
     cv.setPointerCapture(e.pointerId);
-    render();
     return;
   }
 
   const b = get(el.dataset.id);
+  const prevSel = S.sel;
   S.sel = b.id;
-  const rsEl = e.target.closest('.rs-h');
   const dir = rsEl ? rsEl.dataset.dir : null;
 
   drag = {
@@ -228,7 +297,9 @@ cv.onpointerdown = e => {
   };
 
   cv.setPointerCapture(e.pointerId);
-  render();
+  if (String(prevSel) !== String(b.id)) {
+    render();
+  }
 };
 
 cv.onpointermove = e => {
@@ -310,6 +381,57 @@ cv.onpointermove = e => {
   }
 };
 
+let activeInlineState = null;
+
+function captureInlineSelection(b, txSpan) {
+  const sel = window.getSelection && window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const r = sel.getRangeAt(0);
+  if (!txSpan.contains(r.commonAncestorContainer)) return;
+  const selectedText = r.toString();
+  if (selectedText && selectedText.trim().length > 0) {
+    activeInlineState = {
+      blockId: b.id,
+      txSpan,
+      range: r.cloneRange(),
+      text: selectedText
+    };
+  }
+}
+
+function applyInlineTextFormat(cmd, value) {
+  if (!activeInlineState || !S.sel || String(activeInlineState.blockId) !== String(S.sel)) return false;
+  const b = get(S.sel);
+  if (!b) return false;
+  const txSpan = activeInlineState.txSpan;
+  if (!txSpan || !document.body.contains(txSpan)) return false;
+  const sel = window.getSelection && window.getSelection();
+  if (!sel) return false;
+  txSpan.contentEditable = true;
+  txSpan.focus();
+  sel.removeAllRanges();
+  sel.addRange(activeInlineState.range);
+  if (sel.isCollapsed) return false;
+
+  snap();
+  if (cmd === 'createLink') {
+    const href = value || '#';
+    document.execCommand('createLink', false, href);
+  } else if (cmd === 'foreColor') {
+    document.execCommand('styleWithCSS', false, true);
+    document.execCommand('foreColor', false, value);
+  } else {
+    document.execCommand(cmd, false, value || null);
+  }
+  b.t = txSpan.innerHTML.trim();
+  if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+  if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+  activeInlineState = null;
+  txSpan.contentEditable = false;
+  render();
+  return true;
+}
+
 cv.addEventListener('dblclick', e => {
   const blk = e.target.closest('.blk');
   if (!blk) return;
@@ -325,14 +447,24 @@ cv.addEventListener('dblclick', e => {
   const sel = window.getSelection();
   sel.removeAllRanges();
   sel.addRange(range);
+  captureInlineSelection(b, txSpan);
 
-  const finish = () => {
+  const trackSel = () => captureInlineSelection(b, txSpan);
+  txSpan.onmouseup = trackSel;
+  txSpan.onkeyup = trackSel;
+
+  const finish = blurEvt => {
+    const rel = blurEvt && blurEvt.relatedTarget;
+    if (rel && (rel.closest('#canva-bar') || rel.closest('#color-popover') || rel.closest('#app-modal-backdrop'))) {
+      return;
+    }
     txSpan.contentEditable = false;
     const newT = txSpan.innerHTML.trim();
     if (b.t !== newT && b.t !== txSpan.textContent) {
       snap();
       b.t = txSpan.innerHTML;
       if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+      if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
       render();
     }
   };
@@ -344,6 +476,7 @@ cv.addEventListener('dblclick', e => {
       txSpan.blur();
     }
     if (ke.key === 'Escape') {
+      activeInlineState = null;
       txSpan.innerHTML = renderWysiwyg(b.t);
       txSpan.blur();
     }
@@ -355,8 +488,10 @@ cv.onpointerup = cv.onpointercancel = () => {
   const d = drag;
   drag = null;
   if (d && d.draw && !d.moved) {
-    S.sel = d.hit;
-    render();
+    if (String(S.sel) !== String(d.hit)) {
+      S.sel = d.hit;
+      render();
+    }
     return;
   }
   if (d && d.draw && d.moved) {
@@ -369,7 +504,9 @@ cv.onpointerup = cv.onpointercancel = () => {
     }
     toast('Box overlaps with another box. Please draw in empty space.');
   }
-  render();
+  if (d && d.moved) {
+    render();
+  }
 };
 
 cv.ondragover = e => e.preventDefault();

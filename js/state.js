@@ -42,14 +42,77 @@ const S = {
 
 let hist = [];
 let fut = [];
+const pageHist = {};
+const pageFut = {};
+let activeHistPage = 'index.html';
 let uid = 100;
 let drag = null;
 let storageSaveFailed = false;
 
-const get = id => S.blocks.find(b => b.id == id);
+const LEGACY_BLOCK_TYPE_MAP = {
+  box: 'section',
+  container: 'section',
+  div: 'section',
+  main: 'section',
+  heading: 'header',
+  h1: 'header',
+  h2: 'section',
+  h3: 'section',
+  paragraph: 'text',
+  p: 'text',
+  span: 'text',
+  img: 'image',
+  figure: 'image',
+  picture: 'image',
+  btn: 'button',
+  cta: 'button',
+  a: 'link',
+  details: 'dropdown',
+  select: 'dropdown',
+  article: 'card'
+};
+
+function normalizeBlockType(type) {
+  const raw = String(type || '').trim().toLowerCase();
+  if (TY[raw]) return raw;
+  if (LEGACY_BLOCK_TYPE_MAP[raw] && TY[LEGACY_BLOCK_TYPE_MAP[raw]]) {
+    return LEGACY_BLOCK_TYPE_MAP[raw];
+  }
+  return 'text';
+}
+
+function sanitizePageBlocks(blocks) {
+  if (!Array.isArray(blocks)) return [];
+  return blocks
+    .filter(b => b && typeof b === 'object')
+    .map((b, idx) => {
+      const safeType = normalizeBlockType(b.type);
+      const T = TY[safeType] || TY.text;
+      b.type = safeType;
+      if (!b.id) b.id = String(Date.now() + idx);
+      b.c = cl(Number(b.c) || 1, 1, 12);
+      b.r = Math.max(1, Number(b.r) || 1);
+      b.w = cl(Number(b.w) || T.w || 4, 1, 13 - b.c);
+      b.h = Math.max(1, Number(b.h) || T.h || 2);
+      if (b.t === undefined || b.t === null) b.t = T.t || '';
+      else b.t = String(b.t);
+      if (b.f === undefined || b.f === null) b.f = T.f !== undefined ? T.f : 0;
+      return b;
+    });
+}
+
+const get = id => S.blocks.find(b => b && b.id == id);
 
 function syncCurPage() {
+  if (activeHistPage) {
+    pageHist[activeHistPage] = hist;
+    pageFut[activeHistPage] = fut;
+  }
   if (!S.pages[S.curPage]) S.curPage = Object.keys(S.pages)[0] || 'index.html';
+  activeHistPage = S.curPage;
+  hist = pageHist[S.curPage] || (pageHist[S.curPage] = []);
+  fut = pageFut[S.curPage] || (pageFut[S.curPage] = []);
+  S.pages[S.curPage].blocks = sanitizePageBlocks(S.pages[S.curPage].blocks);
   S.blocks = S.pages[S.curPage].blocks;
   R = Math.max(12, ...S.blocks.map(b => b.r + b.h - 1));
 }
@@ -122,6 +185,10 @@ function load() {
         S.mode = 's';
         localStorage.setItem('bcs_default_en_v4', '1');
       }
+      if (!localStorage.getItem('bcs_clean_dw_v6')) {
+        S.codeEdits = {};
+        localStorage.setItem('bcs_clean_dw_v6', '1');
+      }
     }
   } catch (e) {}
   // Upgrade default contact.html if it still has the old placeholder without a form block
@@ -139,12 +206,16 @@ function load() {
     "'Caveat', cursive": "'Inter', sans-serif",
     "'DM Mono', monospace": "'JetBrains Mono', monospace"
   };
-  Object.values(S.pages).forEach(page => (page.blocks || []).forEach(block => {
-    if (fontMigration[block.font]) block.font = fontMigration[block.font];
-  }));
+  Object.values(S.pages).forEach(page => {
+    if (!page) return;
+    page.blocks = sanitizePageBlocks(page.blocks);
+    page.blocks.forEach(block => {
+      if (fontMigration[block.font]) block.font = fontMigration[block.font];
+    });
+  });
   syncLanguageDefaults(S.lang);
   syncCurPage();
-  uid = Math.max(100, ...Object.values(S.pages).flatMap(p => p.blocks.map(b => +b.id || 0))) + 1;
+  uid = Math.max(100, ...Object.values(S.pages).flatMap(p => (p && Array.isArray(p.blocks) ? p.blocks : []).map(b => +b.id || 0))) + 1;
 }
 
 const save = () => {
@@ -189,28 +260,120 @@ function toast(m) {
   toast.k = setTimeout(() => t.classList.remove('on'), 2600);
 }
 
+function createPageSnapshot() {
+  const curEdits = (S.codeEdits && S.codeEdits[S.curPage]) ? S.codeEdits[S.curPage] : {};
+  return JSON.stringify({
+    page: S.curPage,
+    blocks: S.blocks,
+    codeEdits: curEdits,
+    theme: S.theme,
+    gridGap: S.gridGap,
+    gridRowH: S.gridRowH,
+    htmlMode: S.htmlMode,
+    sty: S.sty
+  });
+}
+
+function applyPageSnapshot(raw) {
+  const parsed = JSON.parse(raw);
+  if (Array.isArray(parsed)) {
+    S.blocks = sanitizePageBlocks(parsed);
+    if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+    return;
+  }
+  if (parsed && Array.isArray(parsed.blocks)) {
+    S.blocks = sanitizePageBlocks(parsed.blocks);
+    if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+    S.codeEdits = S.codeEdits || {};
+    if (parsed.codeEdits && Object.keys(parsed.codeEdits).length > 0) {
+      S.codeEdits[S.curPage] = parsed.codeEdits;
+    } else {
+      delete S.codeEdits[S.curPage];
+    }
+    if (parsed.theme) S.theme = parsed.theme;
+    if (parsed.gridGap !== undefined) S.gridGap = parsed.gridGap;
+    if (parsed.gridRowH !== undefined) S.gridRowH = parsed.gridRowH;
+    if (parsed.htmlMode) S.htmlMode = parsed.htmlMode;
+    if (parsed.sty) S.sty = parsed.sty;
+  }
+}
+
 const snap = () => {
-  hist.push(JSON.stringify(S.blocks));
+  if (activeHistPage !== S.curPage) syncCurPage();
+  hist.push(createPageSnapshot());
   fut = [];
+  pageHist[S.curPage] = hist;
+  pageFut[S.curPage] = fut;
   if (hist.length > 60) hist.shift();
 };
 
 function undo() {
-  if (!hist.length) return toast(S.lang === 'en' ? 'Nothing more to undo' : 'Tiada lagi perubahan untuk dibuat asal');
-  fut.push(JSON.stringify(S.blocks));
-  S.blocks = JSON.parse(hist.pop());
-  if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+  if (activeHistPage !== S.curPage) syncCurPage();
+  if (!hist.length) return toast(S.lang === 'en' ? 'Nothing more to undo on this page' : 'Tiada lagi perubahan untuk dibuat asal pada halaman ini');
+  fut.push(createPageSnapshot());
+  applyPageSnapshot(hist.pop());
   if (!get(S.sel)) S.sel = null;
   render();
 }
 
 function redo() {
-  if (!fut.length) return toast(S.lang === 'en' ? 'Nothing more to redo' : 'Tiada lagi perubahan untuk dibuat semula');
-  hist.push(JSON.stringify(S.blocks));
-  S.blocks = JSON.parse(fut.pop());
-  if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+  if (activeHistPage !== S.curPage) syncCurPage();
+  if (!fut.length) return toast(S.lang === 'en' ? 'Nothing more to redo on this page' : 'Tiada lagi perubahan untuk dibuat semula pada halaman ini');
+  hist.push(createPageSnapshot());
+  applyPageSnapshot(fut.pop());
   if (!get(S.sel)) S.sel = null;
   render();
+}
+
+function compressImageFileToDataUrl(file, maxDim = 1200, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      reject(new Error('Invalid image file'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      if (file.type === 'image/svg+xml' || dataUrl.length < 90000) {
+        resolve(dataUrl);
+        return;
+      }
+      const img = new Image();
+      img.onerror = () => resolve(dataUrl);
+      img.onload = () => {
+        try {
+          let w = img.naturalWidth || img.width || 800;
+          let h = img.naturalHeight || img.height || 600;
+          if (w > maxDim || h > maxDim) {
+            if (w >= h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(dataUrl);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, w, h);
+          const outMime = file.type === 'image/png' ? 'image/webp' : 'image/jpeg';
+          const compressed = canvas.toDataURL(outMime, quality);
+          resolve(compressed.length < dataUrl.length ? compressed : dataUrl);
+        } catch (_) {
+          resolve(dataUrl);
+        }
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 const inb = (a, b) => a.c >= b.c && a.r >= b.r && a.c + a.w <= b.c + b.w && a.r + a.h <= b.r + b.h && (a.w < b.w || a.h < b.h);
@@ -249,17 +412,18 @@ function hint(b) {
 }
 
 function mk(type, c, r, w, h) {
-  const T = TY[type] || TY.text;
+  const safeType = normalizeBlockType(type);
+  const T = TY[safeType] || TY.text;
   const isEn = S.lang === 'en';
   const defaultText = (isEn ? (T.enText || T.t) : (T.tMs || T.t)) || T.t;
-  const block = { id: String(uid++), type, c, r, w, h, t: defaultText, f: T.f };
-  if (type === 'link') {
+  const block = { id: String(uid++), type: safeType, c, r, w, h, t: defaultText, f: T.f };
+  if (safeType === 'link') {
     block.href = '#';
     block.col = '#315f9c';
     block.td = 'underline';
-  } else if (type === 'button' || type === 'logo') {
+  } else if (safeType === 'button' || safeType === 'logo') {
     block.href = '#';
-  } else if (type === 'form') {
+  } else if (safeType === 'form') {
     block.fields = isEn ? ['Full Name', 'Email Address', 'Your Message'] : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda'];
     block.submitText = isEn ? 'Send Message' : 'Hantar Mesej';
   }
@@ -267,7 +431,9 @@ function mk(type, c, r, w, h) {
 }
 
 function add(type, c, r) {
-  const T = TY[type];
+  const safeType = normalizeBlockType(type);
+  const T = TY[safeType] || TY.text;
+  type = safeType;
   let b = null;
   if (c && r) {
     const container = S.blocks.filter(o => c >= o.c && c < o.c + o.w && r >= o.r && r < o.r + o.h).sort((x, y) => x.w * x.h - y.w * y.h)[0];
@@ -292,35 +458,65 @@ function add(type, c, r) {
     }
   }
   if (!b) {
-    for (const [w, h] of [[T.w, T.h], [Math.max(1, T.w >> 1), Math.max(1, T.h >> 1)], [2, 2], [1, 1]]) {
-      for (let rr = 1; rr <= R && !b; rr++) {
-        for (let cc = 1; cc <= 12 && !b; cc++) {
-          if (free(cc, rr, w, h, 0, 0)) b = mk(type, cc, rr, w, h);
-        }
+    const topFooters = type !== 'footer'
+      ? S.blocks.filter(o => o.type === 'footer' && !par(o))
+      : [];
+    const footerStartRow = topFooters.length
+      ? Math.min(...topFooters.map(o => o.r || 12))
+      : null;
+    const maxSearchRow = footerStartRow !== null ? Math.max(1, footerStartRow - T.h) : R;
+
+    // Prefer full-size strict placement above footer (never cramming a new block inside an existing container)
+    for (let rr = 1; rr <= maxSearchRow && !b; rr++) {
+      for (let cc = 1; cc <= 12 - T.w + 1 && !b; cc++) {
+        if (free(cc, rr, T.w, T.h, 0, 1)) b = mk(type, cc, rr, T.w, T.h);
       }
-      if (b) break;
+    }
+
+    if (!b && footerStartRow !== null) {
+      // Insert cleanly right above the footer and push the footer down by T.h rows
+      const insertR = footerStartRow;
+      S.blocks.forEach(o => {
+        if ((o.r || 1) >= insertR) {
+          o.r = (o.r || 1) + T.h;
+        }
+      });
+      const maxRowAfterShift = S.blocks.reduce((maxR, o) => Math.max(maxR, (o.r || 1) + (o.h || 1)), insertR + T.h);
+      R = Math.max(R, maxRowAfterShift + 1);
+      b = mk(type, 1, insertR, T.w, T.h);
     }
   }
   if (!b) {
-    // Auto-extend canvas downwards
-    R += 4;
-    for (let rr = R - 3; rr <= R && !b; rr++) {
-      for (let cc = 1; cc <= 12 && !b; cc++) {
-        if (free(cc, rr, T.w, T.h, 0, 0)) b = mk(type, cc, rr, T.w, T.h);
-      }
-    }
+    // Auto-extend canvas downwards right below the lowest existing block
+    const maxExistingRow = S.blocks.reduce((maxR, o) => Math.max(maxR, (o.r || 1) + (o.h || 1)), 1);
+    const targetR = Math.max(1, maxExistingRow);
+    R = Math.max(R, targetR + T.h + 2);
+    b = mk(type, 1, targetR, T.w, T.h);
   }
-  if (!b) return toast(S.lang === 'en' ? 'Please place the element in an empty area.' : 'Sila letakkan elemen di kawasan yang kosong.');
   snap();
+  if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
   S.blocks.push(b);
   S.sel = b.id;
   if (b.r + b.h - 1 > R - 2) R = Math.max(R, b.r + b.h + 2);
   render();
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(() => {
+      const blkEl = document.querySelector(`#cv .blk[data-id="${b.id}"]`);
+      if (blkEl && typeof blkEl.scrollIntoView === 'function') {
+        blkEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      const lnEl = document.querySelector(`#src .ln[data-id="${b.id}"]`);
+      if (lnEl && typeof lnEl.scrollIntoView === 'function') {
+        lnEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  }
   hint(b);
 }
 
 function applyTpl(i) {
   snap();
+  if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
   S.blocks = TP[i][1].map(a => mk(a[0], a[1], a[2], a[3], a[4]));
   if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
   R = Math.max(12, ...S.blocks.map(b => b.r + b.h - 1));
@@ -330,6 +526,8 @@ function applyTpl(i) {
 }
 
 function sorted() {
+  S.blocks = sanitizePageBlocks(S.blocks);
+  if (S.pages && S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
   const bs = [...S.blocks].sort((a, b) => a.r - b.r || a.c - b.c);
   const tot = {};
   const n = {};
@@ -354,6 +552,31 @@ function deleteBox(id) {
 
 function deleteSelected(id) {
   deleteBox(id);
+}
+
+function clearCanvas() {
+  snap();
+  S.blocks = [];
+  if (S.pages[S.curPage]) {
+    S.pages[S.curPage].blocks = S.blocks;
+    if (S.pages[S.curPage].title === undefined) {
+      S.pages[S.curPage].title = ' Your Page Title';
+    }
+  }
+  if (S.codeEdits && S.codeEdits[S.curPage]) {
+    delete S.codeEdits[S.curPage].html;
+  }
+  R = 12;
+  S.sel = null;
+  S.tool = 'r';
+  render();
+  const textarea = document.querySelector('#code-textarea');
+  if (textarea && S.tab === 'html') {
+    textarea.value = htmlLines().map(l => l.s).join('\n');
+  }
+  toast(S.lang === 'en'
+    ? '📄 Canvas cleared to basic HTML structure. Draw boxes on the grid to generate code! (Ctrl+Z to undo)'
+    : '📄 Kanvas dikosongkan ke struktur asas HTML. Lukis kotak pada grid untuk menjana kod! (Ctrl+Z untuk buat asal)');
 }
 
 function addChildToBlock(parentId, childType) {
@@ -385,5 +608,11 @@ function addChildToBlock(parentId, childType) {
   }
   if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
   render();
-  toast(`Component "${TY[childType].n}" added into <${TY[p.type].tag}>.`);
+  const isEn = S.lang === 'en';
+  const childT = TY[childType] || TY.text;
+  const parentT = TY[p.type] || TY.section;
+  const childLabel = isEn ? (childT.en || childT.n) : childT.n;
+  toast(isEn
+    ? `Component "${childLabel}" added inside <${parentT.tag}>.`
+    : `Komponen "${childLabel}" ditambah ke dalam <${parentT.tag}>.`);
 }

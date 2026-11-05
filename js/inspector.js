@@ -17,6 +17,31 @@ function setCodeSourceSelectedElement(element) {
   renderIns();
 }
 function getCodeSourceSelectedElement() { return codeSourceSelectedElement && codeSourceSelectedElement.isConnected ? codeSourceSelectedElement : null; }
+function pickAndCompressImage(onReady) {
+  let fileInput = $('#studio-hidden-img-input');
+  if (!fileInput) {
+    fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.id = 'studio-hidden-img-input';
+    fileInput.accept = 'image/*';
+    fileInput.hidden = true;
+    document.body.appendChild(fileInput);
+  }
+  fileInput.value = '';
+  fileInput.onchange = async () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    try {
+      const dataUrl = typeof compressImageFileToDataUrl === 'function'
+        ? await compressImageFileToDataUrl(file, 1200, 0.82)
+        : URL.createObjectURL(file);
+      if (typeof onReady === 'function') onReady(dataUrl);
+    } catch (_) {
+      toast(S.lang === 'en' ? 'Could not process selected image file.' : 'Gagal memproses fail gambar yang dipilih.');
+    }
+  };
+  fileInput.click();
+}
 function sourceInputColor(value, fallback = '#ffffff') {
   if (/^#[0-9a-f]{6}$/i.test(value || '')) return value;
   const match = String(value || '').match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
@@ -117,6 +142,7 @@ function renderSourceNavigationInspector(panel, element, context) {
       <label class="ins-label">${isEn ? 'Link label' : 'Nama pautan'}</label><input type="text" data-source-property="text" value="${qa((activeTopLink.textContent || '').trim())}">
       <label class="ins-label">${isEn ? 'Target URL' : 'Alamat yang dibuka'}</label><input type="text" data-source-property="href" value="${qa(activeTopLink.getAttribute('href') || '')}" placeholder="${isEn ? 'https://... or page.html' : 'https://... atau halaman.html'}">
     </div>` : ''}
+    <button type="button" class="ins-action-btn" data-import-code-to-blocks style="margin-bottom:6px;background:rgba(0,212,255,0.12);border-color:var(--cy)">${isEn ? '⚡ Convert Custom HTML to Visual Blocks' : '⚡ Tukar HTML Bebas ke Blok Visual'}</button>
     <button type="button" class="ins-action-btn" data-reset-code-source>${isEn ? 'Return to visual blocks' : 'Kembali ke blok visual'}</button>
   </section>`;
 }
@@ -151,7 +177,7 @@ function renderCodeSourceInspector() {
   const panel = $('#inspector-content');
   const element = getCodeSourceSelectedElement();
   if (!element) {
-    panel.innerHTML = `<div class="ins-empty code-source-help"><b>${isEn ? 'Custom Code Page' : 'Halaman kod bebas'}</b><span>${isEn ? 'Click any text or element on the canvas to select it. Edit text directly or use the controls here.' : 'Klik teks atau elemen pada kanvas untuk pilih. Sunting teks terus atau gunakan kawalan di sini.'}</span><div class="code-source-inserts"><button type="button" data-code-source-insert="h1">${isEn ? '+ Heading' : '+ Tajuk'}</button><button type="button" data-code-source-insert="p">${isEn ? '+ Text' : '+ Teks'}</button><button type="button" data-code-source-insert="a">${isEn ? '+ Link' : '+ Pautan'}</button><button type="button" data-code-source-insert="img">${isEn ? '+ Image' : '+ Gambar'}</button><button type="button" data-code-source-insert="section">${isEn ? '+ Section' : '+ Bahagian'}</button></div><button type="button" class="ins-action-btn" data-reset-code-source>${isEn ? 'Return to visual blocks' : 'Kembali ke blok visual'}</button></div>`;
+    panel.innerHTML = `<div class="ins-empty code-source-help"><b>${isEn ? 'Custom Code Page' : 'Halaman kod bebas'}</b><span>${isEn ? 'Click any text or element on the canvas to select it. Edit text directly or use the controls here.' : 'Klik teks atau elemen pada kanvas untuk pilih. Sunting teks terus atau gunakan kawalan di sini.'}</span><div class="code-source-inserts"><button type="button" data-code-source-insert="h1">${isEn ? '+ Heading' : '+ Tajuk'}</button><button type="button" data-code-source-insert="p">${isEn ? '+ Text' : '+ Teks'}</button><button type="button" data-code-source-insert="a">${isEn ? '+ Link' : '+ Pautan'}</button><button type="button" data-code-source-insert="img">${isEn ? '+ Image' : '+ Gambar'}</button><button type="button" data-code-source-insert="section">${isEn ? '+ Section' : '+ Bahagian'}</button></div><button type="button" class="ins-action-btn" data-import-code-to-blocks style="margin-bottom:6px;background:rgba(0,212,255,0.12);border-color:var(--cy)">${isEn ? '⚡ Convert Custom HTML to Visual Blocks' : '⚡ Tukar HTML Bebas ke Blok Visual'}</button><button type="button" class="ins-action-btn" data-reset-code-source>${isEn ? 'Return to visual blocks' : 'Kembali ke blok visual'}</button></div>`;
     return;
   }
   const navigation = sourceNavigationContext(element);
@@ -167,11 +193,11 @@ function renderCodeSourceInspector() {
   const align = element.style.textAlign || computed.textAlign || 'left';
   const objectFit = element.style.objectFit || computed.objectFit || 'fill';
   panel.innerHTML = `<section class="ins-section code-source-element"><div class="ins-section-heading">${isEn ? 'Selected element' : 'Elemen dipilih'} <code>&lt;${tag}&gt;</code></div>
-    ${isImage ? `<label class="ins-label">${isEn ? 'Image URL' : 'Pautan gambar'}</label><input type="url" data-source-property="src" value="${qa(element.getAttribute('src') || '')}" placeholder="https://..."><label class="ins-label">${isEn ? 'Image alt description' : 'Teks penerangan gambar'}</label><input type="text" data-source-property="alt" value="${qa(text)}"><div class="source-dimensions">${sourceDimensionControl(element, 'width', isEn ? 'Width' : 'Lebar')}${sourceDimensionControl(element, 'height', isEn ? 'Height' : 'Tinggi')}</div><label class="ins-label">${isEn ? 'Object fit mode' : 'Cara muat dalam ruang'}</label><select data-source-property="objectFit"><option value="fill"${objectFit === 'fill' ? ' selected' : ''}>${isEn ? 'Stretch to fit' : 'Regang ikut ruang'}</option><option value="contain"${objectFit === 'contain' ? ' selected' : ''}>${isEn ? 'Contain full image' : 'Muat sepenuhnya'}</option><option value="cover"${objectFit === 'cover' ? ' selected' : ''}>${isEn ? 'Cover space' : 'Penuhkan ruang'}</option><option value="none"${objectFit === 'none' ? ' selected' : ''}>${isEn ? 'Original size' : 'Saiz asal'}</option><option value="scale-down"${objectFit === 'scale-down' ? ' selected' : ''}>${isEn ? 'Scale down if needed' : 'Kecilkan jika perlu'}</option></select>` : `<label class="ins-label">${isEn ? 'Text' : 'Teks'}</label><textarea rows="3" data-source-property="text">${esc(text)}</textarea>`}
+    ${isImage ? `<label class="ins-label">${isEn ? 'Image URL' : 'Pautan gambar'}</label><input type="url" data-source-property="src" value="${qa(element.getAttribute('src') || '')}" placeholder="https://..."><button type="button" class="ins-action-btn" data-upload-source-img style="margin:6px 0;width:100%">${isEn ? '📁 Upload Image (Auto-Compressed)' : '📁 Muat Naik Gambar (Mampat Auto)'}</button><label class="ins-label">${isEn ? 'Image alt description' : 'Teks penerangan gambar'}</label><input type="text" data-source-property="alt" value="${qa(text)}"><div class="source-dimensions">${sourceDimensionControl(element, 'width', isEn ? 'Width' : 'Lebar')}${sourceDimensionControl(element, 'height', isEn ? 'Height' : 'Tinggi')}</div><label class="ins-label">${isEn ? 'Object fit mode' : 'Cara muat dalam ruang'}</label><select data-source-property="objectFit"><option value="fill"${objectFit === 'fill' ? ' selected' : ''}>${isEn ? 'Stretch to fit' : 'Regang ikut ruang'}</option><option value="contain"${objectFit === 'contain' ? ' selected' : ''}>${isEn ? 'Contain full image' : 'Muat sepenuhnya'}</option><option value="cover"${objectFit === 'cover' ? ' selected' : ''}>${isEn ? 'Cover space' : 'Penuhkan ruang'}</option><option value="none"${objectFit === 'none' ? ' selected' : ''}>${isEn ? 'Original size' : 'Saiz asal'}</option><option value="scale-down"${objectFit === 'scale-down' ? ' selected' : ''}>${isEn ? 'Scale down if needed' : 'Kecilkan jika perlu'}</option></select>` : `<label class="ins-label">${isEn ? 'Text' : 'Teks'}</label><textarea rows="3" data-source-property="text">${esc(text)}</textarea>`}
     ${tag === 'a' ? `<label class="ins-label">${isEn ? 'Target URL' : 'Alamat yang dibuka'}</label><input type="text" data-source-property="href" value="${qa(element.getAttribute('href') || '')}" placeholder="${isEn ? 'https://... or page.html' : 'https://... atau halaman.html'}">` : ''}
     <div class="ins-grid-2col"><div><label class="ins-label">${isEn ? 'Text color' : 'Warna teks'}</label><input type="color" data-source-property="color" value="${sourceInputColor(element.style.color || computed.color, '#203a5b')}"></div><div><label class="ins-label">${isEn ? 'Background color' : 'Warna latar'}</label><input type="color" data-source-property="backgroundColor" value="${sourceInputColor(element.style.backgroundColor || computed.backgroundColor, '#ffffff')}"></div></div>
     <label class="ins-label">${isEn ? 'Font size' : 'Saiz teks'}</label><input type="number" min="8" max="120" data-source-property="fontSize" value="${fontSize}"><label class="ins-label">${isEn ? 'Alignment' : 'Penjajaran'}</label><select data-source-property="textAlign"><option value="left"${align === 'left' ? ' selected' : ''}>${isEn ? 'Left' : 'Kiri'}</option><option value="center"${align === 'center' ? ' selected' : ''}>${isEn ? 'Center' : 'Tengah'}</option><option value="right"${align === 'right' ? ' selected' : ''}>${isEn ? 'Right' : 'Kanan'}</option></select>
-    <div class="code-source-format"><button type="button" data-code-source-action="bold"><b>B</b></button><button type="button" data-code-source-action="italic"><i>I</i></button><button type="button" data-code-source-action="underline"><u>U</u></button><button type="button" data-code-source-action="delete">${isEn ? 'Delete element' : 'Padam elemen'}</button></div><button type="button" class="ins-action-btn" data-reset-code-source>${isEn ? 'Return to studio visual blocks' : 'Kembali ke blok visual studio'}</button></section>`;
+    <div class="code-source-format"><button type="button" data-code-source-action="bold"><b>B</b></button><button type="button" data-code-source-action="italic"><i>I</i></button><button type="button" data-code-source-action="underline"><u>U</u></button><button type="button" data-code-source-action="delete">${isEn ? 'Delete element' : 'Padam elemen'}</button></div><button type="button" class="ins-action-btn" data-import-code-to-blocks style="margin-bottom:6px;background:rgba(0,212,255,0.12);border-color:var(--cy)">${isEn ? '⚡ Convert Custom HTML to Visual Blocks' : '⚡ Tukar HTML Bebas ke Blok Visual'}</button><button type="button" class="ins-action-btn" data-reset-code-source>${isEn ? 'Return to studio visual blocks' : 'Kembali ke blok visual studio'}</button></section>`;
 }
 
 function renderIns() {
@@ -206,27 +232,28 @@ function renderIns() {
     ];
     const patternPicker = patterns.map(([value, label]) => `<button type="button" class="ins-choice${b.bgImg === value ? ' active' : ''}" data-set-bg-pattern="${value}">${label}</button>`).join('');
     const imagePicker = `
-      <label class="ins-label" for="ins-bg-img">Background Image URL</label>
-      <input type="text" id="ins-bg-img" placeholder="Paste image URL here" value="${qa(b.bgImg && !b.bgImg.startsWith('pattern-') ? b.bgImg : '')}">
+      <label class="ins-label" for="ins-bg-img">${isEn ? 'Background Image URL' : 'URL Gambar Latar'}</label>
+      <input type="text" id="ins-bg-img" placeholder="${isEn ? 'Paste image URL here' : 'Tampal URL gambar di sini'}" value="${qa(b.bgImg && !b.bgImg.startsWith('pattern-') ? b.bgImg : '')}">
+      <button type="button" class="ins-action-btn" data-upload-bg-img style="margin:6px 0;width:100%">${isEn ? '📁 Upload Background Image (Auto-Compressed)' : '📁 Muat Naik Gambar Latar (Mampat Auto)'}</button>
       <div class="ins-preset-chips ins-image-presets">
         <button type="button" class="ins-choice" data-set-bg-img="https://images.unsplash.com/photo-1497366216548-37526070297c?w=1000&auto=format&fit=crop&q=80">Office</button>
         <button type="button" class="ins-choice" data-set-bg-img="https://images.unsplash.com/photo-1518770660439-4636190af475?w=1000&auto=format&fit=crop&q=80">Tech</button>
         <button type="button" class="ins-choice" data-set-bg-img="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1000&auto=format&fit=crop&q=80">Space</button>
       </div>
       <details class="ins-advanced ins-image-advanced">
-        <summary>Image display options</summary>
+        <summary>${isEn ? 'Image display options' : 'Pilihan paparan gambar'}</summary>
         <div class="ins-grid-2col">
-          <div><label class="ins-label" for="ins-bg-size">Fit mode</label><select id="ins-bg-size">
-            <option value="cover"${b.bgSize === 'cover' ? ' selected' : ''}>Cover (Fill area)</option>
-            <option value="contain"${b.bgSize === 'contain' ? ' selected' : ''}>Contain (Fit entire)</option>
-            <option value="auto"${b.bgSize === 'auto' ? ' selected' : ''}>Original size</option>
-            <option value="100% 100%"${b.bgSize === '100% 100%' ? ' selected' : ''}>Stretch (100% 100%)</option>
+          <div><label class="ins-label" for="ins-bg-size">${isEn ? 'Fit mode' : 'Cara muat'}</label><select id="ins-bg-size">
+            <option value="cover"${b.bgSize === 'cover' ? ' selected' : ''}>${isEn ? 'Cover (Fill area)' : 'Penuhkan ruang (Cover)'}</option>
+            <option value="contain"${b.bgSize === 'contain' ? ' selected' : ''}>${isEn ? 'Contain (Fit entire)' : 'Muat penuh (Contain)'}</option>
+            <option value="auto"${b.bgSize === 'auto' ? ' selected' : ''}>${isEn ? 'Original size' : 'Saiz asal'}</option>
+            <option value="100% 100%"${b.bgSize === '100% 100%' ? ' selected' : ''}>${isEn ? 'Stretch (100% 100%)' : 'Regangkan (100% 100%)'}</option>
           </select></div>
-          <div><label class="ins-label" for="ins-bg-repeat">Repeat</label><select id="ins-bg-repeat">
-            <option value="no-repeat"${b.bgRepeat === 'no-repeat' ? ' selected' : ''}>No repeat</option>
-            <option value="repeat"${b.bgRepeat === 'repeat' ? ' selected' : ''}>Repeat both directions</option>
-            <option value="repeat-x"${b.bgRepeat === 'repeat-x' ? ' selected' : ''}>Repeat horizontal (x)</option>
-            <option value="repeat-y"${b.bgRepeat === 'repeat-y' ? ' selected' : ''}>Repeat vertical (y)</option>
+          <div><label class="ins-label" for="ins-bg-repeat">${isEn ? 'Repeat' : 'Ulangan'}</label><select id="ins-bg-repeat">
+            <option value="no-repeat"${b.bgRepeat === 'no-repeat' ? ' selected' : ''}>${isEn ? 'No repeat' : 'Tiada ulangan'}</option>
+            <option value="repeat"${b.bgRepeat === 'repeat' ? ' selected' : ''}>${isEn ? 'Repeat both directions' : 'Ulang kedua-dua arah'}</option>
+            <option value="repeat-x"${b.bgRepeat === 'repeat-x' ? ' selected' : ''}>${isEn ? 'Repeat horizontal (x)' : 'Ulang melintang (x)'}</option>
+            <option value="repeat-y"${b.bgRepeat === 'repeat-y' ? ' selected' : ''}>${isEn ? 'Repeat vertical (y)' : 'Ulang menegak (y)'}</option>
           </select></div>
         </div>
       </details>`;
@@ -256,6 +283,7 @@ function renderIns() {
         <div class="ins-section-heading">${isEn ? 'Image' : 'Gambar'}</div>
         <label class="ins-label" for="ins-img-url">${isEn ? 'Image URL' : 'URL Gambar'}</label>
         <input type="text" id="ins-img-url" placeholder="${isEn ? 'Paste image URL here' : 'Tampal URL gambar di sini'}" value="${qa(b.imgUrl || '')}">
+        <button type="button" class="ins-action-btn" data-upload-img style="margin:6px 0;width:100%">${isEn ? '📁 Upload Image from Device (Auto-Compressed)' : '📁 Muat Naik Gambar dari Peranti (Mampat Auto)'}</button>
         <div class="ins-preset-chips ins-image-presets">
           <button type="button" class="ins-choice" data-set-img="https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=80">Computer</button>
           <button type="button" class="ins-choice" data-set-img="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&auto=format&fit=crop&q=80">Team</button>
@@ -332,23 +360,28 @@ function renderIns() {
       <input type="text" id="ins-form-submit" value="${qa(b.submitText)}" placeholder="${isEn ? 'Send Message' : 'Hantar Mesej'}">
     </section>`;
   } else if (isNav) {
-    const items = b.t.includes(',') ? b.t.split(',') : b.t.includes('|') ? b.t.split('|') : b.t.includes('\n') ? b.t.split('\n') : b.t.trim().split(/\s+/);
+    const items = typeof splitNavItems === 'function' ? splitNavItems(b.t) : (b.t.includes(',') ? b.t.split(',') : b.t.trim().split(/\s+/));
     const drops = b.dropdowns || {};
+    const navHrefs = b.navHrefs || {};
+    const navCtas = b.navCtas || {};
     const curIdx = (S.selNavIdx !== null && S.selNavIdx < items.length) ? S.selNavIdx : 0;
     const curTitle = (items[curIdx] || items[0] || 'Menu').trim();
     const isDrop = !!(drops[curTitle] || drops[curIdx] || drops[curTitle.toLowerCase()]);
+    const matchPage = Object.keys(S.pages).find(k => S.pages[k].name.toLowerCase().includes(curTitle.toLowerCase()));
+    const curItemHref = navHrefs[curTitle] || navHrefs[curIdx] || matchPage || '#';
+    const isItemCta = !isDrop && (navCtas[curTitle] !== undefined ? !!navCtas[curTitle] : /mula|daftar|beli|start|sign|hubungi|contact/i.test(curTitle));
     const defaultSubList = isEn ? ['WhatsApp', 'Email', 'Location'] : ['WhatsApp', 'Emel', 'Lokasi'];
     const dropData = drops[curTitle] || drops[curIdx] || drops[curTitle.toLowerCase()] || defaultSubList;
     const subItems = Array.isArray(dropData) ? dropData : (dropData.items || defaultSubList);
     const subCount = subItems.length;
 
     contextHtml = `<section class="ins-section">
-      <div class="ins-section-heading">${isEn ? 'Navigation Menu Links' : 'Pautan Menu Navigasi'}</div>
+      <div class="ins-section-heading">${isEn ? 'Navigation Menu Links (Click each to style)' : 'Pautan Menu Navigasi (Klik satu-persatu)'}</div>
       <div class="ins-choice-row ins-nav-choices">${items.map((item, index) => {
         const title = item.trim();
         if (!title) return '';
         const itemDrop = !!(drops[title] || drops[index] || drops[title.toLowerCase()]);
-        return `<button type="button" class="ins-choice${index === curIdx ? ' active' : ''}" data-ins-nav-select="${index}" data-ins-nav-title="${esc(title)}">${itemDrop ? '▾ ' : ''}${esc(title)}</button>`;
+        return `<button type="button" class="ins-choice${index === curIdx ? ' active' : ''}" data-ins-nav-select="${index}" data-ins-nav-title="${esc(title)}">${itemDrop ? '▾ ' : '🔗 '}${esc(title)}</button>`;
       }).join('')}</div>
       ${isDrop ? `
         <div style="margin-top:10px;padding:10px;background:rgba(255,255,255,0.04);border:1px solid var(--line);border-radius:6px">
@@ -387,9 +420,25 @@ function renderIns() {
           </button>
         </div>
       ` : `
-        <button type="button" class="ins-action-btn ins-wide-action" data-ins-nav-drop="add" data-target-title="${esc(curTitle)}" style="margin-top:10px">
-          ${isEn ? 'Convert to Dropdown Menu' : 'Tukar kepada Menu Dropdown'}
-        </button>
+        <div style="margin-top:8px;padding:8px;background:rgba(255,255,255,0.04);border:1px solid var(--line);border-radius:6px">
+          <div style="font-size:11px;font-weight:700;margin-bottom:6px;color:var(--cy)">🔗 ${esc(curTitle)}</div>
+          <label class="ins-label" for="ins-nav-item-dest">${isEn ? 'Link Destination (href)' : 'Destinasi Pautan (href)'}</label>
+          <select id="ins-nav-item-dest" data-target-title="${esc(curTitle)}">
+            <option value="#"${curItemHref === '#' ? ' selected' : ''}># (${isEn ? 'Anchor / None' : 'Tiada'})</option>
+            ${Object.keys(S.pages).map(pg => `<option value="${qa(pg)}"${curItemHref === pg ? ' selected' : ''}>${isEn ? 'Page' : 'Halaman'}: ${esc(S.pages[pg].name)}</option>`).join('')}
+            ${S.extLinks.map(ext => `<option value="${qa(ext.url)}"${curItemHref === ext.url ? ' selected' : ''}>${esc(ext.title)}</option>`).join('')}
+          </select>
+          <label class="ins-label" for="ins-nav-item-url" style="margin-top:6px">${isEn ? 'Or Custom URL' : 'Atau Alamat URL Sendiri'}</label>
+          <input type="text" id="ins-nav-item-url" data-target-title="${esc(curTitle)}" value="${qa(curItemHref)}" placeholder="index.html / https://...">
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <button type="button" class="ins-action-btn${isItemCta ? ' active' : ''}" data-ins-nav-cta="${esc(curTitle)}" style="flex:1">
+              ${isItemCta ? (isEn ? '✓ CTA Button Style' : '✓ Gaya Butang CTA') : (isEn ? 'Make CTA Button' : 'Jadikan Butang CTA')}
+            </button>
+            <button type="button" class="ins-action-btn" data-ins-nav-drop="add" data-target-title="${esc(curTitle)}" style="flex:1">
+              ${isEn ? '▾ Dropdown' : '▾ Dropdown'}
+            </button>
+          </div>
+        </div>
       `}
     </section>`;
   }
@@ -408,12 +457,80 @@ function renderIns() {
     <div class="ins-quick-converts"><button type="button" class="ins-choice" data-convert-type="nav">${isEn ? 'Navigation' : 'Navigasi'}</button><button type="button" class="ins-choice" data-convert-type="button">${isEn ? 'CTA Button' : 'Butang CTA'}</button><button type="button" class="ins-choice" data-convert-type="header">Header</button><button type="button" class="ins-choice" data-convert-type="form">${isEn ? 'Form' : 'Borang'}</button></div>
   </details>`;
 
+  const childBlocks = typeof kids === 'function' ? kids(b) : [];
+  const childSwitcherHtml = childBlocks.length ? `
+    <section class="ins-section" style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.28);border-radius:8px;padding:8px 10px;margin-bottom:8px">
+      <div class="ins-section-heading" style="color:var(--cy);margin-bottom:4px">${isEn ? '📦 Elements Inside This Box' : '📦 Elemen Di Dalam Kotak Ini'}</div>
+      <p class="ins-help" style="margin:0 0 6px;font-size:11px">${isEn ? 'Click an inner element below to style its text or links:' : 'Klik elemen di bawah untuk gaya teks atau pautan di dalamnya:'}</p>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        ${childBlocks.map(ch => {
+          const chTxt = stripHtmlTags(ch.t || '').trim() || (TY[ch.type]?.n || ch.type);
+          return `<button type="button" class="ins-action-btn" data-select-child-id="${qa(ch.id)}" style="text-align:left;justify-content:flex-start;font-weight:700;padding:6px 8px">👉 ${esc(chTxt.slice(0, 42))}</button>`;
+        }).join('')}
+      </div>
+    </section>` : '';
+
+  const showInlineStyler = !isImage && !isForm && !isDropdown && !isNav && !childBlocks.length && typeof parseBlockInlineItems === 'function';
+  const inlineItems = showInlineStyler ? parseBlockInlineItems(b) : [];
+  const curInlineIdx = (typeof S.selInlineIdx === 'number' && S.selInlineIdx >= 0 && S.selInlineIdx < inlineItems.length) ? S.selInlineIdx : 0;
+  const activeInline = inlineItems[curInlineIdx] || inlineItems[0] || null;
+  const inlineStylerHtml = (showInlineStyler && activeInline) ? `
+    <section class="ins-section" id="ins-inline-styler" style="border:1px solid rgba(0,212,255,0.28);background:rgba(0,212,255,0.05);border-radius:8px;padding:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px">
+        <div class="ins-section-heading" style="margin:0;color:var(--cy)">🎯 ${esc(activeInline.text || (isEn ? 'Selected Text' : 'Teks Dipilih'))}</div>
+        <button type="button" class="inline-fmt-btn" data-inline-add="link" title="${isEn ? 'Add another text/link phrase' : 'Tambah teks/pautan baharu'}" style="font-size:10.5px;padding:0 7px">+ ${isEn ? 'Add' : 'Tambah'}</button>
+      </div>
+      ${inlineItems.length > 1 ? `
+        <div class="ins-choice-row" style="margin-bottom:8px">
+          ${inlineItems.map((it, idx) => `<button type="button" class="ins-choice${idx === curInlineIdx ? ' active' : ''}" data-inline-select="${idx}">${it.isLink ? '🔗 ' : ''}${esc(it.text)}</button>`).join('')}
+        </div>
+      ` : ''}
+      <div class="inline-item-card" style="margin-bottom:0">
+        <label class="ins-label" style="margin:0">${isEn ? 'Text' : 'Teks'}</label>
+        <div class="inline-item-row">
+          <input type="text" data-inline-txt="${curInlineIdx}" value="${qa(activeInline.text)}" placeholder="${isEn ? 'Text phrase...' : 'Teks / frasa...'}" style="flex:1;padding:5px 8px;font-size:12.5px;font-weight:600">
+          ${inlineItems.length > 1 ? `<button type="button" class="inline-fmt-btn" data-inline-del="${curInlineIdx}" title="${isEn ? 'Delete this text' : 'Padam teks ini'}" style="color:#ff8888;border-color:rgba(255,80,80,0.3)">✕</button>` : ''}
+        </div>
+
+        <label class="ins-label" style="margin:4px 0 0;color:var(--cy)">🔗 &lt;a href="..."&gt; (${isEn ? 'Link Destination' : 'Pautan Halaman / URL'})</label>
+        <select data-inline-dest="${curInlineIdx}" style="width:100%;padding:5px 8px;font-size:12px">
+          <option value=""${!activeInline.isLink ? ' selected' : ''}>${isEn ? '— Plain Text (No Link) —' : '— Teks Biasa (Tiada Link) —'}</option>
+          ${Object.keys(S.pages).map(pg => `<option value="${qa(pg)}"${(activeInline.isLink && activeInline.href === pg) ? ' selected' : ''}>📄 ${esc(S.pages[pg].name)} (${esc(pg)})</option>`).join('')}
+          ${S.extLinks.map(ext => `<option value="${qa(ext.url)}"${(activeInline.isLink && activeInline.href === ext.url) ? ' selected' : ''}>🌐 ${esc(ext.title)}</option>`).join('')}
+          <option value="#"${(activeInline.isLink && (!activeInline.href || activeInline.href === '#')) ? ' selected' : ''}>🔗 # (Anchor)</option>
+        </select>
+        <input type="text" data-inline-href="${curInlineIdx}" value="${qa(activeInline.isLink ? (activeInline.href || '#') : '')}" placeholder="${isEn ? 'Type URL or page (e.g. index.html, https://...)' : 'Taip URL atau halaman (cth: index.html, https://...)'}" style="width:100%;padding:5px 8px;font-size:11.5px;font-family:var(--font-mono);margin-top:4px">
+
+        <div class="inline-item-row" style="justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px dashed rgba(255,255,255,0.1)">
+          <div style="display:flex;align-items:center;gap:4px">
+            <button type="button" class="inline-fmt-btn${activeInline.isLink ? ' active' : ''}" data-inline-link="${curInlineIdx}" title="Link (<a>)" style="width:auto;padding:0 7px">🔗 Link</button>
+            <button type="button" class="inline-fmt-btn${activeInline.isBtn ? ' active' : ''}" data-inline-btn="${curInlineIdx}" title="${isEn ? 'Style as Button' : 'Gaya Butang'}" style="width:auto;padding:0 7px">🔘 ${isEn ? 'Button' : 'Butang'}</button>
+            <button type="button" class="inline-fmt-btn${activeInline.bold ? ' active' : ''}" data-inline-fmt="bold" data-inline-idx="${curInlineIdx}" title="Bold"><b>B</b></button>
+            <button type="button" class="inline-fmt-btn${activeInline.italic ? ' active' : ''}" data-inline-fmt="italic" data-inline-idx="${curInlineIdx}" title="Italic"><i>I</i></button>
+            <button type="button" class="inline-fmt-btn${activeInline.underline ? ' active' : ''}" data-inline-fmt="underline" data-inline-idx="${curInlineIdx}" title="Underline"><u>U</u></button>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <label style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--mute);cursor:pointer" title="${isEn ? 'Text color' : 'Warna teks'}">
+              <span>A</span>
+              <input type="color" data-inline-col="${curInlineIdx}" value="${qa(activeInline.color && /^#[0-9a-f]{6}$/i.test(activeInline.color) ? activeInline.color : (activeInline.isLink ? '#2563eb' : '#1e293b'))}" style="width:20px;height:20px;padding:0;border:none;background:transparent;cursor:pointer">
+            </label>
+            <label style="display:flex;align-items:center;gap:3px;font-size:10px;color:var(--mute);cursor:pointer" title="${isEn ? 'Background / Button color' : 'Warna latar / butang'}">
+              <span>🎨</span>
+              <input type="color" data-inline-bg="${curInlineIdx}" value="${qa(activeInline.bg && /^#[0-9a-f]{6}$/i.test(activeInline.bg) ? activeInline.bg : '#2563eb')}" style="width:20px;height:20px;padding:0;border:none;background:transparent;cursor:pointer">
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>` : '';
+
   el.innerHTML = `
     <section class="ins-section ins-item-section">
       <div class="ins-head-row"><span class="ins-title">${esc(tName)}</span></div>
       <label class="ins-label" for="ty">${isEn ? 'Component Type' : 'Jenis Komponen'}</label>
       <select id="ty" aria-label="${isEn ? 'Component Type' : 'Jenis Komponen'}">${componentOptions}</select>
     </section>
+    ${childSwitcherHtml}
+    ${inlineStylerHtml}
     <section class="ins-section ins-content-section">
       <label class="ins-label" for="tx">${contentLabel}</label>
       <textarea id="tx" rows="3" placeholder="${isEn ? 'Type content here...' : 'Taip kandungan di sini...'}">${qa(b.t)}</textarea>
@@ -723,6 +840,61 @@ document.addEventListener('drop', e => {
     b.dropdowns[title] = arr.length ? arr : [S.lang === 'en' ? 'Option 1' : 'Pilihan 1'];
     if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
     refresh();
+  } else if (e.target.dataset.inlineTxt !== undefined) {
+    const idx = parseInt(e.target.dataset.inlineTxt, 10);
+    const items = parseBlockInlineItems(b);
+    if (items[idx]) {
+      items[idx].text = e.target.value;
+      b.t = serializeBlockInlineItems(items);
+      b._lastInlineHtml = b.t;
+      if ($('#tx')) $('#tx').value = b.t;
+      if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+      if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+      refresh();
+    }
+  } else if (e.target.dataset.inlineHref !== undefined) {
+    const idx = parseInt(e.target.dataset.inlineHref, 10);
+    const items = parseBlockInlineItems(b);
+    if (items[idx]) {
+      const val = e.target.value.trim();
+      if (val) {
+        items[idx].href = val;
+        items[idx].isLink = true;
+      } else {
+        items[idx].isLink = false;
+        items[idx].isBtn = false;
+      }
+      b.t = serializeBlockInlineItems(items);
+      b._lastInlineHtml = b.t;
+      if ($('#tx')) $('#tx').value = b.t;
+      if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+      if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+      refresh();
+    }
+  } else if (e.target.dataset.inlineCol !== undefined) {
+    const idx = parseInt(e.target.dataset.inlineCol, 10);
+    const items = parseBlockInlineItems(b);
+    if (items[idx]) {
+      items[idx].color = e.target.value;
+      b.t = serializeBlockInlineItems(items);
+      b._lastInlineHtml = b.t;
+      if ($('#tx')) $('#tx').value = b.t;
+      if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+      if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+      refresh();
+    }
+  } else if (e.target.dataset.inlineBg !== undefined) {
+    const idx = parseInt(e.target.dataset.inlineBg, 10);
+    const items = parseBlockInlineItems(b);
+    if (items[idx]) {
+      items[idx].bg = e.target.value;
+      b.t = serializeBlockInlineItems(items);
+      b._lastInlineHtml = b.t;
+      if ($('#tx')) $('#tx').value = b.t;
+      if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+      if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+      refresh();
+    }
   }
 });
 
@@ -750,10 +922,11 @@ document.addEventListener('drop', e => {
   if (!b) return;
   snap();
   if (e.target.id == 'ty') {
-    const o = TY[b.type];
+    const o = TY[b.type] || TY.text;
     const isEn = S.lang === 'en';
-    b.type = e.target.value;
-    if (b.t == o.t || b.t == o.tMs) b.t = isEn ? TY[b.type].t : (TY[b.type].tMs || TY[b.type].t);
+    b.type = typeof normalizeBlockType === 'function' ? normalizeBlockType(e.target.value) : e.target.value;
+    const nextT = TY[b.type] || TY.text;
+    if (b.t == o.t || b.t == o.tMs) b.t = isEn ? nextT.t : (nextT.tMs || nextT.t);
     if (['button', 'logo', 'link'].includes(b.type) && !b.href) b.href = '#';
     if (b.type === 'dropdown' && !b.items) b.items = isEn ? ['Option 1', 'Option 2', 'Option 3'] : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
     if (b.type === 'form') {
@@ -782,6 +955,32 @@ document.addEventListener('drop', e => {
     b.href = e.target.value.trim() || '#';
     if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
     render();
+  } else if (e.target.id == 'ins-nav-item-dest' || e.target.id == 'ins-nav-item-url') {
+    const title = e.target.dataset.targetTitle || S.selNavTitle;
+    if (title) {
+      b.navHrefs = b.navHrefs || {};
+      b.navHrefs[title] = e.target.value.trim() || '#';
+      if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+      render();
+    }
+  } else if (e.target.dataset.inlineDest !== undefined) {
+    const idx = parseInt(e.target.dataset.inlineDest, 10);
+    const items = parseBlockInlineItems(b);
+    if (items[idx]) {
+      const val = e.target.value;
+      if (!val) {
+        items[idx].isLink = false;
+        items[idx].isBtn = false;
+      } else {
+        items[idx].href = val;
+        items[idx].isLink = true;
+      }
+      b.t = serializeBlockInlineItems(items);
+      b._lastInlineHtml = b.t;
+      if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+      if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+      render();
+    }
   }
 });
 
@@ -891,26 +1090,78 @@ document.addEventListener('drop', e => {
     insertCodeSourceElement(target.closest('[data-code-source-insert]').dataset.codeSourceInsert);
     return;
   }
+  if (target.closest('[data-upload-source-img]')) {
+    const element = getCodeSourceSelectedElement();
+    if (!element || element.tagName !== 'IMG') return;
+    pickAndCompressImage(dataUrl => {
+      element.setAttribute('src', dataUrl);
+      syncCodeCanvasFrame();
+      renderCodeSourceInspector();
+      toast(isEn ? 'Image uploaded & compressed for fast storage!' : 'Gambar dimuat naik & dimampatkan!');
+    });
+    return;
+  }
+  if (target.closest('[data-import-code-to-blocks]')) {
+    const htmlCode = typeof currentCodeText === 'function' ? currentCodeText('html') : '';
+    const parsed = typeof parseHtmlToBlocks === 'function' ? parseHtmlToBlocks(htmlCode) : null;
+    if (parsed && parsed.length) {
+      snap();
+      S.blocks = parsed;
+      if (S.pages[S.curPage]) S.pages[S.curPage].blocks = parsed;
+      clearPageCodeOverrides();
+      codeSourceSelectedElement = null;
+      S.sel = parsed[0].id;
+      render();
+      toast(isEn
+        ? `⚡ Converted ${parsed.length} HTML elements into visual studio blocks! (Ctrl+Z to undo)`
+        : `⚡ ${parsed.length} elemen HTML ditukar kepada blok visual studio! (Ctrl+Z untuk buat asal)`);
+    } else {
+      toast(isEn ? 'No convertible HTML elements found on this page.' : 'Tiada elemen HTML yang boleh ditukar kepada blok.');
+    }
+    return;
+  }
   if (target.closest('[data-reset-code-source]')) {
     appConfirm(
       isEn
-        ? 'The custom HTML, CSS, and JavaScript on this page will be removed from freeform view and replaced with saved visual blocks. This action cannot be undone.'
-        : 'Kod HTML, CSS dan JavaScript halaman ini akan dibuang daripada paparan bebas dan diganti dengan blok visual tersimpan. Tindakan ini tidak boleh dipulihkan melalui Undo.',
+        ? 'The custom HTML, CSS, and JavaScript on this page will be replaced with your saved visual blocks. You can press Undo (Ctrl+Z) at any time to restore your custom code.'
+        : 'Kod HTML, CSS dan JavaScript bebas pada halaman ini akan digantikan dengan blok visual tersimpan. Anda boleh tekan Undo (Ctrl+Z) pada bila-bila masa untuk memulihkan kod bebas anda.',
       isEn ? 'Return to visual blocks?' : 'Kembali kepada blok visual?',
       '⚠️',
       true,
-      isEn ? 'Discard custom code & return' : 'Buang kod dan kembali'
+      isEn ? 'Return to visual blocks' : 'Kembali ke blok visual'
     ).then(confirmed => {
       if (!confirmed) return;
+      snap();
       clearPageCodeOverrides();
       codeSourceSelectedElement = null;
       render();
-      toast(isEn ? 'Returned to studio visual blocks.' : 'Kembali kepada blok visual studio.');
+      toast(isEn ? 'Returned to studio visual blocks. (Press Ctrl+Z to undo)' : 'Kembali kepada blok visual studio. (Tekan Ctrl+Z untuk buat asal)');
     });
     return;
   }
   const b = get(S.sel);
   if (!b) return;
+  if (target.closest('[data-upload-img]')) {
+    pickAndCompressImage(dataUrl => {
+      snap();
+      b.imgUrl = dataUrl;
+      if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+      render();
+      toast(isEn ? 'Image uploaded & compressed automatically!' : 'Gambar berjaya dimuat naik & dimampatkan!');
+    });
+    return;
+  }
+  if (target.closest('[data-upload-bg-img]')) {
+    pickAndCompressImage(dataUrl => {
+      snap();
+      b.bgImg = dataUrl;
+      b.bgMode = 'image';
+      if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+      render();
+      toast(isEn ? 'Background image uploaded & compressed!' : 'Gambar latar berjaya dimuat naik & dimampatkan!');
+    });
+    return;
+  }
   const modeButton = target.closest('[data-bg-mode]');
   if (modeButton) {
     const mode = modeButton.dataset.bgMode;
@@ -1031,6 +1282,21 @@ document.addEventListener('drop', e => {
     S.selNavIdx = parseInt(btn.dataset.insNavSelect, 10);
     S.selNavTitle = btn.dataset.insNavTitle;
     render();
+  } else if (target.closest('[data-ins-nav-cta]')) {
+    const btn = target.closest('[data-ins-nav-cta]');
+    const title = btn.dataset.insNavCta;
+    if (title) {
+      b.navCtas = b.navCtas || {};
+      const curAuto = /mula|daftar|beli|start|sign|hubungi|contact/i.test(title);
+      const curState = b.navCtas[title] !== undefined ? !!b.navCtas[title] : curAuto;
+      b.navCtas[title] = !curState;
+      snap();
+      if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+      render();
+      toast(b.navCtas[title]
+        ? (isEn ? `"${title}" styled as CTA Button (.btn-cta)` : `"${title}" digayakan sebagai Butang CTA (.btn-cta)`)
+        : (isEn ? `"${title}" set as regular link` : `"${title}" ditukar ke pautan biasa`));
+    }
   } else if (target.closest('[data-ins-nav-drop]')) {
     const btn = target.closest('[data-ins-nav-drop]');
     const action = btn.dataset.insNavDrop;
@@ -1051,6 +1317,106 @@ document.addEventListener('drop', e => {
     }
     if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
     render();
+  } else if (target.closest('[data-select-child-id]')) {
+    const childId = target.closest('[data-select-child-id]').dataset.selectChildId;
+    const childBlk = get(childId);
+    if (childBlk) {
+      S.sel = childBlk.id;
+      S.selInlineIdx = 0;
+      render();
+      toast(isEn ? 'Selected inner element for styling!' : 'Elemen dalaman dipilih untuk digayakan!');
+    }
+  } else if (target.closest('[data-inline-select]')) {
+    const idx = parseInt(target.closest('[data-inline-select]').dataset.inlineSelect, 10);
+    S.selInlineIdx = idx;
+    render();
+  } else if (target.closest('[data-inline-link]')) {
+    const btn = target.closest('[data-inline-link]');
+    const idx = parseInt(btn.dataset.inlineLink, 10);
+    const items = parseBlockInlineItems(b);
+    if (items[idx]) {
+      snap();
+      items[idx].isLink = !items[idx].isLink;
+      if (!items[idx].isLink) items[idx].isBtn = false;
+      else if (!items[idx].href) items[idx].href = 'index.html';
+      b.t = serializeBlockInlineItems(items);
+      b._lastInlineHtml = b.t;
+      if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+      if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+      render();
+      toast(items[idx].isLink
+        ? (isEn ? `"${items[idx].text}" converted to Link (<a>)` : `"${items[idx].text}" dijadikan Pautan (<a>)`)
+        : (isEn ? `"${items[idx].text}" set to plain text` : `"${items[idx].text}" ditukar ke teks biasa`));
+    }
+  } else if (target.closest('[data-inline-btn]')) {
+    const btn = target.closest('[data-inline-btn]');
+    const idx = parseInt(btn.dataset.inlineBtn, 10);
+    const items = parseBlockInlineItems(b);
+    if (items[idx]) {
+      snap();
+      items[idx].isBtn = !items[idx].isBtn;
+      if (items[idx].isBtn) {
+        items[idx].isLink = true;
+        if (!items[idx].href) items[idx].href = '#';
+      }
+      b.t = serializeBlockInlineItems(items);
+      b._lastInlineHtml = b.t;
+      if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+      if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+      render();
+      toast(items[idx].isBtn
+        ? (isEn ? `"${items[idx].text}" styled as Pill Button` : `"${items[idx].text}" digayakan sebagai Butang`)
+        : (isEn ? `"${items[idx].text}" button style removed` : `Gaya butang "${items[idx].text}" dibuang`));
+    }
+  } else if (target.closest('[data-inline-fmt]')) {
+    const btn = target.closest('[data-inline-fmt]');
+    const fmt = btn.dataset.inlineFmt;
+    const idx = parseInt(btn.dataset.inlineIdx, 10);
+    const items = parseBlockInlineItems(b);
+    if (items[idx] && ['bold', 'italic', 'underline'].includes(fmt)) {
+      snap();
+      items[idx][fmt] = !items[idx][fmt];
+      b.t = serializeBlockInlineItems(items);
+      b._lastInlineHtml = b.t;
+      if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+      if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+      render();
+    }
+  } else if (target.closest('[data-inline-del]')) {
+    const btn = target.closest('[data-inline-del]');
+    const idx = parseInt(btn.dataset.inlineDel, 10);
+    const items = parseBlockInlineItems(b);
+    if (items.length > 1 && items[idx]) {
+      snap();
+      items.splice(idx, 1);
+      S.selInlineIdx = Math.max(0, Math.min(idx, items.length - 1));
+      b.t = serializeBlockInlineItems(items);
+      b._lastInlineHtml = b.t;
+      if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+      if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+      render();
+    }
+  } else if (target.closest('[data-inline-add]')) {
+    const items = parseBlockInlineItems(b);
+    snap();
+    items.push({
+      text: isEn ? `Link ${items.length + 1}` : `Pautan ${items.length + 1}`,
+      isLink: true,
+      isBtn: false,
+      href: '#',
+      color: '#2563eb',
+      bg: '',
+      bold: true,
+      italic: false,
+      underline: true
+    });
+    S.selInlineIdx = items.length - 1;
+    b.t = serializeBlockInlineItems(items);
+    b._lastInlineHtml = b.t;
+    if (S.pages[S.curPage]) S.pages[S.curPage].blocks = S.blocks;
+    if (S.codeEdits && S.codeEdits[S.curPage]) delete S.codeEdits[S.curPage].html;
+    render();
+    toast(isEn ? 'Added new inline link item!' : 'Teks / pautan baharu ditambah!');
   }
 });
 
@@ -1084,6 +1450,13 @@ function renderCanvaBar() {
   const isImg = b.type === 'image';
   const hasTypo = !isImg;
 
+  // Check if this block has clickable inline phrases (e.g., "🏠 Laman Utama 📞 Hubungi Kami")
+  const canUseInlinePhrases = !['image', 'form', 'dropdown', 'nav'].includes(b.type) && !(typeof kids === 'function' && kids(b).length) && typeof parseBlockInlineItems === 'function';
+  const inlineItems = canUseInlinePhrases ? parseBlockInlineItems(b) : [];
+  const curInlineIdx = (typeof S.selInlineIdx === 'number' && S.selInlineIdx >= 0 && S.selInlineIdx < inlineItems.length) ? S.selInlineIdx : 0;
+  const activeInline = inlineItems[curInlineIdx] || null;
+  const isMultiOrLinkedPhrase = canUseInlinePhrases && (inlineItems.length > 1 || (activeInline && (activeInline.isLink || activeInline.isBtn)));
+
   // Background Fill status
   const isNoneFill = b.f === 'none';
   const curFillColor = isNoneFill ? 'transparent' : (typeof b.f === 'number' ? (FILLS[b.f] || '#ffffff') : (b.f || '#ffffff'));
@@ -1097,19 +1470,58 @@ function renderCanvaBar() {
   const curRad = b.rad || 0;
   const radDesc = curRad === 999 ? 'Pill (Full Round)' : `${curRad}px`;
 
-  // Typography statuses
+  // Typography statuses (reflect active phrase if selected!)
   const curFont = b.font || "'Inter', sans-serif";
   const curFs = b.fs || (b.type === 'header' ? 20 : ['hero', 'section', 'card'].includes(b.type) ? 16 : 14);
-  const curCol = b.col || (isColorDark(curFillColor) ? '#ffffff' : '#203a5b');
+  const curCol = (isMultiOrLinkedPhrase && activeInline && activeInline.color) ? activeInline.color : (b.col || (isColorDark(curFillColor) ? '#ffffff' : '#203a5b'));
   const currentWeight = b.fw === 'bold' ? 700 : Number(b.fw) || (/\b(?:bold|strong)\b|<\/?(?:b|strong)(?=[\s>])/i.test(b.t || '') ? 700 : 400);
-  const isBold = currentWeight >= 700;
-  const isItalic = b.fst === 'italic' || /<\/?(?:i|em)(?=[\s>])/i.test(b.t || '');
-  const isUnderline = b.td === 'underline';
+  const isBold = isMultiOrLinkedPhrase && activeInline ? !!activeInline.bold : (currentWeight >= 700);
+  const isItalic = isMultiOrLinkedPhrase && activeInline ? !!activeInline.italic : (b.fst === 'italic' || /<\/?(?:i|em)(?=[\s>])/i.test(b.t || ''));
+  const isUnderline = isMultiOrLinkedPhrase && activeInline ? !!activeInline.underline : (b.td === 'underline');
   const align = b.ta || 'left';
   const alignIcon = align === 'center' ? 'alignCenter' : align === 'right' ? 'alignRight' : 'alignLeft';
   const alignTitle = align === 'left' ? 'Align: Left (Click for Center)' : align === 'center' ? 'Align: Center (Click for Right)' : 'Align: Right (Click for Left)';
   const curPad = b.pad !== undefined ? b.pad : 16;
   const curShd = b.shd && b.shd !== 'none' ? b.shd : 'none';
+
+  // Build Direct Top-Bar <a href> controls for the clicked phrase / nav item / link block
+  let directHrefClusterHtml = '';
+  if (b.type === 'nav') {
+    const navParts = typeof splitNavItems === 'function' ? splitNavItems(b.t) : b.t.split(',');
+    const navIdx = (S.selNavIdx !== null && S.selNavIdx < navParts.length) ? S.selNavIdx : 0;
+    const navTitle = (navParts[navIdx] || navParts[0] || 'Menu').trim();
+    const curHref = (b.navHrefs && (b.navHrefs[navTitle] || b.navHrefs[navIdx])) || '#';
+    const isCta = !!(b.navCtas && b.navCtas[navTitle]);
+    directHrefClusterHtml = `
+      <div class="canva-href-cluster" title="${isEn ? 'Direct link (href) for clicked menu item' : 'Tetapan terus a href untuk item menu yang diklik'}">
+        <span style="font-size:11px;font-weight:700;color:#1e40af;white-space:nowrap">🔗 ${esc(navTitle.slice(0, 16))}:</span>
+        <select id="canva-href-sel" class="canva-href-select" data-href-mode="nav" data-nav-title="${qa(navTitle)}">
+          <option value="#"${curHref === '#' ? ' selected' : ''}># (Anchor)</option>
+          ${Object.keys(S.pages).map(pg => `<option value="${qa(pg)}"${curHref === pg ? ' selected' : ''}>📄 ${esc(pg)}</option>`).join('')}
+          ${S.extLinks.map(ext => `<option value="${qa(ext.url)}"${curHref === ext.url ? ' selected' : ''}>🌐 ${esc(ext.title)}</option>`).join('')}
+        </select>
+        <input type="text" id="canva-href-input" class="canva-href-input" data-href-mode="nav" data-nav-title="${qa(navTitle)}" value="${qa(curHref)}" placeholder="index.html / https://...">
+        <button type="button" class="canva-btn${isCta ? ' active' : ''}" data-cbar="nav-cta" data-nav-title="${qa(navTitle)}" title="${isEn ? 'Style this link as CTA Button' : 'Jadikan pautan ini Butang CTA'}" style="height:26px;padding:0 7px;font-size:11px;font-weight:600">🔘 ${isEn ? 'Btn' : 'Butang'}</button>
+      </div>`;
+  } else if (canUseInlinePhrases && activeInline) {
+    const curHref = activeInline.isLink ? (activeInline.href || 'index.html') : '';
+    directHrefClusterHtml = `
+      <div class="canva-href-cluster" title="${isEn ? 'Click any phrase on canvas to set its <a href> and button style directly' : 'Klik mana-mana teks di kanvas untuk terus tetapkan <a href> dan gaya butang'}">
+        ${inlineItems.length > 1 ? `
+          <select id="canva-inline-pick" class="canva-href-select" style="font-weight:700;color:#1e40af;max-width:140px" title="${isEn ? 'Selected text phrase on canvas' : 'Teks yang sedang dipilih di kanvas'}">
+            ${inlineItems.map((it, idx) => `<option value="${idx}"${idx === curInlineIdx ? ' selected' : ''}>🎯 ${esc(it.text)}</option>`).join('')}
+          </select>
+        ` : `<span style="font-size:11px;font-weight:700;color:#1e40af;white-space:nowrap">🔗 a href:</span>`}
+        <select id="canva-href-sel" class="canva-href-select" data-href-mode="inline" data-inline-idx="${curInlineIdx}">
+          <option value=""${!activeInline.isLink ? ' selected' : ''}>${isEn ? 'No Link (Text)' : 'Tiada Link (Teks)'}</option>
+          ${Object.keys(S.pages).map(pg => `<option value="${qa(pg)}"${(activeInline.isLink && curHref === pg) ? ' selected' : ''}>📄 ${esc(pg)}</option>`).join('')}
+          ${S.extLinks.map(ext => `<option value="${qa(ext.url)}"${(activeInline.isLink && curHref === ext.url) ? ' selected' : ''}>🌐 ${esc(ext.title)}</option>`).join('')}
+          <option value="#"${(activeInline.isLink && curHref === '#') ? ' selected' : ''}>🔗 # (Anchor)</option>
+        </select>
+        <input type="text" id="canva-href-input" class="canva-href-input" data-href-mode="inline" data-inline-idx="${curInlineIdx}" value="${qa(curHref)}" placeholder="${isEn ? 'index.html / URL...' : 'index.html / URL...'}">
+        <button type="button" class="canva-btn${activeInline.isBtn ? ' active' : ''}" data-cbar="inline-btn" data-inline-idx="${curInlineIdx}" title="${isEn ? 'Style this phrase as a Button' : 'Gayakan teks ini sebagai Butang'}" style="height:26px;padding:0 7px;font-size:11px;font-weight:600">🔘 ${isEn ? 'Btn' : 'Butang'}</button>
+      </div>`;
+  }
 
   // Google Font Options HTML
   const fontOptionsHtml = GOOGLE_FONTS.map(f => {
@@ -1125,17 +1537,7 @@ function renderCanvaBar() {
         ${Object.keys(TY).map(k => `<option value="${k}"${k === b.type ? ' selected' : ''}>&lt;${TY[k].tag}&gt; ${esc(isEn ? (TY[k].en || TY[k].n) : TY[k].n)}</option>`).join('')}
       </select>
 
-      <!-- Quick Action: Convert to Navigation / Link -->
-      <button type="button" class="canva-btn${b.type === 'nav' ? ' active' : ''}" data-cbar="to-nav" title="Convert to navigation links (<nav>)">
-        ${icon('nav', 'canva-ic', 14)}
-        <span style="font-size:11px;margin-left:3px;font-weight:600">Nav</span>
-      </button>
-      <button type="button" class="canva-btn${b.type === 'button' ? ' active' : ''}" data-cbar="to-link" title="Convert to CTA button link (<a>)">
-        ${icon('button', 'canva-ic', 14)}
-        <span style="font-size:11px;margin-left:3px;font-weight:600">Link</span>
-      </button>
-
-      ${['button', 'link'].includes(b.type) ? `<button type="button" class="canva-btn" data-cbar="to-dropdown" title="${isEn ? 'Convert this link into a dropdown menu' : 'Tukar pautan ini menjadi menu dropdown'}">▾ Dropdown</button>` : ''}
+      ${directHrefClusterHtml}
 
       ${b.type === 'nav' ? (function() {
         const drops = b.dropdowns || {};
@@ -1194,10 +1596,10 @@ function renderCanvaBar() {
           <span class="canva-rainbow-bar"></span>
         </button>
 
-        <!-- 8. Text Formatting: B, I, U -->
-        <button type="button" class="canva-btn${isBold ? ' active' : ''}" data-cbar="bold" title="Bold"><b>B</b></button>
-        <button type="button" class="canva-btn${isItalic ? ' active' : ''}" data-cbar="italic" title="Italic"><i>I</i></button>
-        <button type="button" class="canva-btn${isUnderline ? ' active' : ''}" data-cbar="underline" title="Underline"><span style="text-decoration:underline">U</span></button>
+        <!-- 8. Text Formatting: B, I, U & Inline Link (🔗) -->
+        <button type="button" class="canva-btn${isBold ? ' active' : ''}" data-cbar="bold" title="${isEn ? 'Bold' : 'Tebal'}"><b>B</b></button>
+        <button type="button" class="canva-btn${isItalic ? ' active' : ''}" data-cbar="italic" title="${isEn ? 'Italic' : 'Condong'}"><i>I</i></button>
+        <button type="button" class="canva-btn${isUnderline ? ' active' : ''}" data-cbar="underline" title="${isEn ? 'Underline' : 'Garis Bawah'}"><span style="text-decoration:underline">U</span></button>
 
         <!-- 9. Text Alignment Cycle (Left -> Center -> Right) -->
         <button type="button" class="canva-btn active" data-cbar="align" title="${alignTitle}">

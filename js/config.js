@@ -13,6 +13,126 @@ function getAutoRows() {
 const cl = (v, a, b) => Math.max(a, Math.min(b, v));
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const qa = s => esc(s).replace(/"/g, '&quot;');
+const safeCssUrl = s => String(s || '').replace(/[\r\n]/g, '').replace(/['"()\\]/g, '\\$&');
+
+function splitNavItems(rawText) {
+  const s = String(rawText || '').trim();
+  if (!s) return [];
+  if (s.includes(',')) return s.split(',').map(x => x.trim()).filter(Boolean);
+  if (s.includes('|')) return s.split('|').map(x => x.trim()).filter(Boolean);
+  if (s.includes('\n')) return s.split('\n').map(x => x.trim()).filter(Boolean);
+  if (/\s{2,}/.test(s)) return s.split(/\s{2,}/).map(x => x.trim()).filter(Boolean);
+  const emojiParts = s.split(/\s+(?=[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}])/u).map(x => x.trim()).filter(Boolean);
+  if (emojiParts.length > 1) return emojiParts;
+  return s.split(/\s+/).map(x => x.trim()).filter(Boolean);
+}
+
+function parseBlockInlineItems(b) {
+  if (!b) return [];
+  const raw = String(b.t || '').trim();
+  if (Array.isArray(b.inlineItems) && b.inlineItems.length && b._lastInlineHtml === raw) {
+    return b.inlineItems;
+  }
+  const items = [];
+  if (/<(a|span|b|strong|i|em|u)\b/i.test(raw) && typeof DOMParser !== 'undefined') {
+    try {
+      const doc = new DOMParser().parseFromString(`<div>${raw}</div>`, 'text/html');
+      const root = doc.body.firstElementChild;
+      if (root) {
+        Array.from(root.childNodes).forEach(node => {
+          if (node.nodeType === 3) {
+            const txt = (node.textContent || '').replace(/\u00a0/g, ' ').trim();
+            if (!txt) return;
+            splitNavItems(txt).forEach(part => {
+              items.push({ text: part, isLink: false, isBtn: false, href: 'index.html', color: '', bg: '', bold: false, italic: false, underline: false });
+            });
+          } else if (node.nodeType === 1) {
+            const el = node;
+            const tag = el.tagName.toLowerCase();
+            const txt = (el.textContent || '').replace(/\u00a0/g, ' ').trim();
+            if (!txt) return;
+            const st = el.getAttribute('style') || '';
+            const colMatch = st.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
+            const bgMatch = st.match(/background(?:-color)?\s*:\s*([^;]+)/i);
+            const isBtn = /padding/i.test(st) || el.classList.contains('btn-cta');
+            items.push({
+              text: txt,
+              isLink: tag === 'a' || isBtn,
+              isBtn,
+              href: el.getAttribute('href') || 'index.html',
+              color: colMatch ? colMatch[1].trim() : '',
+              bg: bgMatch ? bgMatch[1].trim() : '',
+              bold: tag === 'b' || tag === 'strong' || /font-weight\s*:\s*(?:bold|[6789]00)/i.test(st) || !!el.querySelector('b,strong'),
+              italic: tag === 'i' || tag === 'em' || /font-style\s*:\s*italic/i.test(st) || !!el.querySelector('i,em'),
+              underline: tag === 'u' || /text-decoration[^;]*underline/i.test(st) || !!el.querySelector('u')
+            });
+          }
+        });
+      }
+    } catch (_) {}
+  }
+  if (!items.length) {
+    const clean = raw.replace(/<[^>]*>/g, '').trim();
+    const parts = splitNavItems(clean);
+    (parts.length ? parts : [clean || 'Text']).forEach(part => {
+      const autoHref = /hubungi|contact/i.test(part) ? 'contact.html' : /tentang|about/i.test(part) ? 'about.html' : 'index.html';
+      items.push({
+        text: part,
+        isLink: false,
+        isBtn: false,
+        href: autoHref,
+        color: '',
+        bg: '',
+        bold: false,
+        italic: false,
+        underline: false
+      });
+    });
+  }
+  b.inlineItems = items;
+  b._lastInlineHtml = raw;
+  return items;
+}
+
+function serializeBlockInlineItems(items) {
+  if (!Array.isArray(items) || !items.length) return '';
+  const hasAnyStyle = items.some(it => it.isLink || it.isBtn || it.color || it.bg || it.bold || it.italic || it.underline);
+  if (!hasAnyStyle) {
+    return items.map(it => String(it.text || '').trim()).filter(Boolean).join(' ');
+  }
+  return items.map(it => {
+    const txt = esc(String(it.text || '').trim());
+    if (!txt) return '';
+    const styles = [];
+    if (it.isBtn) {
+      styles.push(`background-color:${it.bg || '#203a5b'}`);
+      styles.push(`color:${it.color || '#ffffff'}`);
+      styles.push('padding:4px 10px');
+      styles.push('border-radius:6px');
+      styles.push('display:inline-block');
+      styles.push(it.underline ? 'text-decoration:underline' : 'text-decoration:none');
+    } else {
+      if (it.color) styles.push(`color:${it.color}`);
+      if (it.bg) {
+        styles.push(`background-color:${it.bg}`);
+        styles.push('padding:2px 7px');
+        styles.push('border-radius:4px');
+      }
+      if (it.underline) styles.push('text-decoration:underline');
+      else if (it.isLink) styles.push('text-decoration:none');
+    }
+    if (it.bold) styles.push('font-weight:700');
+    if (it.italic) styles.push('font-style:italic');
+    const styleAttr = styles.length ? ` style="${styles.join(';')};"` : '';
+    if (it.isLink || it.isBtn) {
+      return `<a href="${qa(it.href || '#')}"${styleAttr}>${txt}</a>`;
+    }
+    if (styleAttr) {
+      return `<span${styleAttr}>${txt}</span>`;
+    }
+    return txt;
+  }).filter(Boolean).join(' &nbsp; ');
+}
 
 const FILLS = ['#ffffff', '#cfe0ff', '#ffd166', '#2b2f3a', '#ff7a59', '#b8f2c9'];
 

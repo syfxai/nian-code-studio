@@ -69,66 +69,65 @@ const inner = b => {
   const t = esc(b.t);
   const isDiv = S.htmlMode === 'div';
   const cleanAlt = stripHtmlTags(b.t) || 'Mockup image';
-  const cleanCaption = b.t.trim();
+  const cleanCaption = String(b.t || '').trim();
   const defImg = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=80';
+  const isEn = S.lang === 'en';
   return b.type == 'slider' ? (S.hasJs ? '<div class="swiper-wrapper">\n' + [1, 2, 3].map(n => '  <div class="swiper-slide">Slide ' + n + '</div>').join('\n') + '\n</div>\n<div class="swiper-pagination"></div>' : '<div class="slider-box">\n  <p>[ Static Slider ]</p>\n</div>') :
     b.type == 'dropdown' ? (function() {
-      const dropItems = (b.items && b.items.length) ? b.items : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3'];
+      const dropItems = (b.items && b.items.length) ? b.items : (isEn ? ['Option 1', 'Option 2', 'Option 3'] : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3']);
       const innerLinks = dropItems.map(it => `  <a href="#">${esc(it)}</a>`).join('\n');
       return isDiv
         ? `<div class="dropdown-header">${t} ▾</div>\n<div class="dropdown-content">\n${innerLinks}\n</div>`
         : `<summary>${t}</summary>\n<div class="dropdown-content">\n${innerLinks}\n</div>`;
     })() :
     b.type == 'form' ? (function() {
-      const fields = (b.fields && b.fields.length) ? b.fields : (b.t ? b.t.split(',').map(x => x.trim()).filter(Boolean) : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda']);
-      const subTxt = b.submitText || 'Hantar Mesej';
+      const fields = (b.fields && b.fields.length) ? b.fields : (b.t ? b.t.split(',').map(x => x.trim()).filter(Boolean) : (isEn ? ['Full Name', 'Email Address', 'Your Message'] : ['Nama Penuh', 'Alamat Emel', 'Mesej Anda']));
+      const subTxt = b.submitText || (isEn ? 'Send Message' : 'Hantar Mesej');
       const rows = fields.map((f, idx) => {
-        const lbl = f.trim() || `Medan ${idx + 1}`;
+        const lbl = f.trim() || `${isEn ? 'Field' : 'Medan'} ${idx + 1}`;
         const idName = `field-${b.id}-${idx + 1}`;
         const isEmail = /emel|email/i.test(lbl);
         const isPhone = /tel|fon|phone|whatsapp/i.test(lbl);
         const isArea = /mesej|message|komen|comment|ulasan|pertanyaan/i.test(lbl);
         if (isArea) {
-          return `<div class="form-group">\n  <label for="${idName}">${esc(lbl)}</label>\n  <textarea id="${idName}" name="${idName}" rows="3" placeholder="Taip ${qa(lbl.toLowerCase())}..." required></textarea>\n</div>`;
+          return `<div class="form-group">\n  <label for="${idName}">${esc(lbl)}</label>\n  <textarea id="${idName}" name="${idName}" rows="3" placeholder="${isEn ? 'Type' : 'Taip'} ${qa(lbl.toLowerCase())}..." required></textarea>\n</div>`;
         }
         const inputType = isEmail ? 'email' : isPhone ? 'tel' : 'text';
-        return `<div class="form-group">\n  <label for="${idName}">${esc(lbl)}</label>\n  <input type="${inputType}" id="${idName}" name="${idName}" placeholder="Masukkan ${qa(lbl.toLowerCase())}..." required>\n</div>`;
+        return `<div class="form-group">\n  <label for="${idName}">${esc(lbl)}</label>\n  <input type="${inputType}" id="${idName}" name="${idName}" placeholder="${isEn ? 'Enter' : 'Masukkan'} ${qa(lbl.toLowerCase())}..." required>\n</div>`;
       }).join('\n');
       return `${rows}\n<button type="submit" class="btn-cta form-submit">${esc(subTxt)}</button>`;
     })() :
     b.type == 'nav' ? (function() {
-      let items = [];
-      if (b.t.includes(',')) items = b.t.split(',');
-      else if (b.t.includes('|')) items = b.t.split('|');
-      else if (b.t.includes('\n')) items = b.t.split('\n');
-      else items = b.t.trim().split(/\s+/);
+      const items = typeof splitNavItems === 'function' ? splitNavItems(b.t) : b.t.split(',');
       const drops = b.dropdowns || {};
+      const navHrefs = b.navHrefs || {};
+      const navCtas = b.navCtas || {};
       return items.map((x, idx) => {
         const title = x.trim();
         if (!title) return '';
         const dropData = drops[title] || drops[idx] || drops[title.toLowerCase()];
         if (dropData) {
-          const subItems = Array.isArray(dropData) ? dropData : (dropData.items || ['Option 1', 'Option 2', 'Option 3']);
+          const subItems = Array.isArray(dropData) ? dropData : (dropData.items || (isEn ? ['Option 1', 'Option 2', 'Option 3'] : ['Pilihan 1', 'Pilihan 2', 'Pilihan 3']));
           if (isDiv) {
             return `<div class="nav-dropdown">\n  <div class="nav-drop-btn">${esc(title)} ▾</div>\n  <div class="dropdown-content">\n    ${subItems.map(sub => `<a href="#">${esc(sub.trim())}</a>`).join('\n    ')}\n  </div>\n</div>`;
           }
           return `<details class="nav-dropdown">\n  <summary>${esc(title)} ▾</summary>\n  <div class="dropdown-content">\n    ${subItems.map(sub => `<a href="#">${esc(sub.trim())}</a>`).join('\n    ')}\n  </div>\n</details>`;
         }
         const matchPage = Object.keys(S.pages).find(k => S.pages[k].name.toLowerCase().includes(title.toLowerCase()));
-        const href = matchPage || '#';
-        const isCta = /mula|daftar|beli|start|sign|hubungi|contact/i.test(title);
+        const href = navHrefs[title] || navHrefs[idx] || matchPage || '#';
+        const isCta = navCtas[title] !== undefined ? !!navCtas[title] : /mula|daftar|beli|start|sign|hubungi|contact/i.test(title);
         const cls = isCta ? ' class="btn-cta"' : '';
-        return `<a href="${href}"${cls}>${esc(title)}</a>`;
+        return `<a href="${qa(href)}"${cls}>${esc(title)}</a>`;
       }).filter(Boolean).join('\n');
     })() :
-    b.type == 'image' ? (isDiv ? `<div class="image-box"><img src="${b.imgUrl || defImg}" alt="${qa(cleanAlt)}">${cleanCaption ? `\n  <div class="caption">${cleanCaption}</div>` : ''}</div>` : `<img src="${b.imgUrl || defImg}" alt="${qa(cleanAlt)}">${cleanCaption ? `\n<figcaption>${cleanCaption}</figcaption>` : ''}`) :
+    b.type == 'image' ? (isDiv ? `<div class="image-box"><img src="${qa(b.imgUrl || defImg)}" alt="${qa(cleanAlt)}">${cleanCaption ? `\n  <div class="caption">${cleanCaption}</div>` : ''}</div>` : `<img src="${qa(b.imgUrl || defImg)}" alt="${qa(cleanAlt)}">${cleanCaption ? `\n<figcaption>${cleanCaption}</figcaption>` : ''}`) :
     b.type == 'header' ? (hasBlockTag(b.t) ? b.t : `<h1>${b.t}</h1>`) :
     ['hero', 'section', 'card'].includes(b.type) ? (hasBlockTag(b.t) ? b.t : `<h2>${b.t}</h2>`) :
     b.type == 'text' ? (hasBlockTag(b.t) ? b.t : `<p>${b.t}</p>`) : b.t;
 };
 
 function emit(b, d, mode, L, parentFk) {
-  const T = TY[b.type];
+  const T = TY[b.type] || TY.text || { tag: 'div', n: 'Elemen', en: 'Element' };
   const ks = kids(b);
   const pad = '  '.repeat(d);
   const isDiv = S.htmlMode === 'div';
@@ -161,19 +160,6 @@ function emit(b, d, mode, L, parentFk) {
   const fk = 'blk-' + b.id;
   const bColor = FILLS[b.f];
 
-  // 📝 Explanatory comment for Semantic HTML5 / Standard Div structure
-  if (d === 1) {
-    const isMs = S.lang === 'ms';
-    const tagLabel = isMs ? T.n : (T.en || T.n);
-    const colWord = isMs ? 'kol' : 'cols';
-    const rowWord = isMs ? 'baris' : 'rows';
-    if (isDiv) {
-      L.push({ s: `${pad}<!-- 📦 ${tagLabel} (${isMs ? 'HTML Biasa' : 'Standard Div'}): <div class="${b.cls}"> (${b.w} ${colWord} × ${b.h} ${rowWord}) -->`, parentFk, blockColor: bColor });
-    } else {
-      L.push({ s: `${pad}<!-- 🧱 ${tagLabel} (${isMs ? 'Semantik' : 'Semantic'}): <${T.tag}> .${b.cls} (${b.w} ${colWord} × ${b.h} ${rowWord}) -->`, parentFk, blockColor: bColor });
-    }
-  }
-
   if (lk && !ks.length) return L.push({ id: b.id, s: `${pad}<a${clAttr}${stAttr}${at}>${b.t}</a>`, parentFk, isCssInline: !!stAttr, blockColor: bColor, isTagLine: true });
   L.push({ id: b.id, s: `${pad}<${targetTag}${clAttr}${stAttr}${at}>`, fold: 'start', fk, tag: targetTag, parentFk, isCssInline: !!stAttr, blockColor: bColor, isTagLine: true });
   if (ks.length) ks.forEach(k => emit(k, d + 1, mode, L, fk));
@@ -187,21 +173,21 @@ function body(mode) {
   const mainTag = isDiv ? 'div' : 'main';
   const mainCls = isDiv ? 'main-container ' : '';
   const mainIdAttr = isDiv ? ' id="main"' : '';
-  const mainClose = isDiv ? '</div><!-- /.main-container -->' : '</main>';
+  const mainClose = isDiv ? '  </div>' : '  </main>';
 
   const rowH = S.gridRowH || 40;
   const gap = S.gridGap !== undefined ? S.gridGap : 8;
   if (!S.hasCss) {
-    L.push({ s: `<${mainTag}${mainIdAttr}${isDiv ? ' class="main-container"' : ''}>`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body' });
+    L.push({ s: `  <${mainTag}${mainIdAttr}${isDiv ? ' class="main-container"' : ''}>`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body' });
   } else if (mode == 'tw') {
-    L.push({ s: `<${mainTag}${mainIdAttr} class="${mainCls}grid grid-cols-12 auto-rows-[${rowH}px] gap-[${gap}px] p-4">`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body' });
+    L.push({ s: `  <${mainTag}${mainIdAttr} class="${mainCls}grid grid-cols-12 auto-rows-[${rowH}px] gap-[${gap}px] p-4">`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body' });
   } else if (mode == 'inl') {
-    L.push({ s: `<${mainTag}${mainIdAttr}${isDiv ? ' class="main-container"' : ''} style="display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:${rowH}px;gap:${gap}px;padding:16px;">`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body', isCssInline: true });
+    L.push({ s: `  <${mainTag}${mainIdAttr}${isDiv ? ' class="main-container"' : ''} style="display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:${rowH}px;gap:${gap}px;padding:16px;">`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body', isCssInline: true });
   } else {
-    L.push({ s: `<${mainTag}${mainIdAttr}${isDiv ? ' class="main-container"' : ''}>`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body' });
+    L.push({ s: `  <${mainTag}${mainIdAttr}${isDiv ? ' class="main-container"' : ''}>`, fold: 'start', fk: 'main', tag: mainTag, parentFk: 'body' });
   }
   sorted();
-  S.blocks.filter(b => !par(b)).sort((a, b) => a.r - b.r || a.c - b.c).forEach(b => emit(b, 1, mode, L, 'main'));
+  S.blocks.filter(b => !par(b)).sort((a, b) => a.r - b.r || a.c - b.c).forEach(b => emit(b, 2, mode, L, 'main'));
   L.push({ s: mainClose, fold: 'end', fk: 'main', tag: mainTag, parentFk: 'body' });
   return L;
 }
@@ -213,7 +199,7 @@ function getCssRules() {
   const th = S.theme || { primary: '#00d4ff', bg: '#ffffff', text: '#12203f' };
 
   const rootRules = [
-    '/* 🎨 Variabel Tema (:root) */',
+    S.lang === 'ms' ? '/* 🎨 Variabel Tema (:root) */' : '/* 🎨 Theme Variables (:root) */',
     ':root {',
     `  --primary: ${th.primary || '#00d4ff'};`,
     `  --bg-page: ${th.bg || '#ffffff'};`,
@@ -255,10 +241,11 @@ function getCssRules() {
 
     // 🎨 Explanatory style comment for each element
     const isMs = S.lang === 'ms';
-    const tagLabel = isMs ? TY[b.type].n : (TY[b.type].en || TY[b.type].n);
+    const T = TY[b.type] || TY.text || { tag: 'div', n: 'Elemen', en: 'Element' };
+    const tagLabel = isMs ? T.n : (T.en || T.n);
     const colWord = isMs ? 'Kolum' : 'Column';
     const rowWord = isMs ? 'Baris' : 'Row';
-    L.push({ s: `/* 🎨 ${tagLabel}: .${b.cls} (<${TY[b.type].tag}>) - ${colWord} ${rl(b).c} & ${rowWord} ${rl(b).r} */`, parentFk: fk, isCss: true });
+    L.push({ s: `/* 🎨 ${tagLabel}: .${b.cls} (<${T.tag}>) - ${colWord} ${rl(b).c} & ${rowWord} ${rl(b).r} */`, parentFk: fk, isCss: true });
 
     const extra = [];
     if (b.font) extra.push(`  font-family: ${b.font};`);
@@ -292,7 +279,7 @@ function getCssRules() {
         if (p.size) extra.push(`  background-size: ${p.size};`);
         if (p.repeat) extra.push(`  background-repeat: ${p.repeat};`);
       } else {
-        extra.push(`  background-image: url('${b.bgImg}');`);
+        extra.push(`  background-image: url('${safeCssUrl(b.bgImg)}');`);
         extra.push(`  background-size: ${b.bgSize || 'cover'};`);
         extra.push(`  background-repeat: ${b.bgRepeat || 'no-repeat'};`);
         extra.push(`  background-position: ${b.bgPos || 'center'};`);
@@ -437,52 +424,56 @@ function getCssRules() {
 }
 
 function htmlLines() {
-  const curTitle = (S.pages[S.curPage] && S.pages[S.curPage].name) || 'My Website';
-  const htmlLang = S.lang === 'ms' ? 'ms' : 'en';
-  const h = [
-    { s: '<!DOCTYPE html>' },
-    { s: `<html lang="${htmlLang}">`, fold: 'start', fk: 'html', tag: 'html' },
-    { s: '<head>', fold: 'start', fk: 'head', tag: 'head', parentFk: 'html' },
-    { s: '  <meta charset="utf-8">', parentFk: 'head' },
-    { s: '  <meta name="viewport" content="width=device-width, initial-scale=1">', parentFk: 'head' },
-    { s: `  <title>${esc(curTitle)}</title>`, parentFk: 'head' }
-  ];
+  const curPageObj = (S.pages && S.pages[S.curPage]) || {};
+  const curTitle = curPageObj.title !== undefined ? curPageObj.title : ' Your Page Title';
+  const hasBlocks = Array.isArray(S.blocks) && S.blocks.length > 0;
+  const headExtra = [];
 
-  if (S.hasCss) {
-    h.push({ s: '  <!-- Google Fonts -->' });
-    h.push({ s: '  <link rel="preconnect" href="https://fonts.googleapis.com">' });
-    h.push({ s: '  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' });
-    h.push({ s: '  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Lato:wght@400;700&family=Lora:wght@400;600;700&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;600;700&family=Roboto:wght@400;500;700&family=Source+Sans+3:wght@400;500;600;700&display=swap">' });
-
+  if (S.hasCss && hasBlocks) {
     if (S.sty == 'ext' || S.sty == 'all') {
-      h.push({ s: '  <!-- 1. External CSS: Stylesheet for grid layout -->', parentFk: 'head', isCss: true });
-      h.push({ s: '  <link rel="stylesheet" href="style.css">', parentFk: 'head', isCss: true });
+      headExtra.push({ s: '  <link rel="stylesheet" href="style.css">', parentFk: 'head', isCss: true });
     } else if (S.sty == 'tw') {
-      h.push({ s: '  <script src="https://cdn.tailwindcss.com/3.4.17"><\/script>', parentFk: 'head', isCss: true });
+      headExtra.push({ s: '  <script src="https://cdn.tailwindcss.com/3.4.17"><\/script>', parentFk: 'head', isCss: true });
     }
-    if (sl()) h.push({ s: '  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11.1.14/swiper-bundle.min.css">', parentFk: 'head' });
+    if (sl()) headExtra.push({ s: '  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11.1.14/swiper-bundle.min.css">', parentFk: 'head' });
     if (S.sty == 'int') {
-      if (S.blocks.length) {
-        h.push({ s: '  <style>', fold: 'start', fk: 'style', tag: 'style', parentFk: 'head', isCss: true });
-        getCssRules().forEach(r => h.push({ s: '    ' + r.s, id: r.id, parentFk: 'style', isCss: true }));
-        h.push({ s: '  </style>', fold: 'end', fk: 'style', tag: 'style', parentFk: 'head', isCss: true });
-      }
+      headExtra.push({ s: '  <style>', fold: 'start', fk: 'style', tag: 'style', parentFk: 'head', isCss: true });
+      getCssRules().forEach(r => headExtra.push({ s: '    ' + r.s, id: r.id, parentFk: 'style', isCss: true }));
+      headExtra.push({ s: '  </style>', fold: 'end', fk: 'style', tag: 'style', parentFk: 'head', isCss: true });
     } else if (S.sty == 'all') {
-      h.push({ s: '  <!-- 2. Internal CSS: Page-specific typography and theme styles -->', parentFk: 'head', isCss: true });
-      h.push({ s: '  <style>', fold: 'start', fk: 'style', tag: 'style', parentFk: 'head', isCss: true });
-      h.push({ s: '    body { font-family: "Inter", system-ui, sans-serif; background-color: #f8fafc; }', parentFk: 'style', isCss: true });
-      h.push({ s: '    h1, h2 { letter-spacing: -0.5px; }', parentFk: 'style', isCss: true });
-      h.push({ s: '  </style>', fold: 'end', fk: 'style', tag: 'style', parentFk: 'head', isCss: true });
+      headExtra.push({ s: '  <style>', fold: 'start', fk: 'style', tag: 'style', parentFk: 'head', isCss: true });
+      headExtra.push({ s: '    body { font-family: "Inter", system-ui, sans-serif; background-color: #f8fafc; }', parentFk: 'style', isCss: true });
+      headExtra.push({ s: '    h1, h2 { letter-spacing: -0.5px; }', parentFk: 'style', isCss: true });
+      headExtra.push({ s: '  </style>', fold: 'end', fk: 'style', tag: 'style', parentFk: 'head', isCss: true });
     }
   }
 
-  h.push({ s: '</head>', fold: 'end', fk: 'head', tag: 'head', parentFk: 'html' });
+  const h = [
+    { s: '<!DOCTYPE html>' },
+    { s: '<html>', fold: 'start', fk: 'html', tag: 'html' }
+  ];
+
+  if (headExtra.length === 0) {
+    h.push({ s: `<head><title>${esc(curTitle)}</title></head>`, parentFk: 'html' });
+  } else {
+    h.push({ s: '<head>', fold: 'start', fk: 'head', tag: 'head', parentFk: 'html' });
+    h.push({ s: `  <title>${esc(curTitle)}</title>`, parentFk: 'head' });
+    headExtra.forEach(item => h.push(item));
+    h.push({ s: '</head>', fold: 'end', fk: 'head', tag: 'head', parentFk: 'html' });
+  }
+
+  h.push({ s: '' });
   h.push({ s: '<body>', fold: 'start', fk: 'body', tag: 'body', parentFk: 'html' });
-  const bLines = S.blocks.length ? body(S.sty) : [{ s: '  <!-- Drop blocks on canvas, code appears here -->', parentFk: 'body' }];
+  const bLines = hasBlocks
+    ? body(S.sty)
+    : [
+        { s: ' ', parentFk: 'body' },
+        { s: '  ', parentFk: 'body' }
+      ];
   bLines.forEach(l => { if (!l.parentFk) l.parentFk = 'body'; });
 
   const f = [];
-  if (S.hasJs) {
+  if (S.hasJs && hasBlocks) {
     if (sl()) f.push({ s: '  <script src="https://cdn.jsdelivr.net/npm/swiper@11.1.14/swiper-bundle.min.js"><\/script>', parentFk: 'body' });
     f.push({ s: '  <script src="script.js"><\/script>', parentFk: 'body' });
   }
@@ -632,28 +623,63 @@ function js() {
   return L;
 }
 
-function hl(s, t, cssHl, commentRange = null) {
+function hl(s, t, cssHl, commentRange = null, matchedPairInfo = null) {
   if (commentRange) {
     const [start, end] = commentRange;
     if (start === 0 && end === s.length) return `<i class="c">${esc(s)}</i>`;
-    return `${hl(s.slice(0, start), t, cssHl)}<i class="c">${esc(s.slice(start, end))}</i>${hl(s.slice(end), t, cssHl)}`;
+    return `${hl(s.slice(0, start), t, cssHl, null, matchedPairInfo)}<i class="c">${esc(s.slice(start, end))}</i>${hl(s.slice(end), t, cssHl, null, matchedPairInfo)}`;
   }
   if (/^\s*(\/\/|\/\*|<!--)/.test(s)) return `<i class="c">${esc(s)}</i>`;
   s = esc(s);
   if (t == 'css') {
-    let out = s.replace(/^(\s*)([\w-]+)(:)/, '$1<i class=p>$2</i>$3').replace(/^(\.[\w-]+)/, '<i class=t>$1</i>');
+    let out = s
+      .replace(/^(\s*)([\w-]+)(:)/, '$1<i class=p>$2</i>$3')
+      .replace(/^(\s*)([.#@][\w-]+(?:\s+[\w-.*:#]+)*)/, '$1<i class="t dw-tag-section">$2</i>');
     if (cssHl) {
       out = out.replace(/(:)([^;{}]+)(;?)/, '$1<i class=v>$2</i>$3');
     }
     return out;
   }
-  if (t == 'js') return s.replace(/(".*?")/g, '<i class=v>$1</i>').replace(/\b(const|let|var|document|function|if|return)\b/g, '<i class=a>$1</i>');
-  return s.replace(/(&lt;\/?)([\w!-]+)/g, '$1<i class=t>$2</i>').replace(/([\w-]+)="([^"]*)"/g, (m, a, v) => {
-    if (cssHl && a == 'style') {
-      return `<mark class="css-hl-mark">${a}="<i class=v>${v}</i>"</mark>`;
+  if (t == 'js') {
+    return s
+      .replace(/(".*?"|'.*?')/g, '<i class=v>$1</i>')
+      .replace(/\b(const|let|var|document|window|function|if|else|return|forEach|addEventListener|querySelector|querySelectorAll|console)\b/g, '<i class=a>$1</i>');
+  }
+
+  // HTML Mode: Per-Tag Dreamweaver Color Coding & Matching Tag Pair Highlighting
+  let out = s.replace(/(&lt;\/?)([\w!-]+)([\s\S]*?&gt;)/g, (fullTag, openBrk, rawTagName, restAndCloseBrk) => {
+    const lowerTag = String(rawTagName).toLowerCase();
+    const colorCls = (typeof getTagColorClass === 'function')
+      ? getTagColorClass(lowerTag)
+      : 'dw-tag-div';
+    const isClosingTag = openBrk === '&lt;/';
+
+    // Highlight attributes inside restAndCloseBrk
+    const highlightedRest = restAndCloseBrk.replace(/([\w-]+)=&quot;([^&]*)&quot;|([\w-]+)="([^"]*)"/g, (m, a1, v1, a2, v2) => {
+      const a = a1 || a2;
+      const v = v1 !== undefined ? v1 : v2;
+      if (cssHl && a === 'style') {
+        return `<mark class="css-hl-mark">${a}="<i class=v>${v}</i>"</mark>`;
+      }
+      return `<i class=a>${a}</i>=<i class=v>"${v}"</i>`;
+    });
+
+    const innerHtml = `<i class="dw-brk ${colorCls}">${openBrk}</i><i class="t ${colorCls}">${rawTagName}</i>${highlightedRest}`;
+
+    const targetMatchTag = matchedPairInfo ? (matchedPairInfo.tag || matchedPairInfo.matchTag) : null;
+    const isOpenMatch = matchedPairInfo ? Boolean(matchedPairInfo.isOpenLine || matchedPairInfo.isOpenMatchLine) : false;
+    const isCloseMatch = matchedPairInfo ? Boolean(matchedPairInfo.isCloseLine || matchedPairInfo.isCloseMatchLine) : false;
+
+    if (
+      targetMatchTag === lowerTag &&
+      ((!isClosingTag && isOpenMatch) || (isClosingTag && isCloseMatch))
+    ) {
+      return `<mark class="dw-tag-match-token ${colorCls}" title="Matched &lt;${lowerTag}&gt; ... &lt;/${lowerTag}&gt; pair">${innerHtml}</mark>`;
     }
-    return `<i class=a>${a}</i>=<i class=v>"${v}"</i>`;
+    return innerHtml;
   });
+
+  return out;
 }
 
 function preview() {
